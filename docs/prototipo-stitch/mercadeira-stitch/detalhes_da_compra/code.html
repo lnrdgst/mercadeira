@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Purchase Details</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "surface-dim": "#cbdbf5",
+                      "inverse-on-surface": "#eaf1ff",
+                      "on-secondary-fixed-variant": "#004395",
+                      "secondary-container": "#2170e4",
+                      "on-secondary-fixed": "#001a42",
+                      "on-background": "#0b1c30",
+                      "surface": "#f8f9ff",
+                      "on-primary-fixed-variant": "#005321",
+                      "error-container": "#ffdad6",
+                      "surface-tint": "#006e2f",
+                      "primary": "#006e2f",
+                      "surface-container-lowest": "#ffffff",
+                      "on-tertiary-container": "#5c3800",
+                      "inverse-primary": "#4ae176",
+                      "outline": "#6d7b6c",
+                      "background": "#f8f9ff",
+                      "on-secondary": "#ffffff",
+                      "secondary": "#0058be",
+                      "surface-container-highest": "#d3e4fe",
+                      "on-tertiary-fixed": "#2a1700",
+                      "on-error-container": "#93000a",
+                      "inverse-surface": "#213145",
+                      "primary-fixed": "#6bff8f",
+                      "on-primary-container": "#004b1e",
+                      "tertiary-container": "#ef9900",
+                      "primary-container": "#22c55e",
+                      "surface-container-high": "#dce9ff",
+                      "error": "#ba1a1a",
+                      "on-surface-variant": "#3d4a3d",
+                      "on-tertiary": "#ffffff",
+                      "on-primary-fixed": "#002109",
+                      "on-error": "#ffffff",
+                      "secondary-fixed": "#d8e2ff",
+                      "outline-variant": "#bccbb9",
+                      "on-primary": "#ffffff",
+                      "primary-fixed-dim": "#4ae176",
+                      "tertiary": "#855300",
+                      "on-tertiary-fixed-variant": "#653e00",
+                      "surface-container": "#e5eeff",
+                      "tertiary-fixed-dim": "#ffb95f",
+                      "surface-variant": "#d3e4fe",
+                      "tertiary-fixed": "#ffddb8",
+                      "secondary-fixed-dim": "#adc6ff",
+                      "surface-container-low": "#eff4ff",
+                      "surface-bright": "#f8f9ff",
+                      "on-secondary-container": "#fefcff",
+                      "on-surface": "#0b1c30"
+              },
+              "borderRadius": {
+                      "DEFAULT": "1rem",
+                      "lg": "2rem",
+                      "xl": "3rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "lg": "24px",
+                      "sm": "8px",
+                      "touch_target_min": "56px",
+                      "xl": "32px",
+                      "xs": "4px",
+                      "md": "16px",
+                      "gutter": "16px",
+                      "base": "4px",
+                      "margin": "20px"
+              },
+              "fontFamily": {
+                      "body-lg": [
+                              "Plus Jakarta Sans"
+                      ],
+                      "headline-md": [
+                              "Plus Jakarta Sans"
+                      ],
+                      "label-md": [
+                              "Plus Jakarta Sans"
+                      ],
+                      "display": [
+                              "Plus Jakarta Sans"
+                      ],
+                      "headline-lg": [
+                              "Plus Jakarta Sans"
+                      ],
+                      "body-md": [
+                              "Plus Jakarta Sans"
+                      ],
+                      "label-lg": [
+                              "Plus Jakarta Sans"
+                      ]
+              },
+              "fontSize": {
+                      "body-lg": [
+                              "18px",
+                              {
+                                      "lineHeight": "28px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "headline-md": [
+                              "20px",
+                              {
+                                      "lineHeight": "28px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "label-md": [
+                              "12px",
+                              {
+                                      "lineHeight": "16px",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "display": [
+                              "32px",
+                              {
+                                      "lineHeight": "40px",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "headline-lg": [
+                              "24px",
+                              {
+                                      "lineHeight": "32px",
+                                      "letterSpacing": "-0.01em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "body-md": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "label-lg": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "letterSpacing": "0.05em",
+                                      "fontWeight": "600"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+      </script>
+<style>
+        .ambient-shadow-level-1 {
+            box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.04);
+        }
+        .ambient-shadow-level-2 {
+            box-shadow: 0px 8px 30px rgba(0, 110, 47, 0.08); /* Using primary tint */
+        }
+        .glass-nav {
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+        
+        /* Custom Checkbox Styling */
+        input[type="checkbox"] {
+            appearance: none;
+            background-color: #fff;
+            margin: 0;
+            font: inherit;
+            color: currentColor;
+            width: 24px;
+            height: 24px;
+            border: 2px solid #bccbb9; /* outline-variant */
+            border-radius: 9999px; /* fully rounded */
+            display: grid;
+            place-content: center;
+            transition: all 0.2s ease-in-out;
+            cursor: pointer;
+        }
+
+        input[type="checkbox"]::before {
+            content: "";
+            width: 12px;
+            height: 12px;
+            transform: scale(0);
+            transition: 120ms transform ease-in-out;
+            box-shadow: inset 1em 1em white;
+            background-color: white;
+            transform-origin: center;
+            clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+        }
+
+        input[type="checkbox"]:checked {
+            background-color: #22c55e; /* primary-container */
+            border-color: #22c55e;
+        }
+
+        input[type="checkbox"]:checked::before {
+            transform: scale(1);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface font-body-md min-h-screen flex flex-col pb-32 antialiased">
+<!-- Top Navigation (Custom for Details Page) -->
+<header class="sticky top-0 z-40 bg-surface/90 backdrop-blur-md px-margin py-md flex items-center justify-between border-b border-surface-container-low transition-shadow duration-300">
+<button aria-label="Go back" class="h-touch_target_min w-touch_target_min flex items-center justify-center rounded-full hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined text-on-surface" data-icon="arrow_back">arrow_back</span>
+</button>
+<h1 class="font-headline-lg text-headline-lg font-bold text-on-surface">Purchase Details</h1>
+<div class="w-touch_target_min"></div> <!-- Spacer for centering -->
+</header>
+<main class="flex-grow px-margin pt-lg pb-xl max-w-screen-md mx-auto w-full flex flex-col gap-xl">
+<!-- Summary Section -->
+<section class="bg-surface-container-lowest rounded-xl p-lg ambient-shadow-level-1 border border-surface-container-low flex flex-col gap-md">
+<div class="flex justify-between items-start">
+<div>
+<h2 class="font-headline-md text-headline-md font-bold text-on-surface mb-xs">Carrefour - Monthly Shop</h2>
+<p class="font-body-md text-body-md text-on-surface-variant flex items-center gap-xs">
+<span class="material-symbols-outlined text-[16px]" data-icon="calendar_month">calendar_month</span>
+                        Oct 24, 2023
+                    </p>
+</div>
+<!-- Status Badge -->
+<div class="bg-primary-container/20 text-on-primary-container px-3 py-1 rounded-full font-label-md text-label-md flex items-center gap-xs">
+<span class="material-symbols-outlined text-[14px]" data-icon="check_circle" data-weight="fill" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+                    Completed
+                </div>
+</div>
+<div class="grid grid-cols-2 gap-md mt-sm pt-md border-t border-surface-container">
+<div>
+<span class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider block mb-1">Category</span>
+<span class="font-body-md text-body-md text-on-surface flex items-center gap-xs">
+<span class="material-symbols-outlined text-[18px] text-secondary" data-icon="shopping_basket">shopping_basket</span>
+                        Groceries
+                    </span>
+</div>
+<div>
+<span class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider block mb-1">Shopper</span>
+<div class="flex items-center gap-sm">
+<img class="w-8 h-8 rounded-full object-cover" data-alt="A small, circular profile picture of a young woman with brown hair smiling warmly. The photo has a soft, bright, and inviting lighting, matching a premium, modern UI design aesthetic. High quality, clear, minimalist background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCRjlPti3YKi3wmdsRL-NnlkjKHDPKnGO22m49iQMwOhwuRSJ5_gZrMW0uGdR7Lig4xwkFB84U1qzKX-4_bQop9UpujuENR7dTXhb_G0ozz-yFghkdU3loGv4EFOsTGRd51CcukwtpHa62HZ6UNv6q1oCMoQ0eDS6W98rdp3-3iPA7OhF1q1_xpMvJeUUiGieeWGAoImORBQXfBIZh8xdI_9b_8bQ64t6StMmRtEBfEK8C76iR9lBtfnA"/>
+<span class="font-body-md text-body-md text-on-surface">Sarah Smith</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Items List Section -->
+<section class="flex flex-col gap-sm">
+<div class="flex justify-between items-center mb-xs px-1">
+<h3 class="font-headline-md text-headline-md font-semibold text-on-surface">Acquired Items</h3>
+<span class="font-label-md text-label-md text-on-surface-variant bg-surface-container px-2 py-1 rounded-full">4 items</span>
+</div>
+<!-- List Item 1 -->
+<label class="bg-surface-container-lowest rounded-xl p-md ambient-shadow-level-1 border border-surface-container-low flex items-center gap-md cursor-pointer hover:bg-surface-container-lowest/80 transition-colors group">
+<div class="flex-shrink-0 flex items-center justify-center h-touch_target_min w-10">
+<input name="item1" type="checkbox"/>
+</div>
+<div class="flex-grow flex flex-col justify-center">
+<span class="font-body-lg text-body-lg font-medium text-on-surface group-hover:text-primary transition-colors">Whole Milk</span>
+<div class="flex items-center gap-sm mt-xs">
+<span class="font-label-md text-label-md text-on-surface-variant bg-surface-container px-2 py-0.5 rounded-md">2L</span>
+<span class="font-label-md text-label-md text-outline">Parmalat</span>
+</div>
+</div>
+<div class="flex-shrink-0 h-touch_target_min flex items-center">
+<img class="w-8 h-8 rounded-full object-cover border-2 border-surface-container-lowest shadow-sm" data-alt="A tiny, circular profile avatar of a young boy with blonde hair. Soft, premium lighting, friendly expression, clean minimalist background to fit a modern UI." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCWU4s7YtscvUa-ldoZZJJbGZowyNh4EGuP7MNF-HFgpEPBctGrQTMpPw00xwcB6u6y8mlqa00flom4KqzcMapmq49tI9lTVXTb1rQECdnrd8YAtG5Ppv4Bm5284MrnmXkXE_TfrlyylUO8bW-_42YoTmKk_qivna63SLYSsPOmjYjFVZ_Hh4JXiShgVUPtDCzLSxD0b2Yst-qjatiL_3B7Gtm2Qv7EnWjCINxxdDABz2Cl4_n-DUnmJw" title="Added by Timmy"/>
+</div>
+</label>
+<!-- List Item 2 -->
+<label class="bg-surface-container-lowest rounded-xl p-md ambient-shadow-level-1 border border-surface-container-low flex items-center gap-md cursor-pointer hover:bg-surface-container-lowest/80 transition-colors group">
+<div class="flex-shrink-0 flex items-center justify-center h-touch_target_min w-10">
+<input name="item2" type="checkbox"/>
+</div>
+<div class="flex-grow flex flex-col justify-center">
+<span class="font-body-lg text-body-lg font-medium text-on-surface group-hover:text-primary transition-colors">Free-Range Eggs</span>
+<div class="flex items-center gap-sm mt-xs">
+<span class="font-label-md text-label-md text-on-surface-variant bg-surface-container px-2 py-0.5 rounded-md">1 Dozen</span>
+<span class="font-label-md text-label-md text-outline">Happy Hens</span>
+</div>
+</div>
+<div class="flex-shrink-0 h-touch_target_min flex items-center">
+<img class="w-8 h-8 rounded-full object-cover border-2 border-surface-container-lowest shadow-sm" data-alt="A small, circular profile picture of a young woman with brown hair smiling warmly. The photo has a soft, bright, and inviting lighting, matching a premium, modern UI design aesthetic. High quality, clear, minimalist background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDjD12pLkmwPzIXao1EV7FZk9zk-H5-IEdQ2bXBnTmLw5KEwlxmFK1qeTdDkejc2a1isIH3FmF8g_XztP7C1dGu9NX1owK4xLV9dBAZ2OnRZmMV9G_bdImxViKaCGWyk2hdiuNnpITu-ZFSsqsD7RMaG3iYX2Xc2_lhJ3N7VwN7Rn65DUZhAHwdtNvl4MCGXj-k3gm4bFBVLv3QH7YVk2aMmPAhkTBxyTvgqpkz1IxGXInWk1AmiAhwyg" title="Added by Sarah"/>
+</div>
+</label>
+<!-- List Item 3 -->
+<label class="bg-surface-container-lowest rounded-xl p-md ambient-shadow-level-1 border border-surface-container-low flex items-center gap-md cursor-pointer hover:bg-surface-container-lowest/80 transition-colors group">
+<div class="flex-shrink-0 flex items-center justify-center h-touch_target_min w-10">
+<input name="item3" type="checkbox"/>
+</div>
+<div class="flex-grow flex flex-col justify-center">
+<span class="font-body-lg text-body-lg font-medium text-on-surface group-hover:text-primary transition-colors">Sourdough Bread</span>
+<div class="flex items-center gap-sm mt-xs">
+<span class="font-label-md text-label-md text-on-surface-variant bg-surface-container px-2 py-0.5 rounded-md">1 Loaf</span>
+<span class="font-label-md text-label-md text-outline">Local Bakery</span>
+</div>
+</div>
+<div class="flex-shrink-0 h-touch_target_min flex items-center">
+<!-- No avatar, added by main user perhaps -->
+</div>
+</label>
+<!-- List Item 4 -->
+<label class="bg-surface-container-lowest rounded-xl p-md ambient-shadow-level-1 border border-surface-container-low flex items-center gap-md cursor-pointer hover:bg-surface-container-lowest/80 transition-colors group">
+<div class="flex-shrink-0 flex items-center justify-center h-touch_target_min w-10">
+<input name="item4" type="checkbox"/>
+</div>
+<div class="flex-grow flex flex-col justify-center">
+<span class="font-body-lg text-body-lg font-medium text-on-surface group-hover:text-primary transition-colors">Coffee Beans</span>
+<div class="flex items-center gap-sm mt-xs">
+<span class="font-label-md text-label-md text-on-surface-variant bg-surface-container px-2 py-0.5 rounded-md">500g</span>
+<span class="font-label-md text-label-md text-outline">Lavazza</span>
+</div>
+</div>
+<div class="flex-shrink-0 h-touch_target_min flex items-center">
+<img class="w-8 h-8 rounded-full object-cover border-2 border-surface-container-lowest shadow-sm" data-alt="A small, circular profile picture of an older man with glasses and grey hair smiling. Soft, bright lighting, matching a premium, modern UI design aesthetic. High quality, clean background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuD1BtajPYtVR0p8OMfXv1QGfrzIWIr1uhl3SIsG5g4dI3XZX0VA6YG748bqkD4YWMXmQJjADmjaFlZTMrcQ1BAbxtfr0vmTQKSOW_L9rpsdlRokWGxXmKfvW9v7Q4pnaAUDkoN5mDGtn3L7A7rTk5bTnCqy8HbaxbnXpuerRdbsJtpN7JHgsBZ9noaKbO7Hf1QCUMmF7j7sz7pKhjLQRBhDrnBbLgE0Y0GsSd9Q4_2lYOUShaVLkr5rQA" title="Added by John"/>
+</div>
+</label>
+</section>
+</main>
+<!-- Bottom Action Bar -->
+<div class="fixed bottom-0 left-0 w-full z-50 bg-surface/80 glass-nav shadow-[0_-4px_20px_rgba(0,0,0,0.04)] pb-safe pt-md px-margin flex flex-col gap-sm items-center justify-center rounded-t-xl">
+<div class="max-w-screen-md w-full mx-auto flex flex-col gap-sm pb-md">
+<button class="w-full h-touch_target_min bg-primary-container text-on-primary-container font-headline-md text-headline-md font-bold rounded-full flex items-center justify-center gap-sm hover:opacity-90 transition-opacity active:scale-95 duration-150 ambient-shadow-level-2">
+<span class="material-symbols-outlined" data-icon="add_task">add_task</span>
+                Add selected to new list
+            </button>
+<button class="w-full h-12 text-secondary bg-secondary/5 font-label-lg text-label-lg font-semibold rounded-full flex items-center justify-center hover:bg-secondary/10 transition-colors">
+<span class="material-symbols-outlined text-[18px] mr-2" data-icon="lock_open_right">lock_open_right</span>
+                Reopen Purchase (Admin)
+            </button>
+</div>
+</div>
+<script>
+        // Optional subtle header shadow on scroll
+        const header = document.querySelector('header');
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 10) {
+                header.classList.add('shadow-sm');
+                header.classList.remove('border-surface-container-low');
+                header.classList.add('border-transparent');
+            } else {
+                header.classList.remove('shadow-sm');
+                header.classList.add('border-surface-container-low');
+                header.classList.remove('border-transparent');
+            }
+        });
+    </script>
+</body></html>

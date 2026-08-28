@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>Active Shopping - In Store</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary-container": "#22c55e",
+                        "on-tertiary-container": "#5c3800",
+                        "on-tertiary-fixed-variant": "#653e00",
+                        "primary": "#006e2f",
+                        "on-error": "#ffffff",
+                        "error-container": "#ffdad6",
+                        "secondary": "#0058be",
+                        "surface-bright": "#f8f9ff",
+                        "on-surface": "#0b1c30",
+                        "on-primary-container": "#004b1e",
+                        "secondary-fixed": "#d8e2ff",
+                        "surface-container-highest": "#d3e4fe",
+                        "on-primary-fixed": "#002109",
+                        "outline": "#6d7b6c",
+                        "background": "#f8f9ff",
+                        "on-tertiary-fixed": "#2a1700",
+                        "surface": "#f8f9ff",
+                        "secondary-container": "#2170e4",
+                        "tertiary": "#855300",
+                        "surface-container-low": "#eff4ff",
+                        "error": "#ba1a1a",
+                        "on-secondary": "#ffffff",
+                        "primary-fixed-dim": "#4ae176",
+                        "surface-container-lowest": "#ffffff",
+                        "secondary-fixed-dim": "#adc6ff",
+                        "on-secondary-fixed": "#001a42",
+                        "surface-dim": "#cbdbf5",
+                        "inverse-primary": "#4ae176",
+                        "inverse-surface": "#213145",
+                        "on-surface-variant": "#3d4a3d",
+                        "inverse-on-surface": "#eaf1ff",
+                        "surface-container-high": "#dce9ff",
+                        "on-secondary-fixed-variant": "#004395",
+                        "primary-fixed": "#6bff8f",
+                        "on-background": "#0b1c30",
+                        "tertiary-container": "#ef9900",
+                        "outline-variant": "#bccbb9",
+                        "tertiary-fixed": "#ffddb8",
+                        "tertiary-fixed-dim": "#ffb95f",
+                        "on-error-container": "#93000a",
+                        "surface-tint": "#006e2f",
+                        "on-secondary-container": "#fefcff",
+                        "surface-variant": "#d3e4fe",
+                        "on-tertiary": "#ffffff",
+                        "on-primary-fixed-variant": "#005321",
+                        "on-primary": "#ffffff",
+                        "surface-container": "#e5eeff"
+                    },
+                    borderRadius: {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                    spacing: {
+                        "xl": "32px",
+                        "xs": "4px",
+                        "md": "16px",
+                        "touch_target_min": "56px",
+                        "lg": "24px",
+                        "margin": "20px",
+                        "gutter": "16px",
+                        "base": "4px",
+                        "sm": "8px"
+                    },
+                    fontFamily: {
+                        "label-md": ["Plus Jakarta Sans"],
+                        "label-lg": ["Plus Jakarta Sans"],
+                        "headline-md": ["Plus Jakarta Sans"],
+                        "headline-lg": ["Plus Jakarta Sans"],
+                        "display": ["Plus Jakarta Sans"],
+                        "body-md": ["Plus Jakarta Sans"],
+                        "body-lg": ["Plus Jakarta Sans"]
+                    },
+                    fontSize: {
+                        "label-md": ["12px", { lineHeight: "16px", fontWeight: "500" }],
+                        "label-lg": ["14px", { lineHeight: "20px", letterSpacing: "0.05em", fontWeight: "600" }],
+                        "headline-md": ["20px", { lineHeight: "28px", fontWeight: "600" }],
+                        "headline-lg": ["24px", { lineHeight: "32px", letterSpacing: "-0.01em", fontWeight: "700" }],
+                        "display": ["32px", { lineHeight: "40px", letterSpacing: "-0.02em", fontWeight: "700" }],
+                        "body-md": ["16px", { lineHeight: "24px", fontWeight: "400" }],
+                        "body-lg": ["18px", { lineHeight: "28px", fontWeight: "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body {
+            background-color: #f8f9ff;
+            /* Using pure white as per guidelines for Level 0 */
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        /* Level 1 Card Shadow */
+        .ambient-shadow {
+            box-shadow: 0px 4px 20px 0px rgba(0, 0, 0, 0.04);
+        }
+        
+        /* Level 2 Modal Shadow */
+        .elevated-shadow {
+            box-shadow: 0px 8px 30px 0px rgba(34, 197, 94, 0.08); /* Primary tint shadow */
+        }
+
+        /* Glassmorphism for Bottom Nav */
+        .glass-nav {
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+        }
+        
+        /* Swipe to remove animation setup */
+        .swipe-card {
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .real-time-alert {
+            animation: slideDown 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards, fadeOut 0.5s ease-in 4s forwards;
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+        
+        @keyframes slideDown {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @keyframes fadeOut {
+            to {
+                opacity: 0;
+                pointer-events: none;
+                transform: translateY(-10px);
+            }
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="text-on-surface antialiased overflow-x-hidden min-h-screen flex flex-col relative pb-[140px]"> <!-- Added bottom padding for sticky footer -->
+<!-- Top Navigation / Status Bar (Suppressed normal nav, using custom status bar for transactional flow) -->
+<header class="sticky top-0 z-40 bg-surface/90 glass-nav px-margin py-md flex items-center justify-between ambient-shadow">
+<div class="flex items-center gap-sm">
+<img class="w-10 h-10 rounded-full object-cover shadow-sm" data-alt="A small, circular avatar portrait of a modern, stylish young man named João in a bright, airy grocery store environment. The image is a close-up, high-quality, professional headshot with soft lighting and a clean white background, reflecting a premium, organized family app aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCYry470V4O6vallxlrTeOdo4v2mEa3Z5_S38gFPYKnc9JgmbI1nF4Pxo5kfScne4nweyC4S8WfF7FDsTs8p889_dn9j-YTysBITAPSMFgNt4l3B6ZqYdbiGohHXCt_AgXRkO2dus9Mvbuvte3722L7xyn2cyXPQjq0Ci1663XOHKbsWC3AWJlY9eektZ8nKMgqSmvaT0PHvfl07IKCVHZV64RujpBHlCZrGQI5y9S06ovUZo-VUkjY6A"/>
+<div>
+<p class="font-label-md text-label-md text-on-surface-variant">João is shopping at</p>
+<h1 class="font-headline-md text-headline-md text-primary font-bold">Carrefour</h1>
+</div>
+</div>
+<button class="w-10 h-10 flex items-center justify-center rounded-full bg-surface-container hover:bg-surface-container-high transition-colors text-on-surface">
+<span class="material-symbols-outlined" data-icon="more_vert">more_vert</span>
+</button>
+</header>
+<!-- Real-time Alert (Absolute position near top) -->
+<div class="fixed top-[80px] left-0 w-full z-50 px-margin pointer-events-none flex justify-center">
+<div class="real-time-alert bg-primary-container text-on-primary-container px-lg py-sm rounded-full elevated-shadow flex items-center gap-sm pointer-events-auto">
+<span class="material-symbols-outlined text-on-primary-container" data-weight="fill" style="font-variation-settings: 'FILL' 1;">add_circle</span>
+<span class="font-label-lg text-label-lg">Mom added Eggs</span>
+</div>
+</div>
+<!-- Main Content Canvas -->
+<main class="flex-1 px-margin pt-xl pb-margin max-w-screen-md mx-auto w-full flex flex-col gap-xl">
+<!-- Shopping List Section -->
+<section class="flex flex-col gap-md">
+<div class="flex justify-between items-end px-xs">
+<h2 class="font-headline-lg text-headline-lg font-bold text-on-surface">Pantry &amp; Dairy</h2>
+<span class="font-label-md text-label-md text-on-surface-variant bg-surface-container-low px-3 py-1 rounded-full">3 Items</span>
+</div>
+<div class="flex flex-col gap-gutter">
+<!-- Item 1: In Cart -->
+<div class="swipe-card bg-surface border border-[#F1F5F9] rounded-xl p-[20px] ambient-shadow flex items-center justify-between opacity-70 transition-opacity">
+<div class="flex items-center gap-md">
+<!-- Custom Large Checkbox (Checked state) -->
+<button class="w-[32px] h-[32px] rounded-full bg-primary-container flex items-center justify-center text-on-primary-container flex-shrink-0 transition-transform active:scale-90">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">check</span>
+</button>
+<div class="flex flex-col">
+<span class="font-body-lg text-body-lg text-on-surface line-through decoration-on-surface-variant">Milk 1L</span>
+<span class="font-label-md text-label-md text-on-surface-variant">Whole Milk</span>
+</div>
+</div>
+<!-- Status Badge -->
+<div class="bg-primary/10 px-3 py-1 rounded-full flex items-center gap-1">
+<span class="font-label-md text-label-md text-primary font-bold">In Cart</span>
+</div>
+</div>
+<!-- Item 2: Pending -->
+<div class="swipe-card bg-surface border border-[#F1F5F9] rounded-xl p-[20px] ambient-shadow flex items-center justify-between transition-transform active:scale-[0.98]">
+<div class="flex items-center gap-md">
+<!-- Custom Large Checkbox (Empty state) -->
+<button class="w-[32px] h-[32px] rounded-full border-2 border-outline-variant flex items-center justify-center text-transparent hover:border-primary transition-colors flex-shrink-0 active:scale-90">
+<span class="material-symbols-outlined text-[20px]">check</span>
+</button>
+<div class="flex flex-col">
+<span class="font-body-lg text-body-lg text-on-surface font-medium">Apples 1kg</span>
+<span class="font-label-md text-label-md text-on-surface-variant">Fuji or Gala</span>
+</div>
+</div>
+<!-- Collaborator Avatar -->
+<img class="w-8 h-8 rounded-full object-cover border-2 border-surface" data-alt="A tiny circular avatar showing an elegant mature woman in bright, clean lighting, representing 'Mom' in a family sharing app interface." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDmiyZiKoRT1rheqH6CtYhT5ZwFfZgx-YA7qiMRvoFLMQE2lfCT9UjLnZ1_bE69cwLvatQPgKghsSBHa7R7Yv2_uVmCgY_b0ykV2v2mkHgtmmjQyCKtn8v36vAcV2oVav_cCiFMeb_OEFBIUG1PB5holSHwFhbEXkqfRbeSNPY6be35b54fzsn8ObK4qQiJ_uVRHxWhQNib5qmY7Pcb_CqlGutbK_BHGHWPUNIS93wXEbHb_cvrxKE-cA"/>
+</div>
+<!-- Item 3: Removal Requested -->
+<div class="swipe-card bg-[#fff1f2] border border-[#ffe4e6] rounded-xl p-[20px] ambient-shadow flex flex-col gap-sm relative overflow-hidden transition-transform">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-md">
+<button class="w-[32px] h-[32px] rounded-full border-2 border-error/30 flex items-center justify-center flex-shrink-0">
+<span class="material-symbols-outlined text-error text-[20px]">remove</span>
+</button>
+<span class="font-body-lg text-body-lg text-error font-medium">Bread</span>
+</div>
+<img class="w-8 h-8 rounded-full object-cover border-2 border-[#fff1f2]" data-alt="A small circular avatar of a young woman smiling brightly, representing 'Maria' in a bright, modern, minimalist family organization app context." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC_2v2shoW_k7zHLX-wEMWxyf53xCEp_tou0sV2k1MKnm1WNAHBHFDDg-BtlmAvrwVg3RCTpbI-gC_gjqpgOLsgd48y5RBgA-NwQxXG0qnQrxGfgSaJV3b2f7WEk24pfHRKDKKNc0DmHRyN2Iji-5DvCimlJZqpoHfhW8TF_vkWYfTW7aX7eJjjpa1b13GtiKBNglt_rB3XL4F5s8OSxcsJ6f0uGBHkfhXgAe6eSNv_IHvG6Rm5iz7bsw"/>
+</div>
+<div class="bg-white/50 rounded-lg p-2 flex items-center gap-2 mt-1">
+<span class="material-symbols-outlined text-error text-[16px]" style="font-variation-settings: 'FILL' 1;">warning</span>
+<span class="font-label-md text-label-md text-error">Maria requested removal. Tap to confirm.</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Spacer for scrolling -->
+<div class="h-10"></div>
+</main>
+<!-- Contextual Footer (Replacing global BottomNav for transactional screen) -->
+<div class="fixed bottom-0 left-0 w-full z-50 bg-surface/95 glass-nav border-t border-surface-variant/50 px-margin py-md pb-[max(16px,env(safe-area-inset-bottom))] elevated-shadow flex flex-col gap-md">
+<div class="flex justify-between items-center px-xs">
+<div class="flex flex-col">
+<span class="font-label-md text-label-md text-on-surface-variant">Cart Summary</span>
+<span class="font-headline-md text-headline-md text-on-surface font-bold">1 / 3 Items</span>
+</div>
+<!-- Progress indicator ring (visual only) -->
+<div class="w-12 h-12 rounded-full border-4 border-surface-container-highest relative flex items-center justify-center">
+<div class="absolute inset-0 rounded-full border-4 border-primary border-t-transparent border-r-transparent" style="transform: rotate(45deg);"></div>
+<span class="font-label-md text-label-md text-primary font-bold">33%</span>
+</div>
+</div>
+<button class="w-full h-touch_target_min rounded-full border-2 border-primary text-primary font-headline-md text-headline-md font-bold flex items-center justify-center gap-2 hover:bg-primary/5 transition-colors active:scale-[0.98]">
+<span class="material-symbols-outlined">shopping_cart_checkout</span>
+            Finish Shopping
+        </button>
+</div>
+</body></html>

@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport"/>
+<title>Smith Family Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "primary-container": "#22c55e",
+                        "on-tertiary-container": "#5c3800",
+                        "on-tertiary-fixed-variant": "#653e00",
+                        "primary": "#006e2f",
+                        "on-error": "#ffffff",
+                        "error-container": "#ffdad6",
+                        "secondary": "#0058be",
+                        "surface-bright": "#f8f9ff",
+                        "on-surface": "#0b1c30",
+                        "on-primary-container": "#004b1e",
+                        "secondary-fixed": "#d8e2ff",
+                        "surface-container-highest": "#d3e4fe",
+                        "on-primary-fixed": "#002109",
+                        "outline": "#6d7b6c",
+                        "background": "#f8f9ff",
+                        "on-tertiary-fixed": "#2a1700",
+                        "surface": "#f8f9ff",
+                        "secondary-container": "#2170e4",
+                        "tertiary": "#855300",
+                        "surface-container-low": "#eff4ff",
+                        "error": "#ba1a1a",
+                        "on-secondary": "#ffffff",
+                        "primary-fixed-dim": "#4ae176",
+                        "surface-container-lowest": "#ffffff",
+                        "secondary-fixed-dim": "#adc6ff",
+                        "on-secondary-fixed": "#001a42",
+                        "surface-dim": "#cbdbf5",
+                        "inverse-primary": "#4ae176",
+                        "inverse-surface": "#213145",
+                        "on-surface-variant": "#3d4a3d",
+                        "inverse-on-surface": "#eaf1ff",
+                        "surface-container-high": "#dce9ff",
+                        "on-secondary-fixed-variant": "#004395",
+                        "primary-fixed": "#6bff8f",
+                        "on-background": "#0b1c30",
+                        "tertiary-container": "#ef9900",
+                        "outline-variant": "#bccbb9",
+                        "tertiary-fixed": "#ffddb8",
+                        "tertiary-fixed-dim": "#ffb95f",
+                        "on-error-container": "#93000a",
+                        "surface-tint": "#006e2f",
+                        "on-secondary-container": "#fefcff",
+                        "surface-variant": "#d3e4fe",
+                        "on-tertiary": "#ffffff",
+                        "on-primary-fixed-variant": "#005321",
+                        "on-primary": "#ffffff",
+                        "surface-container": "#e5eeff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "xl": "32px",
+                        "xs": "4px",
+                        "md": "16px",
+                        "touch_target_min": "56px",
+                        "lg": "24px",
+                        "margin": "20px",
+                        "gutter": "16px",
+                        "base": "4px",
+                        "sm": "8px"
+                    },
+                    "fontFamily": {
+                        "label-md": ["Plus Jakarta Sans"],
+                        "label-lg": ["Plus Jakarta Sans"],
+                        "headline-md": ["Plus Jakarta Sans"],
+                        "headline-lg": ["Plus Jakarta Sans"],
+                        "display": ["Plus Jakarta Sans"],
+                        "body-md": ["Plus Jakarta Sans"],
+                        "body-lg": ["Plus Jakarta Sans"]
+                    },
+                    "fontSize": {
+                        "label-md": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
+                        "label-lg": ["14px", { "lineHeight": "20px", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "headline-md": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "headline-lg": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "700" }],
+                        "display": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style type="text/tailwindcss">
+        @layer utilities {
+            .pb-safe { padding-bottom: env(safe-area-inset-bottom, 20px); }
+            .pt-safe { padding-top: env(safe-area-inset-top, 20px); }
+            .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface font-body-md min-h-screen flex flex-col pb-safe antialiased">
+<!-- TopAppBar -->
+<header class="bg-surface dark:bg-on-surface text-primary dark:text-primary-fixed flex justify-between items-center w-full px-margin py-sm max-w-screen-xl mx-auto docked full-width top-0 z-40 sticky">
+<div class="flex items-center gap-sm hover:bg-surface-container-low dark:hover:bg-inverse-surface transition-colors p-sm rounded-full cursor-pointer hover:scale-95 duration-150">
+<img class="w-10 h-10 rounded-full object-cover border border-outline-variant" data-alt="A high-quality, professional headshot of an approachable modern family member, bright lighting, soft blurred background, corporate lifestyle aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDCL1OBpTt7IAP519oxwifqCNTCyX14NXEi9a_fQ9ljWXJqXLcQ-napayQXrfdpWD1XrEeqP8jXd4t9J0YAKsmg3yzzKXAjzT4-MCH3JWoL4LKSeHnyCVrl5rnetw66tI07h6NcjSUFXgMT6zGGhDLkCKNMQpoElN7Vbv6rdZZV7pjvQFdsboaeH_mtjqll1q1LQavaKh-k7f63aFfm5Pf7VRr44LwJBrIt3qTmKHhvaj3V8yP8z2IQSA"/>
+<h1 class="font-headline-lg text-headline-lg font-bold text-primary dark:text-primary-fixed">Smith Family</h1>
+</div>
+<button class="w-12 h-12 flex items-center justify-center rounded-full hover:bg-surface-container-low dark:hover:bg-inverse-surface transition-colors text-on-surface-variant dark:text-outline-variant hover:scale-95 duration-150">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+</header>
+<main class="flex-grow px-margin pt-md pb-24 max-w-screen-xl mx-auto w-full flex flex-col gap-xl">
+<!-- Active Trip Card (Bento/Glassmorphism inspired) -->
+<section>
+<div class="bg-surface-container-low rounded-xl p-margin shadow-[0_4px_20px_rgba(0,0,0,0.04)] border border-surface-variant relative overflow-hidden">
+<div class="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent pointer-events-none"></div>
+<div class="relative z-10 flex flex-col gap-md">
+<div class="flex justify-between items-start">
+<div>
+<div class="flex items-center gap-xs mb-1">
+<span class="bg-primary/10 text-primary px-2 py-1 rounded-full font-label-md text-label-md flex items-center gap-1">
+<span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span> Active Now
+                                </span>
+</div>
+<h2 class="font-headline-md text-headline-md">João is at Carrefour</h2>
+</div>
+<img class="w-12 h-12 rounded-full object-cover border-2 border-surface" data-alt="A high-quality, close-up avatar of an approachable man in a grocery store setting, soft natural lighting, modern lifestyle photography." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAUCb4QIVtjFuJOM7N7JhR6iuR54ISHdm8YI-4rQFsuf17FWvJ53EKrkDCiMs9YWDy_Y49W6WnjYC7vEi87UG1gSUYmhhGerJBIZkmTxSGg3Nwa8xIxaN-s6ROCD5vddxb5F3IVxIwpORigJVYB2ZFECc83NXcI_0fmjWdq364WbzC3bxSx0YJB8w3PTPTFeABjs21_NFG0DWzvLk012VAp8S5hsgDJcJJc3IQjPd0Aa5IdjF6KWlPcyA"/>
+</div>
+<div class="bg-surface rounded-lg p-sm border border-outline-variant/30">
+<div class="flex justify-between items-center mb-2">
+<span class="font-label-lg text-label-lg text-on-surface-variant">Shopping Progress</span>
+<span class="font-label-lg text-label-lg text-primary">12/20 items</span>
+</div>
+<div class="w-full bg-surface-container h-2 rounded-full overflow-hidden">
+<div class="bg-primary-container h-full rounded-full transition-all duration-1000 ease-out" style="width: 60%;"></div>
+</div>
+</div>
+<button class="w-full min-h-[56px] bg-primary-container text-on-primary-container font-headline-md text-headline-md rounded-full shadow-[0_4px_12px_rgba(34,197,94,0.2)] hover:opacity-90 transition-opacity flex items-center justify-center gap-2 mt-sm">
+<span class="material-symbols-outlined" data-icon="add_shopping_cart">add_shopping_cart</span>
+                        Join Trip
+                    </button>
+</div>
+</div>
+</section>
+<!-- Primary Action -->
+<section>
+<button class="w-full min-h-[56px] border-2 border-primary text-primary font-headline-md text-headline-md rounded-full hover:bg-primary/5 transition-colors flex items-center justify-center gap-2">
+<span class="material-symbols-outlined" data-icon="add">add</span>
+                Create New List
+            </button>
+</section>
+<!-- Open Lists (Horizontal Scroll) -->
+<section>
+<div class="flex justify-between items-end mb-md">
+<h3 class="font-headline-md text-headline-md">Open Lists</h3>
+<button class="font-label-lg text-label-lg text-primary hover:underline">View All</button>
+</div>
+<div class="flex overflow-x-auto snap-x snap-mandatory hide-scrollbar gap-gutter pb-sm -mx-margin px-margin">
+<div class="snap-start shrink-0 w-64 bg-surface rounded-xl p-md shadow-[0_4px_20px_rgba(0,0,0,0.04)] border border-surface-variant flex flex-col justify-between h-40">
+<div>
+<div class="flex justify-between items-start mb-2">
+<div class="w-10 h-10 rounded-full bg-secondary-container/20 flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined" data-icon="shopping_basket">shopping_basket</span>
+</div>
+<span class="bg-surface-container-highest px-2 py-1 rounded-full font-label-md text-label-md text-on-surface-variant">Shared</span>
+</div>
+<h4 class="font-label-lg text-label-lg font-bold">Weekly Groceries</h4>
+<p class="font-label-md text-label-md text-on-surface-variant mt-1">45 items pending</p>
+</div>
+</div>
+<div class="snap-start shrink-0 w-64 bg-surface rounded-xl p-md shadow-[0_4px_20px_rgba(0,0,0,0.04)] border border-surface-variant flex flex-col justify-between h-40">
+<div>
+<div class="flex justify-between items-start mb-2">
+<div class="w-10 h-10 rounded-full bg-tertiary-container/20 flex items-center justify-center text-tertiary">
+<span class="material-symbols-outlined" data-icon="outdoor_grill">outdoor_grill</span>
+</div>
+<span class="bg-surface-container-highest px-2 py-1 rounded-full font-label-md text-label-md text-on-surface-variant">Personal</span>
+</div>
+<h4 class="font-label-lg text-label-lg font-bold">Saturday BBQ</h4>
+<p class="font-label-md text-label-md text-on-surface-variant mt-1">12 items pending</p>
+</div>
+</div>
+<div class="snap-start shrink-0 w-64 bg-surface rounded-xl p-md shadow-[0_4px_20px_rgba(0,0,0,0.04)] border border-surface-variant flex flex-col justify-center items-center h-40 border-dashed hover:bg-surface-container-low transition-colors cursor-pointer">
+<span class="material-symbols-outlined text-outline text-3xl mb-2" data-icon="add_circle">add_circle</span>
+<span class="font-label-lg text-label-lg text-on-surface-variant">New Template</span>
+</div>
+</div>
+</section>
+<!-- Family Section -->
+<section>
+<h3 class="font-headline-md text-headline-md mb-md">Family Members</h3>
+<div class="grid grid-cols-2 sm:grid-cols-4 gap-gutter">
+<div class="flex flex-col items-center p-sm bg-surface rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.04)] border border-surface-variant">
+<div class="relative">
+<img class="w-14 h-14 rounded-full object-cover" data-alt="Avatar of a woman smiling, bright outdoor lighting, premium lifestyle aesthetic, soft bokeh background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAYN5RkBi5yibFhYkaAqH_FnCiTPPfUv0euMgmNZHbdgEYpNvywVmaDhN19-ZD3FPspM1mJfLr82UfO0-7FCLMdN86Hgh3rd83js2ayexGkpIFl4KfcTOBA5PPqY4BsZPDVeVVW9X3BJma6_uDYJBnbbcgWPRYlbzkQnplqf1FqpeO1RBDsLUBf_Npzea8ck2QHYTc9XVX5EGPRUSS4S5GjyEj_A9ncivTW7qIpSYKCHUlGaiS-YEGn-Q"/>
+<span class="absolute bottom-0 right-0 w-3 h-3 bg-primary rounded-full border-2 border-surface"></span>
+</div>
+<span class="font-label-lg text-label-lg mt-2">Maria</span>
+<span class="font-label-md text-label-md text-on-surface-variant">Online</span>
+</div>
+<div class="flex flex-col items-center p-sm bg-surface rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.04)] border border-surface-variant">
+<div class="relative">
+<img class="w-14 h-14 rounded-full object-cover" data-alt="Avatar of a man looking focused in a store, premium lifestyle aesthetic, soft indoor lighting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuALIklRVRkB3ncbKwsIFIKqiFTofRz5l0Bn_mQn7RUTl85HvmBP-xpq34cOvQVOsJ092BWyXUV-niO_yudiSTrl86JraVyXw1Az9T2veyfgac18XTXcOEzqXpq8AEP0K-M0f8xOcr5djBcGpZDUV0e2CJ1tSF1XGY5u_fcRj4zeNZiOp5rQU_oa60mTSKFguVpH2fnAZHPZE04zh5dzk2UQwFCyChfrqTVuaPSbOtRShJZM9uUTxuk7xA"/>
+<span class="absolute bottom-0 right-0 w-3 h-3 bg-tertiary-container rounded-full border-2 border-surface"></span>
+</div>
+<span class="font-label-lg text-label-lg mt-2">João</span>
+<span class="font-label-md text-label-md text-on-surface-variant truncate max-w-full">At Carrefour</span>
+</div>
+<div class="flex flex-col items-center p-sm bg-surface rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.04)] border border-surface-variant opacity-60">
+<div class="relative">
+<img class="w-14 h-14 rounded-full object-cover grayscale" data-alt="Avatar of a teenager, modern premium lifestyle photography, soft lighting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCrWkyTpCnX52BmyN2TLtEV9jMlNBU8BPZtR-YclTGL-1eKObC5fiyxicUplKBtRj1FiiEtXuK82-un6v_Jjl8s_seZ_vQNW-6fv_s0Wm88TTHQ4sEtL2G-U7TzyTxTedkLtHU_PtTn9Pz3unRq4NUv2mCNn1Kktlv2obgcUKGFqJHLTfIlPOnZgxqHN9wOJJzbcaYMro6Nys6ZUyIbdk-db23F1ICJc9nNnH8ynGuEL3Cqme3xGID7bw"/>
+<span class="absolute bottom-0 right-0 w-3 h-3 bg-outline rounded-full border-2 border-surface"></span>
+</div>
+<span class="font-label-lg text-label-lg mt-2">Ana</span>
+<span class="font-label-md text-label-md text-on-surface-variant">Offline</span>
+</div>
+<div class="flex flex-col items-center justify-center p-sm bg-surface rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.04)] border border-surface-variant border-dashed hover:bg-surface-container-low transition-colors cursor-pointer min-h-[120px]">
+<span class="material-symbols-outlined text-outline text-3xl mb-1" data-icon="person_add">person_add</span>
+<span class="font-label-lg text-label-lg text-on-surface-variant">Invite</span>
+</div>
+</div>
+</section>
+</main>
+<!-- BottomNavBar -->
+<nav class="bg-surface/80 dark:bg-on-surface/80 backdrop-blur-lg fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pt-2 pb-safe shadow-[0_-4px_20px_rgba(0,0,0,0.04)]">
+<a class="flex flex-col items-center justify-center text-primary dark:text-primary-fixed font-bold after:content-[''] after:w-1 after:h-1 after:bg-primary after:rounded-full after:mt-1 hover:opacity-80 transition-opacity scale-90 duration-200 min-w-[64px] min-h-[56px]" href="#">
+<span class="material-symbols-outlined" data-icon="home" style="font-variation-settings: 'FILL' 1;">home</span>
+<span class="font-label-md text-label-md mt-1">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant hover:opacity-80 transition-opacity min-w-[64px] min-h-[56px]" href="#">
+<span class="material-symbols-outlined" data-icon="list_alt">list_alt</span>
+<span class="font-label-md text-label-md mt-1">Lists</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant hover:opacity-80 transition-opacity min-w-[64px] min-h-[56px]" href="#">
+<span class="material-symbols-outlined" data-icon="group">group</span>
+<span class="font-label-md text-label-md mt-1">Family</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant hover:opacity-80 transition-opacity min-w-[64px] min-h-[56px]" href="#">
+<span class="material-symbols-outlined" data-icon="history">history</span>
+<span class="font-label-md text-label-md mt-1">History</span>
+</a>
+</nav>
+<style>
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</body></html>

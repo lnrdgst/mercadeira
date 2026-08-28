@@ -1,0 +1,138 @@
+Project mercadeira_modelo_v1 {
+  database_type: "PostgreSQL"
+  note: "Modelo v1 de referencia. UUID para chaves, TIMESTAMPTZ para instantes e VARCHAR + CHECK para enums."
+}
+
+Table usuario {
+  id uuid [pk]
+  nome varchar(120) [not null]
+  email varchar(255) [not null, unique]
+  criado_em timestamptz [not null]
+  atualizado_em timestamptz [not null]
+}
+
+Table familia {
+  id uuid [pk]
+  nome varchar(120) [not null]
+  criada_por_usuario_id uuid [not null, ref: > usuario.id]
+  criada_em timestamptz [not null]
+  atualizada_em timestamptz [not null]
+}
+
+Table membro_familia {
+  id uuid [pk]
+  familia_id uuid [not null, ref: > familia.id]
+  usuario_id uuid [not null, ref: > usuario.id]
+  papel varchar(30) [not null, note: "CHECK: ADMINISTRADOR, MEMBRO"]
+  status varchar(20) [not null, note: "CHECK: ATIVO, INATIVO"]
+  apelido varchar(120)
+  criado_em timestamptz [not null]
+  atualizado_em timestamptz [not null]
+
+  indexes {
+    (familia_id, usuario_id) [unique]
+    usuario_id [note: "Indice unico parcial PostgreSQL: UNIQUE (usuario_id) WHERE status = 'ATIVO'"]
+  }
+
+  note: "No MVP, um usuario pode ter no maximo um membro_familia ATIVO."
+}
+
+Table solicitacao_entrada_familia {
+  id uuid [pk]
+  familia_id uuid [not null, ref: > familia.id]
+  solicitante_usuario_id uuid [not null, ref: > usuario.id]
+  status varchar(20) [not null, note: "CHECK: PENDENTE, APROVADA, REJEITADA"]
+  solicitada_em timestamptz [not null]
+  resolvida_por_membro_familia_id uuid [ref: > membro_familia.id]
+  resolvida_em timestamptz
+}
+
+Table lista_compra {
+  id uuid [pk]
+  familia_id uuid [not null, ref: > familia.id]
+  nome varchar(120) [not null]
+  categoria varchar(100) [not null]
+  estabelecimento varchar(120)
+  criada_por_membro_familia_id uuid [not null, ref: > membro_familia.id]
+  criada_em timestamptz [not null]
+  atualizada_em timestamptz [not null]
+}
+
+Table participante_lista {
+  id uuid [pk]
+  lista_compra_id uuid [not null, ref: > lista_compra.id]
+  membro_familia_id uuid [not null, ref: > membro_familia.id]
+  entrou_em timestamptz [not null]
+  saiu_em timestamptz
+
+  indexes {
+    (lista_compra_id, membro_familia_id) [unique]
+  }
+
+  note: "Ativo quando saiu_em IS NULL. Nao possui pode_editar."
+}
+
+Table item_lista {
+  id uuid [pk]
+  lista_compra_id uuid [not null, ref: > lista_compra.id]
+  descricao varchar(200) [not null]
+  quantidade numeric(12,3)
+  unidade_medida varchar(30)
+  marca varchar(120)
+  observacoes text
+  adicionado_por_membro_familia_id uuid [not null, ref: > membro_familia.id]
+  criado_em timestamptz [not null]
+  atualizado_em timestamptz [not null]
+}
+
+Table compra {
+  id uuid [pk]
+  lista_compra_id uuid [not null, unique, ref: > lista_compra.id]
+  iniciada_por_membro_familia_id uuid [not null, ref: > membro_familia.id]
+  nome_lista_snapshot varchar(120) [not null]
+  categoria_snapshot varchar(100) [not null]
+  estabelecimento_snapshot varchar(120)
+  status varchar(30) [not null, note: "CHECK: EM_ANDAMENTO, FINALIZADA, CANCELADA"]
+  iniciada_em timestamptz [not null]
+  finalizada_em timestamptz
+
+  note: "ListaCompra 1 -> 0..1 Compra. Reabertura reutiliza a mesma Compra."
+}
+
+Table participante_compra {
+  id uuid [pk]
+  compra_id uuid [not null, ref: > compra.id]
+  participante_lista_origem_id uuid [not null, unique, ref: > participante_lista.id]
+  membro_familia_id uuid [not null, ref: > membro_familia.id]
+  nome_snapshot varchar(120) [not null]
+  papel_snapshot varchar(30) [not null, note: "CHECK: ADMINISTRADOR, MEMBRO"]
+  gerado_em timestamptz [not null]
+
+  indexes {
+    (compra_id, membro_familia_id) [unique]
+  }
+
+  note: "Gerado somente para participante_lista com saiu_em IS NULL no inicio da compra."
+}
+
+Table item_compra {
+  id uuid [pk]
+  compra_id uuid [not null, ref: > compra.id]
+  item_lista_origem_id uuid [unique, ref: > item_lista.id]
+  adicionado_durante_compra boolean [not null]
+  descricao_snapshot varchar(200) [not null]
+  quantidade_snapshot numeric(12,3)
+  unidade_medida_snapshot varchar(30)
+  marca_snapshot varchar(120)
+  observacoes_snapshot text
+  status varchar(40) [not null, note: "CHECK: PENDENTE, NO_CARRINHO, REMOCAO_SOLICITADA, REMOVIDO"]
+  marcado_por_membro_familia_id uuid [ref: > membro_familia.id]
+  marcado_em timestamptz
+  decisao_remocao varchar(20) [note: "CHECK: APROVADA, REJEITADA"]
+  remocao_solicitada_por_membro_familia_id uuid [ref: > membro_familia.id]
+  remocao_solicitada_em timestamptz
+  remocao_resolvida_por_membro_familia_id uuid [ref: > membro_familia.id]
+  remocao_resolvida_em timestamptz
+
+  note: "CHECK: adicionado_durante_compra = true exige item_lista_origem_id IS NULL; quando false, a origem e obrigatoria. Sem status_anterior_remocao. Remocao apenas a partir de NO_CARRINHO."
+}

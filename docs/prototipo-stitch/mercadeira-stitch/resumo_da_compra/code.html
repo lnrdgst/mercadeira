@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>Checkout Confirmation</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "primary-container": "#22c55e",
+                    "on-tertiary-container": "#5c3800",
+                    "on-tertiary-fixed-variant": "#653e00",
+                    "primary": "#006e2f",
+                    "on-error": "#ffffff",
+                    "error-container": "#ffdad6",
+                    "secondary": "#0058be",
+                    "surface-bright": "#f8f9ff",
+                    "on-surface": "#0b1c30",
+                    "on-primary-container": "#004b1e",
+                    "secondary-fixed": "#d8e2ff",
+                    "surface-container-highest": "#d3e4fe",
+                    "on-primary-fixed": "#002109",
+                    "outline": "#6d7b6c",
+                    "background": "#f8f9ff",
+                    "on-tertiary-fixed": "#2a1700",
+                    "surface": "#f8f9ff",
+                    "secondary-container": "#2170e4",
+                    "tertiary": "#855300",
+                    "surface-container-low": "#eff4ff",
+                    "error": "#ba1a1a",
+                    "on-secondary": "#ffffff",
+                    "primary-fixed-dim": "#4ae176",
+                    "surface-container-lowest": "#ffffff",
+                    "secondary-fixed-dim": "#adc6ff",
+                    "on-secondary-fixed": "#001a42",
+                    "surface-dim": "#cbdbf5",
+                    "inverse-primary": "#4ae176",
+                    "inverse-surface": "#213145",
+                    "on-surface-variant": "#3d4a3d",
+                    "inverse-on-surface": "#eaf1ff",
+                    "surface-container-high": "#dce9ff",
+                    "on-secondary-fixed-variant": "#004395",
+                    "primary-fixed": "#6bff8f",
+                    "on-background": "#0b1c30",
+                    "tertiary-container": "#ef9900",
+                    "outline-variant": "#bccbb9",
+                    "tertiary-fixed": "#ffddb8",
+                    "tertiary-fixed-dim": "#ffb95f",
+                    "on-error-container": "#93000a",
+                    "surface-tint": "#006e2f",
+                    "on-secondary-container": "#fefcff",
+                    "surface-variant": "#d3e4fe",
+                    "on-tertiary": "#ffffff",
+                    "on-primary-fixed-variant": "#005321",
+                    "on-primary": "#ffffff",
+                    "surface-container": "#e5eeff"
+            },
+            "borderRadius": {
+                    "DEFAULT": "1rem",
+                    "lg": "2rem",
+                    "xl": "3rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "xl": "32px",
+                    "xs": "4px",
+                    "md": "16px",
+                    "touch_target_min": "56px",
+                    "lg": "24px",
+                    "margin": "20px",
+                    "gutter": "16px",
+                    "base": "4px",
+                    "sm": "8px",
+                    "safe": "env(safe-area-inset-bottom, 20px)"
+            },
+            "fontFamily": {
+                    "label-md": [
+                            "Plus Jakarta Sans"
+                    ],
+                    "label-lg": [
+                            "Plus Jakarta Sans"
+                    ],
+                    "headline-md": [
+                            "Plus Jakarta Sans"
+                    ],
+                    "headline-lg": [
+                            "Plus Jakarta Sans"
+                    ],
+                    "display": [
+                            "Plus Jakarta Sans"
+                    ],
+                    "body-md": [
+                            "Plus Jakarta Sans"
+                    ],
+                    "body-lg": [
+                            "Plus Jakarta Sans"
+                    ]
+            },
+            "fontSize": {
+                    "label-md": [
+                            "12px",
+                            {
+                                    "lineHeight": "16px",
+                                    "fontWeight": "500"
+                            }
+                    ],
+                    "label-lg": [
+                            "14px",
+                            {
+                                    "lineHeight": "20px",
+                                    "letterSpacing": "0.05em",
+                                    "fontWeight": "600"
+                            }
+                    ],
+                    "headline-md": [
+                            "20px",
+                            {
+                                    "lineHeight": "28px",
+                                    "fontWeight": "600"
+                            }
+                    ],
+                    "headline-lg": [
+                            "24px",
+                            {
+                                    "lineHeight": "32px",
+                                    "letterSpacing": "-0.01em",
+                                    "fontWeight": "700"
+                            }
+                    ],
+                    "display": [
+                            "32px",
+                            {
+                                    "lineHeight": "40px",
+                                    "letterSpacing": "-0.02em",
+                                    "fontWeight": "700"
+                            }
+                    ],
+                    "body-md": [
+                            "16px",
+                            {
+                                    "lineHeight": "24px",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "body-lg": [
+                            "18px",
+                            {
+                                    "lineHeight": "28px",
+                                    "fontWeight": "400"
+                            }
+                    ]
+            }
+    },
+        },
+      }
+    </script>
+<style>
+        body {
+            background-color: #f8f9ff;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.04);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface antialiased font-body-md selection:bg-primary-container selection:text-on-primary-container">
+<!-- Top Navigation (Transactional, no shell navs per instruction, just a basic back header) -->
+<header class="flex justify-between items-center w-full px-margin py-sm max-w-screen-xl mx-auto sticky top-0 bg-background/80 backdrop-blur-md z-40">
+<button aria-label="Go back" class="w-12 h-12 flex items-center justify-center rounded-full hover:bg-surface-container-low transition-colors">
+<span class="material-symbols-outlined text-on-surface">arrow_back</span>
+</button>
+<h1 class="font-headline-lg text-headline-lg font-bold text-on-surface text-center flex-1 pr-12">Review</h1>
+</header>
+<main class="max-w-screen-md mx-auto px-margin pt-lg pb-[120px] space-y-xl">
+<!-- Summary Bento Grid -->
+<section aria-labelledby="summary-heading">
+<h2 class="sr-only" id="summary-heading">Checkout Summary</h2>
+<div class="grid grid-cols-2 gap-gutter">
+<!-- Total Items -->
+<div class="glass-card rounded-2xl p-margin flex flex-col justify-between col-span-2">
+<div class="flex justify-between items-start mb-sm">
+<span class="font-label-lg text-label-lg text-on-surface-variant uppercase tracking-wider">Total Items</span>
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">shopping_cart</span>
+</div>
+<div class="font-display text-display text-on-surface">15</div>
+</div>
+<!-- In Cart -->
+<div class="bg-surface-container-lowest rounded-2xl p-margin border border-outline-variant/30 shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
+<div class="font-label-lg text-label-lg text-on-surface-variant mb-xs">In Cart</div>
+<div class="font-headline-lg text-headline-lg text-primary flex items-center gap-xs">
+                        14 <span class="material-symbols-outlined text-primary text-[20px]">check_circle</span>
+</div>
+</div>
+<!-- Pending -->
+<div class="bg-tertiary-container/10 rounded-2xl p-margin border border-tertiary-container/20">
+<div class="font-label-lg text-label-lg text-tertiary mb-xs">Pending</div>
+<div class="font-headline-lg text-headline-lg text-on-tertiary-container flex items-center gap-xs">
+                        1 <span class="material-symbols-outlined text-tertiary text-[20px]">schedule</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Warning Section -->
+<div class="bg-error-container/40 border border-error/20 rounded-2xl p-margin flex items-start gap-md">
+<div class="bg-error/10 w-10 h-10 rounded-full flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-error">warning</span>
+</div>
+<div>
+<h3 class="font-headline-md text-headline-md text-on-surface mb-xs">Action Required</h3>
+<p class="font-body-md text-body-md text-on-surface-variant mb-md">1 item has a removal request. Keep it?</p>
+<!-- Removal Request Item -->
+<div class="bg-surface-container-lowest rounded-xl p-md border border-error/10 flex items-center justify-between mb-sm shadow-[0_2px_10px_rgba(0,0,0,0.02)]">
+<div class="flex items-center gap-md">
+<div class="w-12 h-12 rounded-full overflow-hidden shrink-0 bg-surface-variant">
+<img class="w-full h-full object-cover" data-alt="A macro shot of a fresh, organic bunch of organic bananas resting on a clean white kitchen counter. The lighting is soft and natural, emphasizing the bright yellow skin and creating a fresh, appetizing, premium light-mode aesthetic suitable for a modern grocery app." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAEAyIuqApP9Mmx7jwmuevvGHw4NVtiIKONfSmUUTT23hqa6hjZlD0h8u4t_w_B-Wdfe4sSoPzu861Ah15g9jcYwWcabheh7yZZCO2W8yyZuEfRgzpi1O5cg43DRYmkDzEZnVR_YK89ixfhjL8uR1-pRjkB4UF7AgGu9gbv-U9iGOy6HOoB77ZRfurfd84ysTiho9Q1PmioHYXFUNXUoXfQCK0KBz4AW8HeBkc3ttW8Qh027sEwmuYB5Q"/>
+</div>
+<div>
+<div class="font-label-lg text-label-lg text-on-surface line-through text-on-surface-variant">Organic Bananas</div>
+<div class="font-label-md text-label-md text-error flex items-center gap-xs mt-1">
+<span class="material-symbols-outlined text-[14px]">delete</span> Requested by Sarah
+                            </div>
+</div>
+</div>
+</div>
+<div class="flex gap-sm mt-md">
+<button class="flex-1 h-12 bg-surface-container-highest text-on-surface font-label-lg text-label-lg rounded-full hover:bg-surface-dim transition-colors">Keep Item</button>
+<button class="flex-1 h-12 bg-error text-on-error font-label-lg text-label-lg rounded-full hover:bg-error/90 transition-colors shadow-sm">Remove</button>
+</div>
+</div>
+</div>
+<!-- Final Item List Preview -->
+<section>
+<div class="flex items-center justify-between mb-md">
+<h2 class="font-headline-md text-headline-md text-on-surface">Final Review</h2>
+<button class="text-secondary font-label-lg text-label-lg flex items-center gap-xs hover:opacity-80 transition-opacity">
+                    Edit <span class="material-symbols-outlined text-[18px]">edit</span>
+</button>
+</div>
+<div class="bg-surface-container-lowest rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.04)] border border-outline-variant/20 overflow-hidden">
+<!-- Group: In Cart -->
+<div class="bg-primary/5 px-margin py-sm border-b border-outline-variant/10 flex items-center gap-sm">
+<span class="material-symbols-outlined text-primary text-[18px]" style="font-variation-settings: 'FILL' 1;">shopping_bag</span>
+<span class="font-label-lg text-label-lg text-primary">In Cart (14)</span>
+</div>
+<div class="p-xs">
+<!-- Item -->
+<div class="flex items-center justify-between p-sm hover:bg-surface-container-low rounded-xl transition-colors">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 rounded-full bg-primary-container/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary">check</span>
+</div>
+<span class="font-body-md text-body-md text-on-surface">Almond Milk</span>
+</div>
+<img class="w-8 h-8 rounded-full border border-surface" data-alt="A small, circular avatar portrait of a modern woman with glasses smiling in a bright, airy setting, used as a user profile picture in a premium family sharing app." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDxYKr7VK43k1doZFU4rJzmZPUpz3b_0lNi-UiBsop50uj7rexrcdBSX__YRpvMUOsm8uT-0txjZjMAQwlCTA7ZzgvrosRAYOoo-eQ4diylNvRQxEiN8UNkJqsCGW12nspMaFULGySMzhMCV-2gnWStVWyS3XUfq_oAHk4BLLlWIdJ0ULS_AUcWUmY-gCjY7iDB-2jcbIGygcxp3nndXNhUNfcUPO3xd_YqOU97iKSZ7YsSlN79Iwd2XQ"/>
+</div>
+<!-- Item -->
+<div class="flex items-center justify-between p-sm hover:bg-surface-container-low rounded-xl transition-colors">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 rounded-full bg-primary-container/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary">check</span>
+</div>
+<span class="font-body-md text-body-md text-on-surface">Whole Wheat Bread</span>
+</div>
+</div>
+<!-- Trimmed list for preview -->
+<div class="text-center py-sm">
+<span class="font-label-md text-label-md text-on-surface-variant">+ 12 more items</span>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Fixed Bottom Action Area -->
+<div class="fixed bottom-0 left-0 w-full bg-surface/90 backdrop-blur-xl border-t border-outline-variant/20 px-margin py-md pb-safe z-50">
+<div class="max-w-screen-md mx-auto">
+<p class="font-label-md text-label-md text-on-surface-variant text-center mb-md flex items-center justify-center gap-xs">
+<span class="material-symbols-outlined text-[16px]">history</span>
+                This will be added to the Smith Family history.
+            </p>
+<button class="w-full h-touch_target_min bg-primary-container text-on-primary-container font-headline-md text-headline-md rounded-full shadow-[0_8px_30px_rgba(34,197,94,0.2)] flex items-center justify-center gap-sm hover:opacity-90 active:scale-[0.98] transition-all">
+                Confirm &amp; Finish
+                <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">task_alt</span>
+</button>
+</div>
+</div>
+</body></html>

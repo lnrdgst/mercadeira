@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Start Shopping Confirmation</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-dim": "#cbdbf5",
+                        "on-secondary-fixed": "#001a42",
+                        "on-tertiary-fixed-variant": "#653e00",
+                        "on-tertiary-fixed": "#2a1700",
+                        "tertiary-container": "#ef9900",
+                        "surface-container-high": "#dce9ff",
+                        "on-primary-fixed": "#002109",
+                        "surface-container-low": "#eff4ff",
+                        "error-container": "#ffdad6",
+                        "on-surface": "#0b1c30",
+                        "tertiary": "#855300",
+                        "secondary-fixed": "#d8e2ff",
+                        "on-secondary-container": "#fefcff",
+                        "on-primary-container": "#004b1e",
+                        "on-secondary-fixed-variant": "#004395",
+                        "outline-variant": "#bccbb9",
+                        "on-secondary": "#ffffff",
+                        "primary-fixed": "#6bff8f",
+                        "on-background": "#0b1c30",
+                        "tertiary-fixed-dim": "#ffb95f",
+                        "primary-fixed-dim": "#4ae176",
+                        "inverse-on-surface": "#eaf1ff",
+                        "tertiary-fixed": "#ffddb8",
+                        "surface-container-highest": "#d3e4fe",
+                        "error": "#ba1a1a",
+                        "on-surface-variant": "#3d4a3d",
+                        "inverse-primary": "#4ae176",
+                        "surface-bright": "#f8f9ff",
+                        "primary": "#006e2f",
+                        "on-primary-fixed-variant": "#005321",
+                        "on-error": "#ffffff",
+                        "surface-variant": "#d3e4fe",
+                        "surface-container-lowest": "#ffffff",
+                        "on-primary": "#ffffff",
+                        "background": "#f8f9ff",
+                        "secondary": "#0058be",
+                        "inverse-surface": "#213145",
+                        "surface": "#f8f9ff",
+                        "on-tertiary-container": "#5c3800",
+                        "on-tertiary": "#ffffff",
+                        "on-error-container": "#93000a",
+                        "surface-container": "#e5eeff",
+                        "secondary-fixed-dim": "#adc6ff",
+                        "secondary-container": "#2170e4",
+                        "outline": "#6d7b6c",
+                        "surface-tint": "#006e2f",
+                        "primary-container": "#22c55e"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "base": "4px",
+                        "lg": "24px",
+                        "xl": "32px",
+                        "sm": "8px",
+                        "md": "16px",
+                        "gutter": "16px",
+                        "touch_target_min": "56px",
+                        "xs": "4px",
+                        "margin": "20px"
+                    },
+                    "fontFamily": {
+                        "display": ["Plus Jakarta Sans"],
+                        "headline-lg": ["Plus Jakarta Sans"],
+                        "body-lg": ["Plus Jakarta Sans"],
+                        "headline-md": ["Plus Jakarta Sans"],
+                        "label-lg": ["Plus Jakarta Sans"],
+                        "body-md": ["Plus Jakarta Sans"],
+                        "label-md": ["Plus Jakarta Sans"]
+                    },
+                    "fontSize": {
+                        "display": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "headline-lg": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "700" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "headline-md": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "label-lg": ["14px", { "lineHeight": "20px", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "label-md": ["12px", { "lineHeight": "16px", "fontWeight": "500" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface h-screen w-screen overflow-hidden flex items-center justify-center p-margin">
+<!-- Modal Backdrop -->
+<div class="fixed inset-0 bg-inverse-surface/40 backdrop-blur-sm z-40 transition-opacity duration-300"></div>
+<!-- Modal Container -->
+<div class="relative z-50 bg-surface-container-lowest rounded-xl shadow-[0_8px_30px_rgba(0,110,47,0.08)] max-w-sm w-full mx-auto overflow-hidden transform transition-all duration-300 scale-100 opacity-100">
+<!-- Header Image / Illustration Area -->
+<div class="w-full h-40 bg-surface-container-low flex items-center justify-center overflow-hidden">
+<img class="w-full h-full object-cover opacity-90 mix-blend-multiply" data-alt="A clean, modern 3D illustration of a vibrant green grocery shopping basket on a soft light blue background. The lighting is studio quality, creating soft shadows and a bright, approachable mood. The aesthetic is premium minimalism, fitting for an organized family shopping app." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA6mt9HudjCYwpiCadxM71hOEIjvfw5OYhmxuLGy__GvRchdTXGhucrjOp27jGnCuTMaz1wL2IdE34sa5oYxrHCOHLG0CRlMlR4SLZcgoSV_x1BswUW0ssJiKUv6uLYM9R3Ox0r4aY0uVROaZ8PyZx4QNvi0KDMUu45MHSJpfRxhgyuu-cn7m_RcAUsWw6iHV5UOZcKKwq1P2rpMqmJbCGGNoUnUZG0TdoOQer4Np8J2qX19bvvPvibOg"/>
+</div>
+<!-- Content Area -->
+<div class="p-lg flex flex-col items-center text-center">
+<div class="w-16 h-16 rounded-full bg-primary-container/20 flex items-center justify-center mb-md mt-[-48px] relative z-10 shadow-sm bg-surface-container-lowest border-4 border-surface-container-lowest">
+<span class="material-symbols-outlined text-primary" style="font-size: 32px; font-variation-settings: 'FILL' 1;">
+                    shopping_cart_checkout
+                </span>
+</div>
+<h2 class="font-headline-md text-headline-md text-on-surface mb-sm">
+                Iniciar Compra
+            </h2>
+<p class="font-body-md text-body-md text-on-surface-variant mb-xl px-xs">
+                Deseja iniciar esta compra? Os participantes serão avisados e os itens passarão a ser acompanhados em tempo real.
+            </p>
+<!-- Actions -->
+<div class="w-full flex flex-col gap-sm">
+<button class="w-full min-h-[56px] rounded-full bg-primary-container text-on-primary-container font-label-lg text-label-lg flex items-center justify-center shadow-[0_4px_20px_rgba(34,197,94,0.2)] hover:opacity-90 transition-opacity active:scale-[0.98]">
+                    Confirmar e Iniciar
+                </button>
+<button class="w-full min-h-[56px] rounded-full bg-secondary-container/10 text-secondary font-label-lg text-label-lg flex items-center justify-center hover:bg-secondary-container/20 transition-colors active:scale-[0.98]">
+                    Cancelar
+                </button>
+</div>
+</div>
+</div>
+</body></html>

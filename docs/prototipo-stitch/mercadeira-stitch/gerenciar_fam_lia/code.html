@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Family Management</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "primary-container": "#22c55e",
+                        "on-tertiary-container": "#5c3800",
+                        "on-tertiary-fixed-variant": "#653e00",
+                        "primary": "#006e2f",
+                        "on-error": "#ffffff",
+                        "error-container": "#ffdad6",
+                        "secondary": "#0058be",
+                        "surface-bright": "#f8f9ff",
+                        "on-surface": "#0b1c30",
+                        "on-primary-container": "#004b1e",
+                        "secondary-fixed": "#d8e2ff",
+                        "surface-container-highest": "#d3e4fe",
+                        "on-primary-fixed": "#002109",
+                        "outline": "#6d7b6c",
+                        "background": "#f8f9ff",
+                        "on-tertiary-fixed": "#2a1700",
+                        "surface": "#f8f9ff",
+                        "secondary-container": "#2170e4",
+                        "tertiary": "#855300",
+                        "surface-container-low": "#eff4ff",
+                        "error": "#ba1a1a",
+                        "on-secondary": "#ffffff",
+                        "primary-fixed-dim": "#4ae176",
+                        "surface-container-lowest": "#ffffff",
+                        "secondary-fixed-dim": "#adc6ff",
+                        "on-secondary-fixed": "#001a42",
+                        "surface-dim": "#cbdbf5",
+                        "inverse-primary": "#4ae176",
+                        "inverse-surface": "#213145",
+                        "on-surface-variant": "#3d4a3d",
+                        "inverse-on-surface": "#eaf1ff",
+                        "surface-container-high": "#dce9ff",
+                        "on-secondary-fixed-variant": "#004395",
+                        "primary-fixed": "#6bff8f",
+                        "on-background": "#0b1c30",
+                        "tertiary-container": "#ef9900",
+                        "outline-variant": "#bccbb9",
+                        "tertiary-fixed": "#ffddb8",
+                        "tertiary-fixed-dim": "#ffb95f",
+                        "on-error-container": "#93000a",
+                        "surface-tint": "#006e2f",
+                        "on-secondary-container": "#fefcff",
+                        "surface-variant": "#d3e4fe",
+                        "on-tertiary": "#ffffff",
+                        "on-primary-fixed-variant": "#005321",
+                        "on-primary": "#ffffff",
+                        "surface-container": "#e5eeff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "xl": "32px",
+                        "xs": "4px",
+                        "md": "16px",
+                        "touch_target_min": "56px",
+                        "lg": "24px",
+                        "margin": "20px",
+                        "gutter": "16px",
+                        "base": "4px",
+                        "sm": "8px",
+                        "safe": "env(safe-area-inset-bottom)"
+                    },
+                    "fontFamily": {
+                        "label-md": ["Plus Jakarta Sans"],
+                        "label-lg": ["Plus Jakarta Sans"],
+                        "headline-md": ["Plus Jakarta Sans"],
+                        "headline-lg": ["Plus Jakarta Sans"],
+                        "display": ["Plus Jakarta Sans"],
+                        "body-md": ["Plus Jakarta Sans"],
+                        "body-lg": ["Plus Jakarta Sans"]
+                    },
+                    "fontSize": {
+                        "label-md": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
+                        "label-lg": ["14px", { "lineHeight": "20px", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "headline-md": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "headline-lg": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "700" }],
+                        "display": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.05);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background min-h-screen flex flex-col pb-24 relative overflow-x-hidden">
+<!-- Top App Bar -->
+<header class="bg-surface dark:bg-on-surface docked full-width top-0 z-40 sticky">
+<div class="flex justify-between items-center w-full px-margin py-sm max-w-screen-xl mx-auto">
+<div class="flex items-center gap-4">
+<img class="w-10 h-10 rounded-full object-cover shadow-sm" data-alt="A small, circular profile picture of an adult male with short brown hair, smiling warmly in a bright, naturally lit setting. The style is a high-quality modern photograph, fitting a premium family app aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDb2WWs13O5YBNYyvIUVldCmOt4Gs4WLimAEfbeetINKgOPhiNhl4IOxzdgQGYmq7k7QAVteEWb8Rhq73fZ-USCCxEuYZo0FJ6HuFtrQxB8mF-M2B55sWL7dFBWW2qzW6O6YzpjyjFCnenbPy7icSbnawiT8w9lDD-XkELnLJshrcViIa8niq9dVtRDtHGJYTFbKO7Z_R8F1IwF2_AvT2WW0DGjepW3yAOer5-cQxE_EGuPVjp9fCfVAA"/>
+<h1 class="font-headline-md text-headline-md font-bold text-primary dark:text-primary-fixed">Smith Family</h1>
+</div>
+<button class="p-2 hover:bg-surface-container-low dark:hover:bg-inverse-surface transition-colors rounded-full">
+<span class="material-symbols-outlined text-primary dark:text-primary-fixed" data-icon="notifications">notifications</span>
+</button>
+</div>
+</header>
+<main class="flex-grow px-margin pt-6 pb-12 max-w-screen-md mx-auto w-full space-y-xl">
+<!-- Invite Code Section (Glassmorphism Card) -->
+<section class="glass-card rounded-2xl p-6 relative overflow-hidden">
+<div class="absolute -right-12 -top-12 w-32 h-32 bg-primary-container opacity-20 rounded-full blur-2xl"></div>
+<div class="relative z-10">
+<h2 class="font-headline-md text-headline-md mb-2 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">group_add</span> Invite Family
+                </h2>
+<p class="font-body-md text-on-surface-variant mb-6">Share this code with your family members so they can join the Smith Family list.</p>
+<div class="flex items-center bg-surface-container-low rounded-full p-2 pl-6 border border-surface-container-highest">
+<span class="font-body-lg font-bold tracking-wider flex-grow text-on-surface">SMITH-2024</span>
+<button class="bg-primary-container text-on-primary-container px-6 py-3 rounded-full font-label-lg hover:opacity-90 transition-opacity flex items-center gap-2 min-h-[56px]">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">content_copy</span> Copy
+                    </button>
+</div>
+</div>
+</section>
+<!-- Pending Requests -->
+<section>
+<h2 class="font-headline-md text-headline-md mb-4 px-2">Pending Requests</h2>
+<div class="bg-surface rounded-2xl p-4 shadow-[0_4px_20px_rgba(0,0,0,0.04)] border border-surface-container-lowest">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-4">
+<div class="relative">
+<img class="w-12 h-12 rounded-full object-cover bg-surface-container-low" data-alt="A small circular avatar placeholder image showing a young boy with messy blonde hair, wearing a red t-shirt, set against a soft blurred background in a modern light style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuALJEP24iehh48eoF8g-cZmLb-QBglU7UTVwe-TInc-VXrl2Ev0roTk6_945U6_4HLhQpPtQoVu8aDZ-SCWe4rFjjNl0Jo7Wsvyd1PZ2y4Gx9Nlg4UXBE69l4LMhYcNprlHYlLk117wAZzJ5kWvoxnOU8A9BFl5Bv2y96m8bESpuJQfi9wS0SDvVjYzGP3EuprxACBYk2my-8OHuOzGProWT3v7ARlBDjlDHFxiwf2znwks7jtoX0XKDg"/>
+<span class="absolute -bottom-1 -right-1 w-4 h-4 bg-tertiary-container rounded-full border-2 border-surface flex items-center justify-center">
+<span class="material-symbols-outlined text-[10px] text-on-tertiary-container">hourglass_empty</span>
+</span>
+</div>
+<div>
+<p class="font-body-md font-medium text-on-surface">Lucas wants to join</p>
+<p class="font-label-md text-on-surface-variant">Requested 2 hours ago</p>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<button class="w-10 h-10 rounded-full bg-error-container text-on-error-container flex items-center justify-center hover:bg-opacity-80 transition-opacity">
+<span class="material-symbols-outlined text-sm">close</span>
+</button>
+<button class="w-10 h-10 rounded-full bg-primary text-on-primary flex items-center justify-center hover:bg-opacity-80 transition-opacity shadow-sm">
+<span class="material-symbols-outlined text-sm">check</span>
+</button>
+</div>
+</div>
+</div>
+</section>
+<!-- Current Members -->
+<section>
+<h2 class="font-headline-md text-headline-md mb-4 px-2">Current Members</h2>
+<div class="space-y-3">
+<!-- Member: Dad (Admin) -->
+<div class="bg-surface rounded-2xl p-4 shadow-[0_4px_20px_rgba(0,0,0,0.04)] border border-surface-container-lowest flex items-center justify-between group">
+<div class="flex items-center gap-4">
+<img class="w-12 h-12 rounded-full object-cover" data-alt="A high-quality portrait of an adult male in his 40s, smiling, professional yet approachable, wearing a casual blue button-down shirt. Used as a user avatar in a modern application." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBRoAkz-SGjsmE-Jtbm9TShaIfZT4_u59sgIPrJP-C8HdWC4Au4kHjYKLQCDoVS76ZBg8fsLshPxe786v4D5GgAgkDGczEGUl-eyLeM7KSU9so1Mp4S39uy3ruNAXge7gZ1LJ5hunZAvirZrOERv3KVaANG8LlIpr-4wRRY34yDWuzMlln1FkToGsfMqJAv37AYu98DP4fiFmklfPeur-OK_BStR4yHmvfI17NMA42rPJrwSzBC4JQqJw"/>
+<div>
+<p class="font-body-md font-medium text-on-surface">Dad</p>
+<span class="inline-flex items-center px-2 py-0.5 rounded-full bg-secondary-container/10 text-secondary-container font-label-md mt-1">
+                                Admin
+                            </span>
+</div>
+</div>
+<button class="opacity-0 group-hover:opacity-100 transition-opacity p-2 text-on-surface-variant hover:bg-surface-container-low rounded-full">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+<!-- Member: Mom -->
+<div class="bg-surface rounded-2xl p-4 shadow-[0_4px_20px_rgba(0,0,0,0.04)] border border-surface-container-lowest flex items-center justify-between group">
+<div class="flex items-center gap-4">
+<img class="w-12 h-12 rounded-full object-cover" data-alt="A pleasant portrait of an adult female in her 30s, warm smile, wearing a simple white blouse, bright natural lighting, modern minimalist style suitable for a profile avatar." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBjo8joD5rmOtRSOeRdYkqBwdskoufuOYYti925QsiwZVWHljzqNGjb9F6WM_4Mr7TqJDABcH5ZfbBVxnWsRlkPepFV5Cafe2Vq0hfnE2Fx1pPgmfIu01Oj8dDBz-tSgTrOhe6Lhqzh1roDQuwLx6vy2Zu1bXlV9fs_Efpv5XfcwEpvY5VtJmdDOcVg8AXWCzFazDHYEDtGzsRm7pkYO26xMNjwm_zl5MknyMg04-CzB6YRHE06NFrrvQ"/>
+<div>
+<p class="font-body-md font-medium text-on-surface">Mom</p>
+</div>
+</div>
+<button class="opacity-0 group-hover:opacity-100 transition-opacity p-2 text-on-surface-variant hover:bg-surface-container-low rounded-full">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+<!-- Member: João -->
+<div class="bg-surface rounded-2xl p-4 shadow-[0_4px_20px_rgba(0,0,0,0.04)] border border-surface-container-lowest flex items-center justify-between group">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-full bg-surface-container-highest flex items-center justify-center text-primary font-headline-md">
+                            J
+                        </div>
+<div>
+<p class="font-body-md font-medium text-on-surface">João</p>
+</div>
+</div>
+<button class="opacity-0 group-hover:opacity-100 transition-opacity p-2 text-on-surface-variant hover:bg-surface-container-low rounded-full">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+</div>
+</section>
+<!-- Family Settings -->
+<section class="mt-8 pt-8 border-t border-surface-container-highest">
+<h2 class="font-headline-md text-headline-md mb-4 px-2">Settings</h2>
+<div class="space-y-4">
+<button class="w-full flex items-center justify-between p-4 rounded-2xl hover:bg-surface-container-low transition-colors text-left min-h-[56px]">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-on-surface-variant">edit</span>
+<span class="font-body-md text-on-surface">Rename Family</span>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
+</button>
+<button class="w-full flex items-center justify-between p-4 rounded-2xl hover:bg-error-container/20 transition-colors text-left min-h-[56px] text-error">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined">logout</span>
+<span class="font-body-md">Leave Family</span>
+</div>
+</button>
+</div>
+</section>
+</main>
+<!-- Bottom Navigation Bar -->
+<nav class="bg-surface/80 dark:bg-on-surface/80 backdrop-blur-lg fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pt-2 pb-safe shadow-[0_-4px_20px_rgba(0,0,0,0.04)] md:hidden">
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant hover:opacity-80 transition-opacity p-2 min-h-[56px] min-w-[56px]" href="#">
+<span class="material-symbols-outlined" data-icon="home">home</span>
+<span class="font-label-md text-label-md mt-1">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant hover:opacity-80 transition-opacity p-2 min-h-[56px] min-w-[56px]" href="#">
+<span class="material-symbols-outlined" data-icon="list_alt">list_alt</span>
+<span class="font-label-md text-label-md mt-1">Lists</span>
+</a>
+<a class="flex flex-col items-center justify-center text-primary dark:text-primary-fixed font-bold after:content-[''] after:w-1 after:h-1 after:bg-primary after:rounded-full after:mt-1 hover:opacity-80 transition-opacity Active: scale-90 duration-200 p-2 min-h-[56px] min-w-[56px]" href="#">
+<span class="material-symbols-outlined" data-icon="group" style="font-variation-settings: 'FILL' 1;">group</span>
+<span class="font-label-md text-label-md mt-1">Family</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant hover:opacity-80 transition-opacity p-2 min-h-[56px] min-w-[56px]" href="#">
+<span class="material-symbols-outlined" data-icon="history">history</span>
+<span class="font-label-md text-label-md mt-1">History</span>
+</a>
+</nav>
+<!-- Desktop Nav (Hidden on Mobile) -->
+<div class="hidden md:flex fixed top-0 left-1/2 -translate-x-1/2 h-full z-50 pointer-events-none w-full max-w-screen-xl px-margin items-start justify-center pt-sm">
+<nav class="pointer-events-auto flex items-center gap-8 px-8 py-3 bg-surface/80 backdrop-blur-md rounded-full shadow-sm border border-surface-container-highest">
+<a class="text-on-surface-variant font-label-lg hover:text-primary transition-colors" href="#">Home</a>
+<a class="text-on-surface-variant font-label-lg hover:text-primary transition-colors" href="#">Lists</a>
+<a class="text-primary font-label-lg font-bold flex items-center gap-2" href="#"><span class="w-1.5 h-1.5 bg-primary rounded-full"></span>Family</a>
+<a class="text-on-surface-variant font-label-lg hover:text-primary transition-colors" href="#">History</a>
+</nav>
+</div>
+</body></html>
