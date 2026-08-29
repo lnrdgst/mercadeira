@@ -1,0 +1,142 @@
+erDiagram
+    USUARIO {
+        uuid id PK
+        varchar nome
+        varchar email UK
+        timestamptz criado_em
+        timestamptz atualizado_em
+    }
+    FAMILIA {
+        uuid id PK
+        varchar nome
+        varchar codigo_ingresso UK
+        varchar status
+        uuid criada_por_usuario_id FK
+        timestamptz criada_em
+        timestamptz atualizada_em
+    }
+    MEMBRO_FAMILIA {
+        uuid id PK
+        uuid familia_id FK
+        uuid usuario_id FK
+        varchar papel
+        varchar status
+        varchar apelido
+        timestamptz criado_em
+        timestamptz atualizado_em
+    }
+    SOLICITACAO_ENTRADA_FAMILIA {
+        uuid id PK
+        uuid familia_id FK
+        uuid solicitante_usuario_id FK
+        varchar status
+        timestamptz solicitada_em
+        uuid resolvida_por_membro_familia_id FK
+        timestamptz resolvida_em
+    }
+    LISTA_COMPRA {
+        uuid id PK
+        uuid familia_id FK
+        varchar nome
+        varchar categoria
+        varchar estabelecimento
+        varchar status
+        uuid criada_por_membro_familia_id FK
+        timestamptz criada_em
+        timestamptz atualizada_em
+    }
+    PARTICIPANTE_LISTA {
+        uuid id PK
+        uuid lista_compra_id FK
+        uuid membro_familia_id FK
+        timestamptz entrou_em
+        timestamptz saiu_em
+    }
+    ITEM_LISTA {
+        uuid id PK
+        uuid lista_compra_id FK
+        varchar descricao
+        numeric quantidade
+        varchar unidade_medida
+        varchar marca
+        text observacoes
+        integer ordem_exibicao
+        timestamptz removido_em
+        uuid adicionado_por_membro_familia_id FK
+        timestamptz criado_em
+        timestamptz atualizado_em
+    }
+    COMPRA {
+        uuid id PK
+        uuid lista_compra_id FK UK
+        uuid iniciada_por_membro_familia_id FK
+        varchar nome_lista_snapshot
+        varchar categoria_snapshot
+        varchar estabelecimento_snapshot
+        varchar status
+        timestamptz iniciada_em
+        timestamptz finalizada_em
+        timestamptz reaberta_em
+        uuid reaberta_por_membro_familia_id FK
+    }
+    PARTICIPANTE_COMPRA {
+        uuid id PK
+        uuid compra_id FK
+        uuid participante_lista_origem_id FK UK
+        uuid membro_familia_id FK
+        varchar nome_snapshot
+        varchar papel_snapshot
+        timestamptz gerado_em
+    }
+    ITEM_COMPRA {
+        uuid id PK
+        uuid compra_id FK
+        uuid item_lista_origem_id FK UK
+        boolean adicionado_durante_compra
+        integer ordem_exibicao
+        varchar descricao_snapshot
+        numeric quantidade_snapshot
+        varchar unidade_medida_snapshot
+        varchar marca_snapshot
+        text observacoes_snapshot
+        varchar status
+        uuid marcado_por_membro_familia_id FK
+        timestamptz marcado_em
+        varchar decisao_remocao
+        uuid remocao_solicitada_por_membro_familia_id FK
+        timestamptz remocao_solicitada_em
+        uuid remocao_resolvida_por_membro_familia_id FK
+        timestamptz remocao_resolvida_em
+    }
+
+    USUARIO ||--o{ FAMILIA : cria
+    USUARIO ||--o{ MEMBRO_FAMILIA : possui_vinculo
+    USUARIO ||--o{ SOLICITACAO_ENTRADA_FAMILIA : solicita
+    FAMILIA ||--o{ MEMBRO_FAMILIA : possui
+    FAMILIA ||--o{ SOLICITACAO_ENTRADA_FAMILIA : recebe
+    FAMILIA ||--o{ LISTA_COMPRA : possui
+    MEMBRO_FAMILIA ||--o{ SOLICITACAO_ENTRADA_FAMILIA : resolve
+    MEMBRO_FAMILIA ||--o{ LISTA_COMPRA : cria
+    LISTA_COMPRA ||--o{ PARTICIPANTE_LISTA : possui
+    MEMBRO_FAMILIA ||--o{ PARTICIPANTE_LISTA : participa
+    LISTA_COMPRA ||--o{ ITEM_LISTA : possui
+    MEMBRO_FAMILIA ||--o{ ITEM_LISTA : adiciona
+    LISTA_COMPRA ||--o| COMPRA : origina
+    MEMBRO_FAMILIA ||--o{ COMPRA : inicia
+    MEMBRO_FAMILIA ||--o{ COMPRA : reabre
+    COMPRA ||--o{ PARTICIPANTE_COMPRA : possui
+    PARTICIPANTE_LISTA ||--o| PARTICIPANTE_COMPRA : origina
+    MEMBRO_FAMILIA ||--o{ PARTICIPANTE_COMPRA : integra
+    COMPRA ||--o{ ITEM_COMPRA : possui
+    ITEM_LISTA ||--o| ITEM_COMPRA : origina
+    MEMBRO_FAMILIA ||--o{ ITEM_COMPRA : marca
+    MEMBRO_FAMILIA ||--o{ ITEM_COMPRA : solicita_remocao
+    MEMBRO_FAMILIA ||--o{ ITEM_COMPRA : resolve_remocao
+
+%% Regras relevantes:
+%% 1. A integridade de pertencimento entre familia e membros sera validada pela camada de aplicacao no MVP.
+%% 2. Familia: codigo_ingresso e unico; status ATIVA ou INATIVA.
+%% 3. ListaCompra: EM_PREPARACAO, EM_COMPRA, FINALIZADA ou CANCELADA.
+%% 4. ItemLista ativo possui removido_em nulo; ordem_exibicao nao e unica.
+%% 5. Compra reaberta possui reaberta_em e reaberta_por_membro_familia_id preenchidos em par.
+%% 6. Ha no maximo uma solicitacao PENDENTE por familia e solicitante.
