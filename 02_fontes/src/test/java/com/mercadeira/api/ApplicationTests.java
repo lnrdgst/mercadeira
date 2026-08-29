@@ -196,8 +196,9 @@ class ApplicationTests {
     private UUID inserirUsuario() {
         UUID id = UUID.randomUUID();
         jdbcTemplate.update(
-                "INSERT INTO usuario (id, nome, email, criado_em, atualizado_em) VALUES (?, ?, ?, ?, ?)",
-                id, "Usuario " + id, id + "@test.local", timestamp(BASE_TIME), timestamp(BASE_TIME));
+                "INSERT INTO usuario (id, nome, email, senha_hash, criado_em, atualizado_em) VALUES (?, ?, ?, ?, ?, ?)",
+                id, "Usuario " + id, id + "@test.local", "hash-de-teste-nao-utilizavel-" + id,
+                timestamp(BASE_TIME), timestamp(BASE_TIME));
         return id;
     }
 

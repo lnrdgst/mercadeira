@@ -25,6 +25,9 @@ public class Usuario {
     @Column(name = "email", nullable = false, length = 255)
     private String email;
 
+    @Column(name = "senha_hash", nullable = false, length = 255)
+    private String senhaHash;
+
     @Column(name = "criado_em", nullable = false)
     private Instant criadoEm;
 
