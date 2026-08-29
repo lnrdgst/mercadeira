@@ -39,6 +39,9 @@ public class ItemCompra {
     @Column(name = "adicionado_durante_compra", nullable = false)
     private boolean adicionadoDuranteCompra;
 
+    @Column(name = "ordem_exibicao", nullable = false)
+    private Integer ordemExibicao;
+
     @Column(name = "descricao_snapshot", nullable = false, length = 200)
     private String descricaoSnapshot;
 

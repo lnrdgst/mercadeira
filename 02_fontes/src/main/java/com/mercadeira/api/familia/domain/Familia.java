@@ -6,6 +6,8 @@ import java.util.UUID;
 import com.mercadeira.api.usuario.domain.Usuario;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -25,6 +27,13 @@ public class Familia {
 
     @Column(name = "nome", nullable = false, length = 120)
     private String nome;
+
+    @Column(name = "codigo_ingresso", nullable = false, length = 32)
+    private String codigoIngresso;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false, length = 20)
+    private StatusFamilia status;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "criada_por_usuario_id", nullable = false)

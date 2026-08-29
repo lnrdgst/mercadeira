@@ -43,6 +43,12 @@ public class ItemLista {
     @Column(name = "observacoes", columnDefinition = "TEXT")
     private String observacoes;
 
+    @Column(name = "ordem_exibicao", nullable = false)
+    private Integer ordemExibicao;
+
+    @Column(name = "removido_em")
+    private Instant removidoEm;
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "adicionado_por_membro_familia_id", nullable = false)
     private MembroFamilia adicionadoPorMembroFamilia;

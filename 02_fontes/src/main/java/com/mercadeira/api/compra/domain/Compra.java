@@ -54,6 +54,13 @@ public class Compra {
     @Column(name = "finalizada_em")
     private Instant finalizadaEm;
 
+    @Column(name = "reaberta_em")
+    private Instant reabertaEm;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = true)
+    @JoinColumn(name = "reaberta_por_membro_familia_id")
+    private MembroFamilia reabertaPorMembroFamilia;
+
     protected Compra() {
     }
 }
