@@ -52,4 +52,39 @@ public class MembroFamilia {
 
     protected MembroFamilia() {
     }
+
+    public static MembroFamilia criarAdministrador(Familia familia, Usuario usuario, Instant agora) {
+        return criar(familia, usuario, PapelMembroFamilia.ADMINISTRADOR, agora);
+    }
+
+    public static MembroFamilia criarMembro(Familia familia, Usuario usuario, Instant agora) {
+        return criar(familia, usuario, PapelMembroFamilia.MEMBRO, agora);
+    }
+
+    private static MembroFamilia criar(Familia familia, Usuario usuario, PapelMembroFamilia papel, Instant agora) {
+        MembroFamilia membro = new MembroFamilia();
+        membro.familia = familia;
+        membro.usuario = usuario;
+        membro.papel = papel;
+        membro.status = StatusMembroFamilia.ATIVO;
+        membro.criadoEm = agora;
+        membro.atualizadoEm = agora;
+        return membro;
+    }
+
+    public UUID getId() {
+        return id;
+    }
+
+    public Familia getFamilia() {
+        return familia;
+    }
+
+    public PapelMembroFamilia getPapel() {
+        return papel;
+    }
+
+    public StatusMembroFamilia getStatus() {
+        return status;
+    }
 }

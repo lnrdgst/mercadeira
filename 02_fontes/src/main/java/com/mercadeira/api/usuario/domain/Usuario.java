@@ -36,4 +36,30 @@ public class Usuario {
 
     protected Usuario() {
     }
+
+    public static Usuario criar(String nome, String email, String senhaHash, Instant agora) {
+        Usuario usuario = new Usuario();
+        usuario.nome = nome;
+        usuario.email = email;
+        usuario.senhaHash = senhaHash;
+        usuario.criadoEm = agora;
+        usuario.atualizadoEm = agora;
+        return usuario;
+    }
+
+    public UUID getId() {
+        return id;
+    }
+
+    public String getNome() {
+        return nome;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public String getSenhaHash() {
+        return senhaHash;
+    }
 }

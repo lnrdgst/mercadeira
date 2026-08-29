@@ -47,4 +47,27 @@ public class Familia {
 
     protected Familia() {
     }
+
+    public static Familia criar(String nome, String codigoIngresso, Usuario criadaPorUsuario, Instant agora) {
+        Familia familia = new Familia();
+        familia.nome = nome;
+        familia.codigoIngresso = codigoIngresso;
+        familia.status = StatusFamilia.ATIVA;
+        familia.criadaPorUsuario = criadaPorUsuario;
+        familia.criadaEm = agora;
+        familia.atualizadaEm = agora;
+        return familia;
+    }
+
+    public UUID getId() {
+        return id;
+    }
+
+    public String getCodigoIngresso() {
+        return codigoIngresso;
+    }
+
+    public StatusFamilia getStatus() {
+        return status;
+    }
 }

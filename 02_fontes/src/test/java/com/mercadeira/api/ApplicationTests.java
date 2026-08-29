@@ -10,6 +10,19 @@ import com.mercadeira.api.compra.domain.StatusCompra;
 import com.mercadeira.api.compra.domain.StatusItemCompra;
 import com.mercadeira.api.compra.repository.CompraRepository;
 import com.mercadeira.api.compra.repository.ItemCompraRepository;
+import com.mercadeira.api.familia.application.AprovarSolicitacaoEntradaFamilia;
+import com.mercadeira.api.familia.application.ConsultarFamiliaAtivaUsuario;
+import com.mercadeira.api.familia.application.CriarFamilia;
+import com.mercadeira.api.familia.application.ListarSolicitacoesPendentes;
+import com.mercadeira.api.familia.application.MembroSemPermissaoException;
+import com.mercadeira.api.familia.application.RejeitarSolicitacaoEntradaFamilia;
+import com.mercadeira.api.familia.application.SolicitacaoPendenteJaExisteException;
+import com.mercadeira.api.familia.application.SolicitarEntradaFamiliaPorCodigo;
+import com.mercadeira.api.familia.application.UsuarioJaPossuiFamiliaAtivaException;
+import com.mercadeira.api.familia.domain.Familia;
+import com.mercadeira.api.familia.domain.MembroFamilia;
+import com.mercadeira.api.familia.domain.PapelMembroFamilia;
+import com.mercadeira.api.familia.domain.SolicitacaoEntradaFamilia;
 import com.mercadeira.api.familia.domain.StatusFamilia;
 import com.mercadeira.api.familia.domain.StatusMembroFamilia;
 import com.mercadeira.api.familia.domain.StatusSolicitacaoEntradaFamilia;
@@ -18,6 +31,11 @@ import com.mercadeira.api.familia.repository.MembroFamiliaRepository;
 import com.mercadeira.api.familia.repository.SolicitacaoEntradaFamiliaRepository;
 import com.mercadeira.api.lista.repository.ItemListaRepository;
 import com.mercadeira.api.lista.repository.ParticipanteListaRepository;
+import com.mercadeira.api.usuario.application.CadastrarUsuario;
+import com.mercadeira.api.usuario.application.EmailJaCadastradoException;
+import com.mercadeira.api.usuario.domain.Usuario;
+import com.mercadeira.api.usuario.repository.UsuarioRepository;
+import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,6 +48,7 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 @Testcontainers
 @SpringBootTest
@@ -49,6 +68,9 @@ class ApplicationTests {
 
     @Autowired
     private EntityManagerFactory entityManagerFactory;
+
+    @Autowired
+    private EntityManager entityManager;
 
     @Autowired
     private FamiliaRepository familiaRepository;
@@ -71,8 +93,188 @@ class ApplicationTests {
     @Autowired
     private ItemCompraRepository itemCompraRepository;
 
+    @Autowired
+    private UsuarioRepository usuarioRepository;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private CadastrarUsuario cadastrarUsuario;
+
+    @Autowired
+    private CriarFamilia criarFamilia;
+
+    @Autowired
+    private SolicitarEntradaFamiliaPorCodigo solicitarEntradaFamiliaPorCodigo;
+
+    @Autowired
+    private ListarSolicitacoesPendentes listarSolicitacoesPendentes;
+
+    @Autowired
+    private AprovarSolicitacaoEntradaFamilia aprovarSolicitacaoEntradaFamilia;
+
+    @Autowired
+    private RejeitarSolicitacaoEntradaFamilia rejeitarSolicitacaoEntradaFamilia;
+
+    @Autowired
+    private ConsultarFamiliaAtivaUsuario consultarFamiliaAtivaUsuario;
+
     @Test
     void contextLoads() {
+    }
+
+    @Test
+    void cadastraUsuarioComSenhaCodificada() {
+        Usuario usuario = cadastrarUsuario.cadastrar("Ana", "ana@example.test", "senha-original");
+
+        assertThat(usuario.getId()).isNotNull();
+        assertThat(usuario.getSenhaHash()).isNotEqualTo("senha-original");
+        assertThat(passwordEncoder.matches("senha-original", usuario.getSenhaHash())).isTrue();
+        assertThat(usuarioRepository.findByEmail("ana@example.test")).isPresent();
+    }
+
+    @Test
+    void impedeCadastroComEmailDuplicado() {
+        cadastrarUsuario.cadastrar("Ana", "ana@example.test", "senha-original");
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(
+                () -> cadastrarUsuario.cadastrar("Outra Ana", "ana@example.test", "outra-senha"))
+                .isInstanceOf(EmailJaCadastradoException.class);
+    }
+
+    @Test
+    void criaFamiliaComAdministradorInicialECodigoCompartilhavel() {
+        Usuario usuario = cadastrarUsuario.cadastrar("Ana", "ana@example.test", "senha-original");
+
+        Familia familia = criarFamilia.criar(usuario.getId(), "Casa da Ana");
+        MembroFamilia administrador = membroFamiliaRepository
+                .findByUsuario_IdAndStatus(usuario.getId(), StatusMembroFamilia.ATIVO)
+                .orElseThrow();
+
+        assertThat(familia.getStatus()).isEqualTo(StatusFamilia.ATIVA);
+        assertThat(familia.getCodigoIngresso()).matches("[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{8}");
+        assertThat(administrador.getFamilia().getId()).isEqualTo(familia.getId());
+        assertThat(administrador.getPapel()).isEqualTo(PapelMembroFamilia.ADMINISTRADOR);
+    }
+
+    @Test
+    void impedeSegundaFamiliaAtivaParaMesmoUsuario() {
+        Usuario usuario = cadastrarUsuario.cadastrar("Ana", "ana@example.test", "senha-original");
+        criarFamilia.criar(usuario.getId(), "Casa da Ana");
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(
+                () -> criarFamilia.criar(usuario.getId(), "Outra casa"))
+                .isInstanceOf(UsuarioJaPossuiFamiliaAtivaException.class);
+    }
+
+    @Test
+    void solicitaEntradaPorCodigoEListaSolicitacoesPendentes() {
+        Usuario criador = cadastrarUsuario.cadastrar("Ana", "ana@example.test", "senha-original");
+        Familia familia = criarFamilia.criar(criador.getId(), "Casa da Ana");
+        Usuario solicitante = cadastrarUsuario.cadastrar("Bia", "bia@example.test", "senha-original");
+        MembroFamilia administrador = consultarFamiliaAtivaUsuario.consultar(criador.getId()).orElseThrow();
+
+        SolicitacaoEntradaFamilia solicitacao = solicitarEntradaFamiliaPorCodigo.solicitar(
+                solicitante.getId(), familia.getCodigoIngresso());
+
+        assertThat(solicitacao.getStatus()).isEqualTo(StatusSolicitacaoEntradaFamilia.PENDENTE);
+        assertThat(listarSolicitacoesPendentes.listar(familia.getId(), administrador.getId()))
+                .extracting(SolicitacaoEntradaFamilia::getId)
+                .containsExactly(solicitacao.getId());
+    }
+
+    @Test
+    void impedeSolicitacaoPendenteDuplicada() {
+        Usuario criador = cadastrarUsuario.cadastrar("Ana", "ana@example.test", "senha-original");
+        Familia familia = criarFamilia.criar(criador.getId(), "Casa da Ana");
+        Usuario solicitante = cadastrarUsuario.cadastrar("Bia", "bia@example.test", "senha-original");
+        solicitarEntradaFamiliaPorCodigo.solicitar(solicitante.getId(), familia.getCodigoIngresso());
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(
+                () -> solicitarEntradaFamiliaPorCodigo.solicitar(solicitante.getId(), familia.getCodigoIngresso()))
+                .isInstanceOf(SolicitacaoPendenteJaExisteException.class);
+    }
+
+    @Test
+    void aprovaSolicitacaoECriaMembro() {
+        Usuario criador = cadastrarUsuario.cadastrar("Ana", "ana@example.test", "senha-original");
+        Familia familia = criarFamilia.criar(criador.getId(), "Casa da Ana");
+        MembroFamilia administrador = consultarFamiliaAtivaUsuario.consultar(criador.getId()).orElseThrow();
+        Usuario solicitante = cadastrarUsuario.cadastrar("Bia", "bia@example.test", "senha-original");
+        SolicitacaoEntradaFamilia solicitacao = solicitarEntradaFamiliaPorCodigo.solicitar(
+                solicitante.getId(), familia.getCodigoIngresso());
+
+        aprovarSolicitacaoEntradaFamilia.aprovar(solicitacao.getId(), administrador.getId());
+
+        assertThat(solicitacao.getStatus()).isEqualTo(StatusSolicitacaoEntradaFamilia.APROVADA);
+        assertThat(solicitacao.getResolvidaPorMembroFamilia().getId()).isEqualTo(administrador.getId());
+        assertThat(consultarFamiliaAtivaUsuario.consultar(solicitante.getId()))
+                .get()
+                .extracting(MembroFamilia::getPapel)
+                .isEqualTo(PapelMembroFamilia.MEMBRO);
+    }
+
+    @Test
+    void rejeitaSolicitacaoSemCriarMembro() {
+        Usuario criador = cadastrarUsuario.cadastrar("Ana", "ana@example.test", "senha-original");
+        Familia familia = criarFamilia.criar(criador.getId(), "Casa da Ana");
+        MembroFamilia administrador = consultarFamiliaAtivaUsuario.consultar(criador.getId()).orElseThrow();
+        Usuario solicitante = cadastrarUsuario.cadastrar("Bia", "bia@example.test", "senha-original");
+        SolicitacaoEntradaFamilia solicitacao = solicitarEntradaFamiliaPorCodigo.solicitar(
+                solicitante.getId(), familia.getCodigoIngresso());
+
+        rejeitarSolicitacaoEntradaFamilia.rejeitar(solicitacao.getId(), administrador.getId());
+
+        assertThat(solicitacao.getStatus()).isEqualTo(StatusSolicitacaoEntradaFamilia.REJEITADA);
+        assertThat(consultarFamiliaAtivaUsuario.consultar(solicitante.getId())).isEmpty();
+    }
+
+    @Test
+    void impedeDecisaoPorMembroSemPermissao() {
+        Usuario criador = cadastrarUsuario.cadastrar("Ana", "ana@example.test", "senha-original");
+        Familia familia = criarFamilia.criar(criador.getId(), "Casa da Ana");
+        Usuario membroSemPermissao = cadastrarUsuario.cadastrar("Bia", "bia@example.test", "senha-original");
+        UUID membroSemPermissaoId = inserirMembro(familia.getId(), membroSemPermissao.getId(), StatusMembroFamilia.ATIVO);
+        Usuario solicitante = cadastrarUsuario.cadastrar("Caio", "caio@example.test", "senha-original");
+        SolicitacaoEntradaFamilia solicitacao = solicitarEntradaFamiliaPorCodigo.solicitar(
+                solicitante.getId(), familia.getCodigoIngresso());
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(
+                () -> aprovarSolicitacaoEntradaFamilia.aprovar(solicitacao.getId(), membroSemPermissaoId))
+                .isInstanceOf(MembroSemPermissaoException.class);
+        org.assertj.core.api.Assertions.assertThatThrownBy(
+                () -> rejeitarSolicitacaoEntradaFamilia.rejeitar(solicitacao.getId(), membroSemPermissaoId))
+                .isInstanceOf(MembroSemPermissaoException.class);
+    }
+
+    @Test
+    void impedeAprovacaoQuandoSolicitanteJaPossuiFamiliaAtiva() {
+        Usuario criador = cadastrarUsuario.cadastrar("Ana", "ana@example.test", "senha-original");
+        Familia familia = criarFamilia.criar(criador.getId(), "Casa da Ana");
+        MembroFamilia administrador = consultarFamiliaAtivaUsuario.consultar(criador.getId()).orElseThrow();
+        Usuario solicitante = cadastrarUsuario.cadastrar("Bia", "bia@example.test", "senha-original");
+        SolicitacaoEntradaFamilia solicitacao = solicitarEntradaFamiliaPorCodigo.solicitar(
+                solicitante.getId(), familia.getCodigoIngresso());
+        UUID outraFamiliaId = inserirFamilia(criador.getId(), StatusFamilia.ATIVA, "OUTRAFAM");
+        inserirMembro(outraFamiliaId, solicitante.getId(), StatusMembroFamilia.ATIVO);
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(
+                () -> aprovarSolicitacaoEntradaFamilia.aprovar(solicitacao.getId(), administrador.getId()))
+                .isInstanceOf(UsuarioJaPossuiFamiliaAtivaException.class);
+    }
+
+    @Test
+    void consultaFamiliaAtivaERepresentaAusenciaComOptional() {
+        Usuario usuarioComFamilia = cadastrarUsuario.cadastrar("Ana", "ana@example.test", "senha-original");
+        Familia familia = criarFamilia.criar(usuarioComFamilia.getId(), "Casa da Ana");
+        Usuario usuarioSemFamilia = cadastrarUsuario.cadastrar("Bia", "bia@example.test", "senha-original");
+
+        assertThat(consultarFamiliaAtivaUsuario.consultar(usuarioComFamilia.getId()))
+                .get()
+                .extracting(membro -> membro.getFamilia().getId())
+                .isEqualTo(familia.getId());
+        assertThat(consultarFamiliaAtivaUsuario.consultar(usuarioSemFamilia.getId())).isEmpty();
     }
 
     @Test
@@ -194,6 +396,7 @@ class ApplicationTests {
     }
 
     private UUID inserirUsuario() {
+        entityManager.flush();
         UUID id = UUID.randomUUID();
         jdbcTemplate.update(
                 "INSERT INTO usuario (id, nome, email, senha_hash, criado_em, atualizado_em) VALUES (?, ?, ?, ?, ?, ?)",
@@ -203,6 +406,7 @@ class ApplicationTests {
     }
 
     private UUID inserirFamilia(UUID criadaPorUsuarioId, StatusFamilia status, String codigoIngresso) {
+        entityManager.flush();
         UUID id = UUID.randomUUID();
         jdbcTemplate.update(
                 "INSERT INTO familia (id, nome, codigo_ingresso, status, criada_por_usuario_id, criada_em, atualizada_em) "
@@ -213,6 +417,7 @@ class ApplicationTests {
     }
 
     private UUID inserirMembro(UUID familiaId, UUID usuarioId, StatusMembroFamilia status) {
+        entityManager.flush();
         UUID id = UUID.randomUUID();
         jdbcTemplate.update(
                 "INSERT INTO membro_familia (id, familia_id, usuario_id, papel, status, criado_em, atualizado_em) "
@@ -222,6 +427,7 @@ class ApplicationTests {
     }
 
     private UUID inserirSolicitacao(UUID familiaId, UUID solicitanteUsuarioId) {
+        entityManager.flush();
         UUID id = UUID.randomUUID();
         jdbcTemplate.update(
                 "INSERT INTO solicitacao_entrada_familia "
@@ -231,6 +437,7 @@ class ApplicationTests {
     }
 
     private UUID inserirLista(UUID familiaId, UUID criadaPorMembroFamiliaId) {
+        entityManager.flush();
         UUID id = UUID.randomUUID();
         jdbcTemplate.update(
                 "INSERT INTO lista_compra "
@@ -242,6 +449,7 @@ class ApplicationTests {
     }
 
     private UUID inserirParticipante(UUID listaId, UUID membroId, Instant saiuEm) {
+        entityManager.flush();
         UUID id = UUID.randomUUID();
         jdbcTemplate.update(
                 "INSERT INTO participante_lista (id, lista_compra_id, membro_familia_id, entrou_em, saiu_em) "
@@ -251,6 +459,7 @@ class ApplicationTests {
     }
 
     private UUID inserirItemLista(UUID listaId, UUID membroId, int ordemExibicao, Instant removidoEm) {
+        entityManager.flush();
         UUID id = UUID.randomUUID();
         jdbcTemplate.update(
                 "INSERT INTO item_lista "
@@ -262,6 +471,7 @@ class ApplicationTests {
     }
 
     private UUID inserirCompra(UUID listaId, UUID membroId, StatusCompra status, Instant finalizadaEm) {
+        entityManager.flush();
         UUID id = UUID.randomUUID();
         jdbcTemplate.update(
                 "INSERT INTO compra "
@@ -273,6 +483,7 @@ class ApplicationTests {
     }
 
     private UUID inserirItemCompra(UUID compraId, int ordemExibicao, StatusItemCompra status) {
+        entityManager.flush();
         UUID id = UUID.randomUUID();
         jdbcTemplate.update(
                 "INSERT INTO item_compra "

@@ -10,4 +10,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface FamiliaRepository extends JpaRepository<Familia, UUID> {
 
     Optional<Familia> findByCodigoIngressoAndStatus(String codigoIngresso, StatusFamilia status);
+
+    boolean existsByCodigoIngresso(String codigoIngresso);
 }

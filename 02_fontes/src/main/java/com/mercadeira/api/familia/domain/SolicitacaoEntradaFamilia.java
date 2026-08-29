@@ -49,4 +49,42 @@ public class SolicitacaoEntradaFamilia {
 
     protected SolicitacaoEntradaFamilia() {
     }
+
+    public static SolicitacaoEntradaFamilia criar(Familia familia, Usuario solicitanteUsuario, Instant agora) {
+        SolicitacaoEntradaFamilia solicitacao = new SolicitacaoEntradaFamilia();
+        solicitacao.familia = familia;
+        solicitacao.solicitanteUsuario = solicitanteUsuario;
+        solicitacao.status = StatusSolicitacaoEntradaFamilia.PENDENTE;
+        solicitacao.solicitadaEm = agora;
+        return solicitacao;
+    }
+
+    public void registrarResolucao(
+            StatusSolicitacaoEntradaFamilia status,
+            MembroFamilia responsavel,
+            Instant agora) {
+        this.status = status;
+        this.resolvidaPorMembroFamilia = responsavel;
+        this.resolvidaEm = agora;
+    }
+
+    public UUID getId() {
+        return id;
+    }
+
+    public Familia getFamilia() {
+        return familia;
+    }
+
+    public Usuario getSolicitanteUsuario() {
+        return solicitanteUsuario;
+    }
+
+    public StatusSolicitacaoEntradaFamilia getStatus() {
+        return status;
+    }
+
+    public MembroFamilia getResolvidaPorMembroFamilia() {
+        return resolvidaPorMembroFamilia;
+    }
 }
