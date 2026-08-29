@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.UUID;
 
 import com.mercadeira.api.compra.domain.StatusCompra;
@@ -42,6 +44,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.annotation.Rollback;
 import org.springframework.transaction.annotation.Transactional;
 import org.testcontainers.containers.PostgreSQLContainer;
@@ -57,11 +61,18 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 class ApplicationTests {
 
     private static final Instant BASE_TIME = Instant.parse("2026-08-29T12:00:00Z");
+    private static final String JWT_TEST_SECRET = Base64.getEncoder().encodeToString(
+            "segredo-exclusivo-de-teste-com-32-bytes-ou-mais".getBytes(StandardCharsets.UTF_8));
 
     @Container
     @ServiceConnection
     static PostgreSQLContainer postgreSQLContainer = new PostgreSQLContainer(
             DockerImageName.parse("postgres:18-alpine"));
+
+    @DynamicPropertySource
+    static void configurarJwt(DynamicPropertyRegistry registry) {
+        registry.add("mercadeira.jwt.secret", () -> JWT_TEST_SECRET);
+    }
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
