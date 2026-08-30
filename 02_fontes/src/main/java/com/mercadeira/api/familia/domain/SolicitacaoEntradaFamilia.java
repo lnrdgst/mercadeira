@@ -84,6 +84,10 @@ public class SolicitacaoEntradaFamilia {
         return status;
     }
 
+    public Instant getSolicitadaEm() {
+        return solicitadaEm;
+    }
+
     public MembroFamilia getResolvidaPorMembroFamilia() {
         return resolvidaPorMembroFamilia;
     }

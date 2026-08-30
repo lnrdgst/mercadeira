@@ -63,6 +63,10 @@ public class Familia {
         return id;
     }
 
+    public String getNome() {
+        return nome;
+    }
+
     public String getCodigoIngresso() {
         return codigoIngresso;
     }
