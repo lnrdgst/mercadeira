@@ -37,7 +37,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
 @Testcontainers
-@SpringBootTest
+@SpringBootTest(properties = "spring.jpa.open-in-view=false")
 @Transactional
 @Rollback
 class ApiIntegrationTests {
@@ -165,11 +165,19 @@ class ApiIntegrationTests {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"codigoIngresso\":\"" + familia.getCodigoIngresso() + "\"}"))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.status").value("PENDENTE"));
+                .andExpect(jsonPath("$.status").value("PENDENTE"))
+                .andExpect(jsonPath("$.solicitante.id").value(solicitante.getId().toString()))
+                .andExpect(jsonPath("$.solicitante.nome").value("Bia"))
+                .andExpect(jsonPath("$.solicitante.email").value("bia@example.test"))
+                .andExpect(jsonPath("$.solicitante.senhaHash").doesNotExist());
         mockMvc.perform(get("/api/familias/solicitacoes")
                         .header("Authorization", "Bearer " + tokenDo(administrador)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].status").value("PENDENTE"));
+                .andExpect(jsonPath("$[0].status").value("PENDENTE"))
+                .andExpect(jsonPath("$[0].solicitante.id").value(solicitante.getId().toString()))
+                .andExpect(jsonPath("$[0].solicitante.nome").value("Bia"))
+                .andExpect(jsonPath("$[0].solicitante.email").value("bia@example.test"))
+                .andExpect(jsonPath("$[0].solicitante.senhaHash").doesNotExist());
     }
 
     @Test
@@ -200,11 +208,19 @@ class ApiIntegrationTests {
         mockMvc.perform(post("/api/familias/solicitacoes/{id}/aprovar", aprovacaoId)
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("APROVADA"));
+                .andExpect(jsonPath("$.status").value("APROVADA"))
+                .andExpect(jsonPath("$.solicitante.id").value(primeiroSolicitante.getId().toString()))
+                .andExpect(jsonPath("$.solicitante.nome").value("Bia"))
+                .andExpect(jsonPath("$.solicitante.email").value("bia@example.test"))
+                .andExpect(jsonPath("$.solicitante.senhaHash").doesNotExist());
         mockMvc.perform(post("/api/familias/solicitacoes/{id}/rejeitar", rejeicaoId)
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("REJEITADA"));
+                .andExpect(jsonPath("$.status").value("REJEITADA"))
+                .andExpect(jsonPath("$.solicitante.id").value(segundoSolicitante.getId().toString()))
+                .andExpect(jsonPath("$.solicitante.nome").value("Caio"))
+                .andExpect(jsonPath("$.solicitante.email").value("caio@example.test"))
+                .andExpect(jsonPath("$.solicitante.senhaHash").doesNotExist());
     }
 
     private String tokenDo(Usuario usuario) {
