@@ -23,4 +23,11 @@ public interface SolicitacaoEntradaFamiliaRepository extends JpaRepository<Solic
             UUID familiaId,
             UUID solicitanteUsuarioId,
             StatusSolicitacaoEntradaFamilia status);
+
+    List<SolicitacaoEntradaFamilia> findBySolicitanteUsuario_IdAndStatus(UUID solicitanteUsuarioId,
+            StatusSolicitacaoEntradaFamilia status);
+
+    @EntityGraph(attributePaths = "familia")
+    List<SolicitacaoEntradaFamilia> findBySolicitanteUsuario_IdAndStatusOrderBySolicitadaEmAsc(
+            UUID solicitanteUsuarioId, StatusSolicitacaoEntradaFamilia status);
 }

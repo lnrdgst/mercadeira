@@ -6,6 +6,7 @@ import java.util.UUID;
 import com.mercadeira.api.autenticacao.security.UsuarioAutenticado;
 import com.mercadeira.api.familia.application.AprovarSolicitacaoEntradaFamilia;
 import com.mercadeira.api.familia.application.ConsultarFamiliaAtivaUsuario;
+import com.mercadeira.api.familia.application.ConsultarMinhasSolicitacoesPendentes;
 import com.mercadeira.api.familia.application.CriarFamilia;
 import com.mercadeira.api.familia.application.ListarSolicitacoesPendentes;
 import com.mercadeira.api.familia.application.MembroSemPermissaoException;
@@ -31,6 +32,7 @@ public class FamiliaController {
     private final UsuarioAutenticado usuarioAutenticado;
     private final CriarFamilia criarFamilia;
     private final ConsultarFamiliaAtivaUsuario consultarFamiliaAtivaUsuario;
+    private final ConsultarMinhasSolicitacoesPendentes consultarMinhasSolicitacoesPendentes;
     private final SolicitarEntradaFamiliaPorCodigo solicitarEntradaFamiliaPorCodigo;
     private final ListarSolicitacoesPendentes listarSolicitacoesPendentes;
     private final AprovarSolicitacaoEntradaFamilia aprovarSolicitacaoEntradaFamilia;
@@ -40,6 +42,7 @@ public class FamiliaController {
             UsuarioAutenticado usuarioAutenticado,
             CriarFamilia criarFamilia,
             ConsultarFamiliaAtivaUsuario consultarFamiliaAtivaUsuario,
+            ConsultarMinhasSolicitacoesPendentes consultarMinhasSolicitacoesPendentes,
             SolicitarEntradaFamiliaPorCodigo solicitarEntradaFamiliaPorCodigo,
             ListarSolicitacoesPendentes listarSolicitacoesPendentes,
             AprovarSolicitacaoEntradaFamilia aprovarSolicitacaoEntradaFamilia,
@@ -47,6 +50,7 @@ public class FamiliaController {
         this.usuarioAutenticado = usuarioAutenticado;
         this.criarFamilia = criarFamilia;
         this.consultarFamiliaAtivaUsuario = consultarFamiliaAtivaUsuario;
+        this.consultarMinhasSolicitacoesPendentes = consultarMinhasSolicitacoesPendentes;
         this.solicitarEntradaFamiliaPorCodigo = solicitarEntradaFamiliaPorCodigo;
         this.listarSolicitacoesPendentes = listarSolicitacoesPendentes;
         this.aprovarSolicitacaoEntradaFamilia = aprovarSolicitacaoEntradaFamilia;
@@ -82,6 +86,15 @@ public class FamiliaController {
         return listarSolicitacoesPendentes.listar(executor.getFamilia().getId(), executor.getId()).stream()
                 .map(SolicitacaoEntradaFamiliaResponse::from)
                 .toList();
+    }
+
+    @GetMapping("/solicitacoes/minhas-pendentes")
+    public ResponseEntity<List<MinhaSolicitacaoEntradaPendenteResponse>> minhasPendentes() {
+        List<MinhaSolicitacaoEntradaPendenteResponse> pendentes = consultarMinhasSolicitacoesPendentes
+                .consultar(usuarioAutenticado.getId()).stream()
+                .map(MinhaSolicitacaoEntradaPendenteResponse::from)
+                .toList();
+        return pendentes.isEmpty() ? ResponseEntity.noContent().build() : ResponseEntity.ok(pendentes);
     }
 
     @PostMapping("/solicitacoes/{solicitacaoId}/aprovar")

@@ -181,6 +181,48 @@ class ApiIntegrationTests {
     }
 
     @Test
+    void retornaPendenciasDoUsuarioAutenticadoParaOnboarding() throws Exception {
+        Usuario adminA = cadastrarUsuario.cadastrar("Admin A", "admin-a-onboarding@example.test", "senha-original");
+        Familia familiaA = criarFamilia.criar(adminA.getId(), "Familia A");
+        Usuario adminB = cadastrarUsuario.cadastrar("Admin B", "admin-b-onboarding@example.test", "senha-original");
+        Familia familiaB = criarFamilia.criar(adminB.getId(), "Familia B");
+        Usuario solicitante = cadastrarUsuario.cadastrar("Bia", "bia-onboarding@example.test", "senha-original");
+        SolicitarEntradaFamiliaResponseHelper.criarPendente(solicitante, familiaA, solicitacaoRepository);
+        SolicitarEntradaFamiliaResponseHelper.criarPendente(solicitante, familiaB, solicitacaoRepository);
+
+        mockMvc.perform(get("/api/familias/solicitacoes/minhas-pendentes")
+                        .header("Authorization", "Bearer " + tokenDo(solicitante)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].status").value("PENDENTE"))
+                .andExpect(jsonPath("$[0].familia.id").exists())
+                .andExpect(jsonPath("$[0].familia.nome").exists())
+                .andExpect(jsonPath("$[0].solicitante").doesNotExist());
+    }
+
+    @Test
+    void retornaNoContentQuandoUsuarioNaoPossuiPendencias() throws Exception {
+        Usuario usuario = cadastrarUsuario.cadastrar("Bia", "bia-sem-pendencias@example.test", "senha-original");
+
+        mockMvc.perform(get("/api/familias/solicitacoes/minhas-pendentes")
+                        .header("Authorization", "Bearer " + tokenDo(usuario)))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void retornaNoContentParaUsuarioComFamiliaAtivaMesmoComPendenciaResidual() throws Exception {
+        Usuario usuario = cadastrarUsuario.cadastrar("Bia", "bia-com-familia@example.test", "senha-original");
+        criarFamilia.criar(usuario.getId(), "Familia da Bia");
+        Usuario administrador = cadastrarUsuario.cadastrar("Ana", "ana-residual@example.test", "senha-original");
+        Familia outraFamilia = criarFamilia.criar(administrador.getId(), "Outra familia");
+        SolicitarEntradaFamiliaResponseHelper.criarPendente(usuario, outraFamilia, solicitacaoRepository);
+
+        mockMvc.perform(get("/api/familias/solicitacoes/minhas-pendentes")
+                        .header("Authorization", "Bearer " + tokenDo(usuario)))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
     void impedeListagemPorMembroSemPermissao() throws Exception {
         Usuario administrador = cadastrarUsuario.cadastrar("Ana", "ana@example.test", "senha-original");
         Familia familia = criarFamilia.criar(administrador.getId(), "Casa da Ana");

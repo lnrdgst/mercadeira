@@ -40,7 +40,8 @@ public class SolicitarEntradaFamiliaPorCodigo {
 
     @Transactional
     public SolicitacaoEntradaFamilia solicitar(UUID usuarioId, String codigoIngresso) {
-        Usuario usuario = usuarioRepository.findById(usuarioId)
+        // Serializa a solicitacao com uma eventual aprovacao do mesmo usuario.
+        Usuario usuario = usuarioRepository.findByIdForUpdate(usuarioId)
                 .orElseThrow(() -> new UsuarioNaoEncontradoException(usuarioId));
         Familia familia = familiaRepository.findByCodigoIngressoAndStatus(codigoIngresso, StatusFamilia.ATIVA)
                 .orElseThrow(CodigoFamiliaInvalidoException::new);

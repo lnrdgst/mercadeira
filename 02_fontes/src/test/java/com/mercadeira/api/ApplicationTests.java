@@ -19,6 +19,7 @@ import com.mercadeira.api.familia.application.ListarSolicitacoesPendentes;
 import com.mercadeira.api.familia.application.MembroSemPermissaoException;
 import com.mercadeira.api.familia.application.RejeitarSolicitacaoEntradaFamilia;
 import com.mercadeira.api.familia.application.SolicitacaoPendenteJaExisteException;
+import com.mercadeira.api.familia.application.SolicitacaoNaoPendenteException;
 import com.mercadeira.api.familia.application.SolicitarEntradaFamiliaPorCodigo;
 import com.mercadeira.api.familia.application.UsuarioJaPossuiFamiliaAtivaException;
 import com.mercadeira.api.familia.domain.Familia;
@@ -239,6 +240,33 @@ class ApplicationTests {
 
         assertThat(solicitacao.getStatus()).isEqualTo(StatusSolicitacaoEntradaFamilia.REJEITADA);
         assertThat(consultarFamiliaAtivaUsuario.consultar(solicitante.getId())).isEmpty();
+    }
+
+    @Test
+    void aprovarSolicitacaoCancelaOutrasPendenciasDoMesmoUsuario() {
+        Usuario adminA = cadastrarUsuario.cadastrar("Admin A", "admin-a@example.test", "senha-original");
+        Familia familiaA = criarFamilia.criar(adminA.getId(), "Familia A");
+        MembroFamilia membroAdminA = consultarFamiliaAtivaUsuario.consultar(adminA.getId()).orElseThrow();
+        Usuario adminB = cadastrarUsuario.cadastrar("Admin B", "admin-b@example.test", "senha-original");
+        Familia familiaB = criarFamilia.criar(adminB.getId(), "Familia B");
+        MembroFamilia membroAdminB = consultarFamiliaAtivaUsuario.consultar(adminB.getId()).orElseThrow();
+        Usuario solicitante = cadastrarUsuario.cadastrar("Bia", "bia-pendente@example.test", "senha-original");
+
+        SolicitacaoEntradaFamilia solicitacaoA = solicitarEntradaFamiliaPorCodigo.solicitar(
+                solicitante.getId(), familiaA.getCodigoIngresso());
+        SolicitacaoEntradaFamilia solicitacaoB = solicitarEntradaFamiliaPorCodigo.solicitar(
+                solicitante.getId(), familiaB.getCodigoIngresso());
+
+        aprovarSolicitacaoEntradaFamilia.aprovar(solicitacaoA.getId(), membroAdminA.getId());
+
+        assertThat(solicitacaoA.getStatus()).isEqualTo(StatusSolicitacaoEntradaFamilia.APROVADA);
+        SolicitacaoEntradaFamilia cancelada = solicitacaoEntradaFamiliaRepository.findById(solicitacaoB.getId()).orElseThrow();
+        assertThat(cancelada.getStatus()).isEqualTo(StatusSolicitacaoEntradaFamilia.CANCELADA);
+        assertThat(cancelada.getResolvidaPorMembroFamilia()).isNull();
+        assertThat(consultarFamiliaAtivaUsuario.consultar(solicitante.getId())).isPresent();
+        org.assertj.core.api.Assertions.assertThatThrownBy(
+                () -> aprovarSolicitacaoEntradaFamilia.aprovar(solicitacaoB.getId(), membroAdminB.getId()))
+                .isInstanceOf(SolicitacaoNaoPendenteException.class);
     }
 
     @Test

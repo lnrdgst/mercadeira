@@ -68,6 +68,10 @@ public class SolicitacaoEntradaFamilia {
         this.resolvidaEm = agora;
     }
 
+    public void cancelarAutomaticamente() {
+        this.status = StatusSolicitacaoEntradaFamilia.CANCELADA;
+    }
+
     public UUID getId() {
         return id;
     }
