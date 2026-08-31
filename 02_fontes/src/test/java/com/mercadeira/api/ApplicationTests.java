@@ -7,6 +7,10 @@ import java.time.Instant;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import com.mercadeira.api.compra.domain.StatusCompra;
 import com.mercadeira.api.compra.domain.StatusItemCompra;
@@ -49,6 +53,7 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.annotation.Rollback;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Propagation;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -168,6 +173,78 @@ class ApplicationTests {
         assertThat(familia.getCodigoIngresso()).matches("[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{8}");
         assertThat(administrador.getFamilia().getId()).isEqualTo(familia.getId());
         assertThat(administrador.getPapel()).isEqualTo(PapelMembroFamilia.ADMINISTRADOR);
+    }
+
+    @Test
+    void criarFamiliaCancelaPendenciasDoCriador() {
+        Usuario adminA = cadastrarUsuario.cadastrar("Admin A", "admin-a-criacao@example.test", "senha-original");
+        Familia familiaA = criarFamilia.criar(adminA.getId(), "Familia A");
+        Usuario adminB = cadastrarUsuario.cadastrar("Admin B", "admin-b-criacao@example.test", "senha-original");
+        Familia familiaB = criarFamilia.criar(adminB.getId(), "Familia B");
+        Usuario criador = cadastrarUsuario.cadastrar("Bia", "bia-criacao@example.test", "senha-original");
+        SolicitacaoEntradaFamilia solicitacaoA = solicitarEntradaFamiliaPorCodigo.solicitar(
+                criador.getId(), familiaA.getCodigoIngresso());
+        SolicitacaoEntradaFamilia solicitacaoB = solicitarEntradaFamiliaPorCodigo.solicitar(
+                criador.getId(), familiaB.getCodigoIngresso());
+
+        Familia familiaC = criarFamilia.criar(criador.getId(), "Familia C");
+
+        assertThat(familiaC.getId()).isNotNull();
+        MembroFamilia administrador = consultarFamiliaAtivaUsuario.consultar(criador.getId()).orElseThrow();
+        assertThat(administrador.getFamilia().getId()).isEqualTo(familiaC.getId());
+        assertThat(administrador.getPapel()).isEqualTo(PapelMembroFamilia.ADMINISTRADOR);
+        assertThat(administrador.getStatus()).isEqualTo(StatusMembroFamilia.ATIVO);
+        assertThat(solicitacaoA.getStatus()).isEqualTo(StatusSolicitacaoEntradaFamilia.CANCELADA);
+        assertThat(solicitacaoB.getStatus()).isEqualTo(StatusSolicitacaoEntradaFamilia.CANCELADA);
+        assertThat(solicitacaoEntradaFamiliaRepository.findBySolicitanteUsuario_IdAndStatus(
+                criador.getId(), StatusSolicitacaoEntradaFamilia.PENDENTE)).isEmpty();
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM solicitacao_entrada_familia "
+                        + "WHERE solicitante_usuario_id = ? AND (resolvida_em IS NOT NULL "
+                        + "OR resolvida_por_membro_familia_id IS NOT NULL)",
+                Integer.class, criador.getId())).isZero();
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void criacaoDeFamiliaEAprovacaoConcorrentesGeramUmUnicoVinculoAtivo() throws Exception {
+        Usuario administrador = cadastrarUsuario.cadastrar("Admin", "admin-corrida@example.test", "senha-original");
+        Familia familiaExistente = criarFamilia.criar(administrador.getId(), "Familia existente");
+        MembroFamilia membroAdministrador = consultarFamiliaAtivaUsuario.consultar(administrador.getId()).orElseThrow();
+        Usuario solicitante = cadastrarUsuario.cadastrar("Bia", "bia-corrida@example.test", "senha-original");
+        SolicitacaoEntradaFamilia solicitacao = solicitarEntradaFamiliaPorCodigo.solicitar(
+                solicitante.getId(), familiaExistente.getCodigoIngresso());
+        CountDownLatch iniciar = new CountDownLatch(1);
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+
+        try {
+            Future<Boolean> criacao = executor.submit(() -> {
+                iniciar.await();
+                try {
+                    criarFamilia.criar(solicitante.getId(), "Familia concorrente");
+                    return true;
+                } catch (UsuarioJaPossuiFamiliaAtivaException exception) {
+                    return false;
+                }
+            });
+            Future<Boolean> aprovacao = executor.submit(() -> {
+                iniciar.await();
+                try {
+                    aprovarSolicitacaoEntradaFamilia.aprovar(solicitacao.getId(), membroAdministrador.getId());
+                    return true;
+                } catch (UsuarioJaPossuiFamiliaAtivaException exception) {
+                    return false;
+                }
+            });
+
+            iniciar.countDown();
+
+            assertThat(criacao.get()).isNotEqualTo(aprovacao.get());
+            assertThat(membroFamiliaRepository.findByUsuario_IdAndStatus(
+                    solicitante.getId(), StatusMembroFamilia.ATIVO)).isPresent();
+        } finally {
+            executor.shutdownNow();
+        }
     }
 
     @Test

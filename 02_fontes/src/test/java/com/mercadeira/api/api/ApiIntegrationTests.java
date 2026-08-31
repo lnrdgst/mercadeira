@@ -223,6 +223,32 @@ class ApiIntegrationTests {
     }
 
     @Test
+    void criarFamiliaCancelaPendenciasEAtualizaOnboarding() throws Exception {
+        Usuario adminA = cadastrarUsuario.cadastrar("Admin A", "admin-a-criar-endpoint@example.test", "senha-original");
+        Familia familiaA = criarFamilia.criar(adminA.getId(), "Familia A");
+        Usuario adminB = cadastrarUsuario.cadastrar("Admin B", "admin-b-criar-endpoint@example.test", "senha-original");
+        Familia familiaB = criarFamilia.criar(adminB.getId(), "Familia B");
+        Usuario criador = cadastrarUsuario.cadastrar("Bia", "bia-criar-endpoint@example.test", "senha-original");
+        UUID solicitacaoA = SolicitarEntradaFamiliaResponseHelper.criarPendente(criador, familiaA, solicitacaoRepository);
+        UUID solicitacaoB = SolicitarEntradaFamiliaResponseHelper.criarPendente(criador, familiaB, solicitacaoRepository);
+        String token = tokenDo(criador);
+
+        mockMvc.perform(post("/api/familias")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"nome\":\"Familia C\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.papel").value("ADMINISTRADOR"));
+        mockMvc.perform(get("/api/familias/solicitacoes/minhas-pendentes")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isNoContent());
+        org.assertj.core.api.Assertions.assertThat(solicitacaoRepository.findById(solicitacaoA).orElseThrow().getStatus())
+                .isEqualTo(StatusSolicitacaoEntradaFamilia.CANCELADA);
+        org.assertj.core.api.Assertions.assertThat(solicitacaoRepository.findById(solicitacaoB).orElseThrow().getStatus())
+                .isEqualTo(StatusSolicitacaoEntradaFamilia.CANCELADA);
+    }
+
+    @Test
     void impedeListagemPorMembroSemPermissao() throws Exception {
         Usuario administrador = cadastrarUsuario.cadastrar("Ana", "ana@example.test", "senha-original");
         Familia familia = criarFamilia.criar(administrador.getId(), "Casa da Ana");
