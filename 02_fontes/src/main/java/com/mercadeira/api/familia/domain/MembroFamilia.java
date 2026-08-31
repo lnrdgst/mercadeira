@@ -87,4 +87,8 @@ public class MembroFamilia {
     public StatusMembroFamilia getStatus() {
         return status;
     }
+
+    public Usuario getUsuario() {
+        return usuario;
+    }
 }

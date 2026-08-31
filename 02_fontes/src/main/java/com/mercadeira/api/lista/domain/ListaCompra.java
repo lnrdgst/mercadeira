@@ -33,8 +33,9 @@ public class ListaCompra {
     @Column(name = "nome", nullable = false, length = 120)
     private String nome;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "categoria", nullable = false, length = 100)
-    private String categoria;
+    private CategoriaCompra categoria;
 
     @Column(name = "estabelecimento", length = 120)
     private String estabelecimento;
@@ -55,4 +56,37 @@ public class ListaCompra {
 
     protected ListaCompra() {
     }
+
+    public static ListaCompra criar(
+            Familia familia,
+            String nome,
+            CategoriaCompra categoria,
+            String estabelecimento,
+            MembroFamilia criadaPorMembroFamilia,
+            Instant agora) {
+        ListaCompra lista = new ListaCompra();
+        lista.familia = familia;
+        lista.nome = nome;
+        lista.categoria = categoria;
+        lista.estabelecimento = estabelecimento;
+        lista.status = StatusListaCompra.EM_PREPARACAO;
+        lista.criadaPorMembroFamilia = criadaPorMembroFamilia;
+        lista.criadaEm = agora;
+        lista.atualizadaEm = agora;
+        return lista;
+    }
+
+    public void registrarAtualizacao(Instant agora) {
+        atualizadaEm = agora;
+    }
+
+    public UUID getId() { return id; }
+    public Familia getFamilia() { return familia; }
+    public String getNome() { return nome; }
+    public CategoriaCompra getCategoria() { return categoria; }
+    public String getEstabelecimento() { return estabelecimento; }
+    public StatusListaCompra getStatus() { return status; }
+    public MembroFamilia getCriadaPorMembroFamilia() { return criadaPorMembroFamilia; }
+    public Instant getCriadaEm() { return criadaEm; }
+    public Instant getAtualizadaEm() { return atualizadaEm; }
 }

@@ -39,4 +39,27 @@ public class ParticipanteLista {
 
     protected ParticipanteLista() {
     }
+
+    public static ParticipanteLista criar(ListaCompra listaCompra, MembroFamilia membroFamilia, Instant agora) {
+        ParticipanteLista participante = new ParticipanteLista();
+        participante.listaCompra = listaCompra;
+        participante.membroFamilia = membroFamilia;
+        participante.entrouEm = agora;
+        return participante;
+    }
+
+    public void reativar(Instant agora) {
+        saiuEm = null;
+        entrouEm = agora;
+    }
+
+    public void sair(Instant agora) {
+        saiuEm = agora;
+    }
+
+    public UUID getId() { return id; }
+    public ListaCompra getListaCompra() { return listaCompra; }
+    public MembroFamilia getMembroFamilia() { return membroFamilia; }
+    public Instant getEntrouEm() { return entrouEm; }
+    public Instant getSaiuEm() { return saiuEm; }
 }
