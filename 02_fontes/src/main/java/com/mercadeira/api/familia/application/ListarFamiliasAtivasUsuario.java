@@ -1,6 +1,6 @@
 package com.mercadeira.api.familia.application;
 
-import java.util.Optional;
+import java.util.List;
 import java.util.UUID;
 
 import com.mercadeira.api.familia.domain.MembroFamilia;
@@ -10,16 +10,17 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-public class ConsultarFamiliaAtivaUsuario {
+public class ListarFamiliasAtivasUsuario {
 
     private final MembroFamiliaRepository membroFamiliaRepository;
 
-    public ConsultarFamiliaAtivaUsuario(MembroFamiliaRepository membroFamiliaRepository) {
+    public ListarFamiliasAtivasUsuario(MembroFamiliaRepository membroFamiliaRepository) {
         this.membroFamiliaRepository = membroFamiliaRepository;
     }
 
     @Transactional(readOnly = true)
-    public Optional<MembroFamilia> consultar(UUID usuarioId) {
-        return membroFamiliaRepository.findByUsuario_IdAndStatus(usuarioId, StatusMembroFamilia.ATIVO);
+    public List<MembroFamilia> listar(UUID usuarioId) {
+        return membroFamiliaRepository.findByUsuario_IdAndStatusOrderByFamilia_NomeAsc(
+                usuarioId, StatusMembroFamilia.ATIVO);
     }
 }

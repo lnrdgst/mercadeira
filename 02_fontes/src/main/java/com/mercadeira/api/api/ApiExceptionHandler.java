@@ -12,7 +12,7 @@ import com.mercadeira.api.familia.application.MembroSemPermissaoException;
 import com.mercadeira.api.familia.application.SolicitacaoNaoEncontradaException;
 import com.mercadeira.api.familia.application.SolicitacaoNaoPendenteException;
 import com.mercadeira.api.familia.application.SolicitacaoPendenteJaExisteException;
-import com.mercadeira.api.familia.application.UsuarioJaPossuiFamiliaAtivaException;
+import com.mercadeira.api.familia.application.SolicitanteJaPossuiVinculoAtivoException;
 import com.mercadeira.api.familia.application.UsuarioNaoEncontradoException;
 import com.mercadeira.api.usuario.application.DadosUsuarioInvalidosException;
 import com.mercadeira.api.usuario.application.EmailJaCadastradoException;
@@ -66,8 +66,9 @@ public class ApiExceptionHandler {
         return resposta(HttpStatus.NOT_FOUND, "RECURSO_NAO_ENCONTRADO", "Recurso nao encontrado.", request, Map.of());
     }
 
-    @ExceptionHandler({ EmailJaCadastradoException.class, UsuarioJaPossuiFamiliaAtivaException.class,
-            SolicitacaoPendenteJaExisteException.class, SolicitacaoNaoPendenteException.class,
+    @ExceptionHandler({ EmailJaCadastradoException.class, SolicitacaoPendenteJaExisteException.class,
+            SolicitacaoNaoPendenteException.class,
+            SolicitanteJaPossuiVinculoAtivoException.class,
             FamiliaInativaException.class })
     ResponseEntity<ErroApiResponse> tratarConflito(Exception exception, HttpServletRequest request) {
         return resposta(HttpStatus.CONFLICT, "CONFLITO_DE_ESTADO", exception.getMessage(), request, Map.of());

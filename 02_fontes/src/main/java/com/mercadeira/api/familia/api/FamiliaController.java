@@ -5,16 +5,19 @@ import java.util.UUID;
 
 import com.mercadeira.api.autenticacao.security.UsuarioAutenticado;
 import com.mercadeira.api.familia.application.AprovarSolicitacaoEntradaFamilia;
-import com.mercadeira.api.familia.application.ConsultarFamiliaAtivaUsuario;
 import com.mercadeira.api.familia.application.ConsultarMinhasSolicitacoesPendentes;
 import com.mercadeira.api.familia.application.CriarFamilia;
+import com.mercadeira.api.familia.application.ListarFamiliasAtivasUsuario;
 import com.mercadeira.api.familia.application.ListarSolicitacoesPendentes;
 import com.mercadeira.api.familia.application.MembroSemPermissaoException;
 import com.mercadeira.api.familia.application.RejeitarSolicitacaoEntradaFamilia;
 import com.mercadeira.api.familia.application.SolicitarEntradaFamiliaPorCodigo;
 import com.mercadeira.api.familia.domain.Familia;
 import com.mercadeira.api.familia.domain.MembroFamilia;
+import com.mercadeira.api.familia.domain.PapelMembroFamilia;
 import com.mercadeira.api.familia.domain.SolicitacaoEntradaFamilia;
+import com.mercadeira.api.familia.domain.StatusMembroFamilia;
+import com.mercadeira.api.familia.repository.MembroFamiliaRepository;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -31,45 +34,45 @@ public class FamiliaController {
 
     private final UsuarioAutenticado usuarioAutenticado;
     private final CriarFamilia criarFamilia;
-    private final ConsultarFamiliaAtivaUsuario consultarFamiliaAtivaUsuario;
+    private final ListarFamiliasAtivasUsuario listarFamiliasAtivasUsuario;
     private final ConsultarMinhasSolicitacoesPendentes consultarMinhasSolicitacoesPendentes;
     private final SolicitarEntradaFamiliaPorCodigo solicitarEntradaFamiliaPorCodigo;
     private final ListarSolicitacoesPendentes listarSolicitacoesPendentes;
     private final AprovarSolicitacaoEntradaFamilia aprovarSolicitacaoEntradaFamilia;
     private final RejeitarSolicitacaoEntradaFamilia rejeitarSolicitacaoEntradaFamilia;
+    private final MembroFamiliaRepository membroFamiliaRepository;
 
-    public FamiliaController(
-            UsuarioAutenticado usuarioAutenticado,
-            CriarFamilia criarFamilia,
-            ConsultarFamiliaAtivaUsuario consultarFamiliaAtivaUsuario,
+    public FamiliaController(UsuarioAutenticado usuarioAutenticado, CriarFamilia criarFamilia,
+            ListarFamiliasAtivasUsuario listarFamiliasAtivasUsuario,
             ConsultarMinhasSolicitacoesPendentes consultarMinhasSolicitacoesPendentes,
             SolicitarEntradaFamiliaPorCodigo solicitarEntradaFamiliaPorCodigo,
             ListarSolicitacoesPendentes listarSolicitacoesPendentes,
             AprovarSolicitacaoEntradaFamilia aprovarSolicitacaoEntradaFamilia,
-            RejeitarSolicitacaoEntradaFamilia rejeitarSolicitacaoEntradaFamilia) {
+            RejeitarSolicitacaoEntradaFamilia rejeitarSolicitacaoEntradaFamilia,
+            MembroFamiliaRepository membroFamiliaRepository) {
         this.usuarioAutenticado = usuarioAutenticado;
         this.criarFamilia = criarFamilia;
-        this.consultarFamiliaAtivaUsuario = consultarFamiliaAtivaUsuario;
+        this.listarFamiliasAtivasUsuario = listarFamiliasAtivasUsuario;
         this.consultarMinhasSolicitacoesPendentes = consultarMinhasSolicitacoesPendentes;
         this.solicitarEntradaFamiliaPorCodigo = solicitarEntradaFamiliaPorCodigo;
         this.listarSolicitacoesPendentes = listarSolicitacoesPendentes;
         this.aprovarSolicitacaoEntradaFamilia = aprovarSolicitacaoEntradaFamilia;
         this.rejeitarSolicitacaoEntradaFamilia = rejeitarSolicitacaoEntradaFamilia;
+        this.membroFamiliaRepository = membroFamiliaRepository;
     }
 
-    @GetMapping("/ativa")
-    public ResponseEntity<FamiliaResponse> consultarAtiva() {
-        return consultarFamiliaAtivaUsuario.consultar(usuarioAutenticado.getId())
+    @GetMapping
+    public List<FamiliaResponse> listarFamilias() {
+        return listarFamiliasAtivasUsuario.listar(usuarioAutenticado.getId()).stream()
                 .map(this::familiaResponse)
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.noContent().build());
+                .toList();
     }
 
     @PostMapping
     public ResponseEntity<FamiliaResponse> criar(@Valid @RequestBody CriarFamiliaRequest request) {
         Familia familia = criarFamilia.criar(usuarioAutenticado.getId(), request.nome());
-        MembroFamilia membro = membroAtivo();
-        return ResponseEntity.status(HttpStatus.CREATED).body(FamiliaResponse.from(familia, membro.getPapel()));
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(FamiliaResponse.from(familia, PapelMembroFamilia.ADMINISTRADOR));
     }
 
     @PostMapping("/solicitacoes")
@@ -78,14 +81,6 @@ public class FamiliaController {
         SolicitacaoEntradaFamilia solicitacao = solicitarEntradaFamiliaPorCodigo.solicitar(
                 usuarioAutenticado.getId(), request.codigoIngresso());
         return ResponseEntity.status(HttpStatus.CREATED).body(SolicitacaoEntradaFamiliaResponse.from(solicitacao));
-    }
-
-    @GetMapping("/solicitacoes")
-    public List<SolicitacaoEntradaFamiliaResponse> listarSolicitacoes() {
-        MembroFamilia executor = membroAtivo();
-        return listarSolicitacoesPendentes.listar(executor.getFamilia().getId(), executor.getId()).stream()
-                .map(SolicitacaoEntradaFamiliaResponse::from)
-                .toList();
     }
 
     @GetMapping("/solicitacoes/minhas-pendentes")
@@ -97,17 +92,25 @@ public class FamiliaController {
         return pendentes.isEmpty() ? ResponseEntity.noContent().build() : ResponseEntity.ok(pendentes);
     }
 
-    @PostMapping("/solicitacoes/{solicitacaoId}/aprovar")
-    public SolicitacaoEntradaFamiliaResponse aprovar(@PathVariable UUID solicitacaoId) {
+    @GetMapping("/{familiaId}/solicitacoes")
+    public List<SolicitacaoEntradaFamiliaResponse> listarSolicitacoes(@PathVariable UUID familiaId) {
+        MembroFamilia executor = membroAtivoNaFamilia(familiaId);
+        return listarSolicitacoesPendentes.listar(familiaId, executor.getId()).stream()
+                .map(SolicitacaoEntradaFamiliaResponse::from)
+                .toList();
+    }
+
+    @PostMapping("/{familiaId}/solicitacoes/{solicitacaoId}/aprovar")
+    public SolicitacaoEntradaFamiliaResponse aprovar(@PathVariable UUID familiaId, @PathVariable UUID solicitacaoId) {
         SolicitacaoEntradaFamilia solicitacao = aprovarSolicitacaoEntradaFamilia.aprovar(
-                solicitacaoId, membroAtivo().getId());
+                familiaId, solicitacaoId, membroAtivoNaFamilia(familiaId).getId());
         return SolicitacaoEntradaFamiliaResponse.from(solicitacao);
     }
 
-    @PostMapping("/solicitacoes/{solicitacaoId}/rejeitar")
-    public SolicitacaoEntradaFamiliaResponse rejeitar(@PathVariable UUID solicitacaoId) {
+    @PostMapping("/{familiaId}/solicitacoes/{solicitacaoId}/rejeitar")
+    public SolicitacaoEntradaFamiliaResponse rejeitar(@PathVariable UUID familiaId, @PathVariable UUID solicitacaoId) {
         SolicitacaoEntradaFamilia solicitacao = rejeitarSolicitacaoEntradaFamilia.rejeitar(
-                solicitacaoId, membroAtivo().getId());
+                familiaId, solicitacaoId, membroAtivoNaFamilia(familiaId).getId());
         return SolicitacaoEntradaFamiliaResponse.from(solicitacao);
     }
 
@@ -115,8 +118,9 @@ public class FamiliaController {
         return FamiliaResponse.from(membro.getFamilia(), membro.getPapel());
     }
 
-    private MembroFamilia membroAtivo() {
-        return consultarFamiliaAtivaUsuario.consultar(usuarioAutenticado.getId())
+    private MembroFamilia membroAtivoNaFamilia(UUID familiaId) {
+        return membroFamiliaRepository.findByFamilia_IdAndUsuario_IdAndStatus(
+                familiaId, usuarioAutenticado.getId(), StatusMembroFamilia.ATIVO)
                 .orElseThrow(MembroSemPermissaoException::new);
     }
 }

@@ -1,0 +1,78 @@
+erDiagram
+    USUARIO {
+        uuid id PK
+        varchar nome
+        varchar email UK
+        varchar senha_hash
+    }
+    FAMILIA {
+        uuid id PK
+        varchar nome
+        varchar codigo_ingresso UK
+        varchar status
+    }
+    MEMBRO_FAMILIA {
+        uuid id PK
+        uuid familia_id FK
+        uuid usuario_id FK
+        varchar papel
+        varchar status
+    }
+    SOLICITACAO_ENTRADA_FAMILIA {
+        uuid id PK
+        uuid familia_id FK
+        uuid solicitante_usuario_id FK
+        varchar status
+        timestamptz solicitada_em
+        uuid resolvida_por_membro_familia_id FK
+        timestamptz resolvida_em
+    }
+    LISTA_COMPRA {
+        uuid id PK
+        uuid familia_id FK
+        varchar status
+    }
+    PARTICIPANTE_LISTA {
+        uuid id PK
+        uuid lista_compra_id FK
+        uuid membro_familia_id FK
+    }
+    ITEM_LISTA {
+        uuid id PK
+        uuid lista_compra_id FK
+        integer ordem_exibicao
+    }
+    COMPRA {
+        uuid id PK
+        uuid lista_compra_id FK
+        varchar status
+    }
+    PARTICIPANTE_COMPRA {
+        uuid id PK
+        uuid compra_id FK
+        uuid membro_familia_id FK
+    }
+    ITEM_COMPRA {
+        uuid id PK
+        uuid compra_id FK
+        integer ordem_exibicao
+        varchar status
+    }
+
+    USUARIO ||--o{ FAMILIA : cria
+    USUARIO ||--o{ MEMBRO_FAMILIA : "0..N ativos"
+    USUARIO ||--o{ SOLICITACAO_ENTRADA_FAMILIA : solicita
+    FAMILIA ||--o{ MEMBRO_FAMILIA : possui
+    FAMILIA ||--o{ SOLICITACAO_ENTRADA_FAMILIA : recebe
+    FAMILIA ||--o{ LISTA_COMPRA : possui
+    MEMBRO_FAMILIA ||--o{ SOLICITACAO_ENTRADA_FAMILIA : resolve
+    MEMBRO_FAMILIA ||--o{ LISTA_COMPRA : cria
+    LISTA_COMPRA ||--o{ PARTICIPANTE_LISTA : possui
+    MEMBRO_FAMILIA ||--o{ PARTICIPANTE_LISTA : participa
+    LISTA_COMPRA ||--o{ ITEM_LISTA : possui
+    LISTA_COMPRA ||--o| COMPRA : origina
+    COMPRA ||--o{ PARTICIPANTE_COMPRA : possui
+    COMPRA ||--o{ ITEM_COMPRA : possui
+
+%% UNIQUE (familia_id, usuario_id) impede duplicidade dentro da familia.
+%% O indice de membro ativo por usuario e parcial e nao unico.

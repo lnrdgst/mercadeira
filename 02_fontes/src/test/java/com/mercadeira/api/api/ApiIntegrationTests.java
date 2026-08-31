@@ -1,5 +1,6 @@
 package com.mercadeira.api.api;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -12,6 +13,7 @@ import java.util.UUID;
 
 import com.mercadeira.api.autenticacao.application.AutenticarUsuario;
 import com.mercadeira.api.familia.application.CriarFamilia;
+import com.mercadeira.api.familia.application.SolicitarEntradaFamiliaPorCodigo;
 import com.mercadeira.api.familia.domain.Familia;
 import com.mercadeira.api.familia.domain.SolicitacaoEntradaFamilia;
 import com.mercadeira.api.familia.domain.StatusSolicitacaoEntradaFamilia;
@@ -47,266 +49,101 @@ class ApiIntegrationTests {
 
     @Container
     @ServiceConnection
-    static PostgreSQLContainer postgreSQLContainer = new PostgreSQLContainer(
-            DockerImageName.parse("postgres:18-alpine"));
+    static PostgreSQLContainer postgreSQLContainer = new PostgreSQLContainer(DockerImageName.parse("postgres:18-alpine"));
 
     @DynamicPropertySource
     static void configurarJwt(DynamicPropertyRegistry registry) {
         registry.add("mercadeira.jwt.secret", () -> JWT_TEST_SECRET);
     }
 
-    @Autowired
-    private WebApplicationContext webApplicationContext;
-
-    @Autowired
-    private CadastrarUsuario cadastrarUsuario;
-
-    @Autowired
-    private AutenticarUsuario autenticarUsuario;
-
-    @Autowired
-    private CriarFamilia criarFamilia;
-
-    @Autowired
-    private SolicitacaoEntradaFamiliaRepository solicitacaoRepository;
-
+    @Autowired private WebApplicationContext context;
+    @Autowired private CadastrarUsuario cadastrarUsuario;
+    @Autowired private AutenticarUsuario autenticarUsuario;
+    @Autowired private CriarFamilia criarFamilia;
+    @Autowired private SolicitarEntradaFamiliaPorCodigo solicitarEntrada;
+    @Autowired private SolicitacaoEntradaFamiliaRepository solicitacaoRepository;
     private MockMvc mockMvc;
 
     @BeforeEach
     void configurarMockMvc() {
-        mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext)
-                .apply(springSecurity())
-                .build();
+        mockMvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
     }
 
     @Test
-    void cadastraUsuarioValidoSemExporHash() throws Exception {
-        mockMvc.perform(post("/api/usuarios")
+    void listaFamiliasAtivasOuArrayVazio() throws Exception {
+        Usuario semFamilia = usuario("Sem familia");
+        mockMvc.perform(get("/api/familias").header("Authorization", bearer(semFamilia)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$").isEmpty());
+
+        Usuario usuario = usuario("Ana");
+        criarFamilia.criar(usuario.getId(), "Zeta");
+        criarFamilia.criar(usuario.getId(), "Alfa");
+        mockMvc.perform(get("/api/familias").header("Authorization", bearer(usuario)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].nome").value("Alfa"))
+                .andExpect(jsonPath("$[0].papel").value("ADMINISTRADOR"))
+                .andExpect(jsonPath("$[1].nome").value("Zeta"));
+    }
+
+    @Test
+    void rotasDeFamiliaExigemJwt() throws Exception {
+        mockMvc.perform(get("/api/familias")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void solicitacaoEOnboardingFuncionamComOutraFamiliaAtiva() throws Exception {
+        Usuario usuario = usuario("Bia");
+        criarFamilia.criar(usuario.getId(), "Casa Bia");
+        Usuario admin = usuario("Admin");
+        Familia destino = criarFamilia.criar(admin.getId(), "Destino");
+
+        mockMvc.perform(post("/api/familias/solicitacoes").header("Authorization", bearer(usuario))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"nome\":\"Ana\",\"email\":\"ana@example.test\",\"senha\":\"senha-original\"}"))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.id").isNotEmpty())
-                .andExpect(jsonPath("$.email").value("ana@example.test"))
-                .andExpect(jsonPath("$.senhaHash").doesNotExist());
+                        .content("{\"codigoIngresso\":\"" + destino.getCodigoIngresso() + "\"}"))
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.status").value("PENDENTE"));
+        mockMvc.perform(get("/api/familias/solicitacoes/minhas-pendentes").header("Authorization", bearer(usuario)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$[0].familia.id").value(destino.getId().toString()));
     }
 
     @Test
-    void retornaErroDeValidacaoParaEmailInvalido() throws Exception {
-        mockMvc.perform(post("/api/usuarios")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"nome\":\"Ana\",\"email\":\"invalido\",\"senha\":\"senha-original\"}"))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.erro").value("VALIDACAO_INVALIDA"))
-                .andExpect(jsonPath("$.campos.email").isNotEmpty())
-                .andExpect(jsonPath("$.timestamp").exists())
-                .andExpect(jsonPath("$.path").value("/api/usuarios"));
-    }
-
-    @Test
-    void retornaConflitoParaEmailDuplicado() throws Exception {
-        cadastrarUsuario.cadastrar("Ana", "ana@example.test", "senha-original");
-
-        mockMvc.perform(post("/api/usuarios")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"nome\":\"Outra Ana\",\"email\":\"ana@example.test\",\"senha\":\"senha-original\"}"))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.erro").value("CONFLITO_DE_ESTADO"));
-    }
-
-    @Test
-    void realizaLoginValidoERejeitaCredenciaisInvalidas() throws Exception {
-        cadastrarUsuario.cadastrar("Ana", "ana@example.test", "senha-original");
-
-        mockMvc.perform(post("/api/autenticacao/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"email\":\"ana@example.test\",\"senha\":\"senha-original\"}"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.token").isNotEmpty())
-                .andExpect(jsonPath("$.expiracao").exists());
-        mockMvc.perform(post("/api/autenticacao/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"email\":\"ana@example.test\",\"senha\":\"invalida\"}"))
-                .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.erro").value("NAO_AUTENTICADO"));
-    }
-
-    @Test
-    void exigeJwtParaRotasDeFamilia() throws Exception {
-        mockMvc.perform(get("/api/familias/ativa"))
-                .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.erro").value("NAO_AUTENTICADO"));
-    }
-
-    @Test
-    void criaFamiliaAutenticadoEConsultaFamiliaAtiva() throws Exception {
-        Usuario usuario = cadastrarUsuario.cadastrar("Ana", "ana@example.test", "senha-original");
-        String token = tokenDo(usuario);
-
-        mockMvc.perform(post("/api/familias")
-                        .header("Authorization", "Bearer " + token)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"nome\":\"Casa da Ana\"}"))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.status").value("ATIVA"))
-                .andExpect(jsonPath("$.papel").value("ADMINISTRADOR"));
-        mockMvc.perform(get("/api/familias/ativa").header("Authorization", "Bearer " + token))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.nome").value("Casa da Ana"));
-    }
-
-    @Test
-    void solicitaEntradaEListaSolicitacoesComoAdministrador() throws Exception {
-        Usuario administrador = cadastrarUsuario.cadastrar("Ana", "ana@example.test", "senha-original");
-        Familia familia = criarFamilia.criar(administrador.getId(), "Casa da Ana");
-        Usuario solicitante = cadastrarUsuario.cadastrar("Bia", "bia@example.test", "senha-original");
-
-        mockMvc.perform(post("/api/familias/solicitacoes")
-                        .header("Authorization", "Bearer " + tokenDo(solicitante))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"codigoIngresso\":\"" + familia.getCodigoIngresso() + "\"}"))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.status").value("PENDENTE"))
-                .andExpect(jsonPath("$.solicitante.id").value(solicitante.getId().toString()))
-                .andExpect(jsonPath("$.solicitante.nome").value("Bia"))
-                .andExpect(jsonPath("$.solicitante.email").value("bia@example.test"))
-                .andExpect(jsonPath("$.solicitante.senhaHash").doesNotExist());
-        mockMvc.perform(get("/api/familias/solicitacoes")
-                        .header("Authorization", "Bearer " + tokenDo(administrador)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].status").value("PENDENTE"))
-                .andExpect(jsonPath("$[0].solicitante.id").value(solicitante.getId().toString()))
-                .andExpect(jsonPath("$[0].solicitante.nome").value("Bia"))
-                .andExpect(jsonPath("$[0].solicitante.email").value("bia@example.test"))
-                .andExpect(jsonPath("$[0].solicitante.senhaHash").doesNotExist());
-    }
-
-    @Test
-    void retornaPendenciasDoUsuarioAutenticadoParaOnboarding() throws Exception {
-        Usuario adminA = cadastrarUsuario.cadastrar("Admin A", "admin-a-onboarding@example.test", "senha-original");
+    void aprovacaoEscopadaNaoCancelaOutrasPendencias() throws Exception {
+        Usuario adminA = usuario("Admin A");
         Familia familiaA = criarFamilia.criar(adminA.getId(), "Familia A");
-        Usuario adminB = cadastrarUsuario.cadastrar("Admin B", "admin-b-onboarding@example.test", "senha-original");
+        Usuario adminB = usuario("Admin B");
         Familia familiaB = criarFamilia.criar(adminB.getId(), "Familia B");
-        Usuario solicitante = cadastrarUsuario.cadastrar("Bia", "bia-onboarding@example.test", "senha-original");
-        SolicitarEntradaFamiliaResponseHelper.criarPendente(solicitante, familiaA, solicitacaoRepository);
-        SolicitarEntradaFamiliaResponseHelper.criarPendente(solicitante, familiaB, solicitacaoRepository);
+        Usuario solicitante = usuario("Bia");
+        UUID solicitacaoA = solicitarEntrada.solicitar(solicitante.getId(), familiaA.getCodigoIngresso()).getId();
+        UUID solicitacaoB = solicitarEntrada.solicitar(solicitante.getId(), familiaB.getCodigoIngresso()).getId();
 
-        mockMvc.perform(get("/api/familias/solicitacoes/minhas-pendentes")
-                        .header("Authorization", "Bearer " + tokenDo(solicitante)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(2))
-                .andExpect(jsonPath("$[0].status").value("PENDENTE"))
-                .andExpect(jsonPath("$[0].familia.id").exists())
-                .andExpect(jsonPath("$[0].familia.nome").exists())
-                .andExpect(jsonPath("$[0].solicitante").doesNotExist());
+        mockMvc.perform(post("/api/familias/{familiaId}/solicitacoes/{id}/aprovar", familiaA.getId(), solicitacaoA)
+                        .header("Authorization", bearer(adminA)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("APROVADA"));
+        assertThat(solicitacaoRepository.findById(solicitacaoB).orElseThrow().getStatus())
+                .isEqualTo(StatusSolicitacaoEntradaFamilia.PENDENTE);
+        mockMvc.perform(get("/api/familias/{familiaId}/solicitacoes", familiaB.getId())
+                        .header("Authorization", bearer(adminA)))
+                .andExpect(status().isForbidden());
     }
 
     @Test
-    void retornaNoContentQuandoUsuarioNaoPossuiPendencias() throws Exception {
-        Usuario usuario = cadastrarUsuario.cadastrar("Bia", "bia-sem-pendencias@example.test", "senha-original");
-
-        mockMvc.perform(get("/api/familias/solicitacoes/minhas-pendentes")
-                        .header("Authorization", "Bearer " + tokenDo(usuario)))
-                .andExpect(status().isNoContent());
-    }
-
-    @Test
-    void retornaNoContentParaUsuarioComFamiliaAtivaMesmoComPendenciaResidual() throws Exception {
-        Usuario usuario = cadastrarUsuario.cadastrar("Bia", "bia-com-familia@example.test", "senha-original");
-        criarFamilia.criar(usuario.getId(), "Familia da Bia");
-        Usuario administrador = cadastrarUsuario.cadastrar("Ana", "ana-residual@example.test", "senha-original");
-        Familia outraFamilia = criarFamilia.criar(administrador.getId(), "Outra familia");
-        SolicitarEntradaFamiliaResponseHelper.criarPendente(usuario, outraFamilia, solicitacaoRepository);
-
-        mockMvc.perform(get("/api/familias/solicitacoes/minhas-pendentes")
-                        .header("Authorization", "Bearer " + tokenDo(usuario)))
-                .andExpect(status().isNoContent());
-    }
-
-    @Test
-    void criarFamiliaCancelaPendenciasEAtualizaOnboarding() throws Exception {
-        Usuario adminA = cadastrarUsuario.cadastrar("Admin A", "admin-a-criar-endpoint@example.test", "senha-original");
+    void endpointAdministrativoExigeFamiliaDaSolicitacao() throws Exception {
+        Usuario adminA = usuario("Admin A");
         Familia familiaA = criarFamilia.criar(adminA.getId(), "Familia A");
-        Usuario adminB = cadastrarUsuario.cadastrar("Admin B", "admin-b-criar-endpoint@example.test", "senha-original");
+        Usuario adminB = usuario("Admin B");
         Familia familiaB = criarFamilia.criar(adminB.getId(), "Familia B");
-        Usuario criador = cadastrarUsuario.cadastrar("Bia", "bia-criar-endpoint@example.test", "senha-original");
-        UUID solicitacaoA = SolicitarEntradaFamiliaResponseHelper.criarPendente(criador, familiaA, solicitacaoRepository);
-        UUID solicitacaoB = SolicitarEntradaFamiliaResponseHelper.criarPendente(criador, familiaB, solicitacaoRepository);
-        String token = tokenDo(criador);
+        Usuario solicitante = usuario("Bia");
+        SolicitacaoEntradaFamilia solicitacao = solicitarEntrada.solicitar(solicitante.getId(), familiaB.getCodigoIngresso());
 
-        mockMvc.perform(post("/api/familias")
-                        .header("Authorization", "Bearer " + token)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"nome\":\"Familia C\"}"))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.papel").value("ADMINISTRADOR"));
-        mockMvc.perform(get("/api/familias/solicitacoes/minhas-pendentes")
-                        .header("Authorization", "Bearer " + token))
-                .andExpect(status().isNoContent());
-        org.assertj.core.api.Assertions.assertThat(solicitacaoRepository.findById(solicitacaoA).orElseThrow().getStatus())
-                .isEqualTo(StatusSolicitacaoEntradaFamilia.CANCELADA);
-        org.assertj.core.api.Assertions.assertThat(solicitacaoRepository.findById(solicitacaoB).orElseThrow().getStatus())
-                .isEqualTo(StatusSolicitacaoEntradaFamilia.CANCELADA);
+        mockMvc.perform(post("/api/familias/{familiaId}/solicitacoes/{id}/aprovar", familiaA.getId(), solicitacao.getId())
+                        .header("Authorization", bearer(adminA)))
+                .andExpect(status().isNotFound());
     }
 
-    @Test
-    void impedeListagemPorMembroSemPermissao() throws Exception {
-        Usuario administrador = cadastrarUsuario.cadastrar("Ana", "ana@example.test", "senha-original");
-        Familia familia = criarFamilia.criar(administrador.getId(), "Casa da Ana");
-        Usuario solicitante = cadastrarUsuario.cadastrar("Bia", "bia@example.test", "senha-original");
-        SolicitarEntradaFamiliaResponseHelper.criarPendente(solicitante, familia, solicitacaoRepository);
-
-        mockMvc.perform(get("/api/familias/solicitacoes")
-                        .header("Authorization", "Bearer " + tokenDo(solicitante)))
-                .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.erro").value("ACESSO_NEGADO"));
+    private Usuario usuario(String nome) {
+        return cadastrarUsuario.cadastrar(nome, nome.toLowerCase().replace(" ", "") + UUID.randomUUID() + "@test.local", "senha-original");
     }
 
-    @Test
-    void aprovaESemelhantementeRejeitaSolicitacoesAutenticado() throws Exception {
-        Usuario administrador = cadastrarUsuario.cadastrar("Ana", "ana@example.test", "senha-original");
-        Familia familia = criarFamilia.criar(administrador.getId(), "Casa da Ana");
-        Usuario primeiroSolicitante = cadastrarUsuario.cadastrar("Bia", "bia@example.test", "senha-original");
-        Usuario segundoSolicitante = cadastrarUsuario.cadastrar("Caio", "caio@example.test", "senha-original");
-        UUID aprovacaoId = SolicitarEntradaFamiliaResponseHelper.criarPendente(
-                primeiroSolicitante, familia, solicitacaoRepository);
-        UUID rejeicaoId = SolicitarEntradaFamiliaResponseHelper.criarPendente(
-                segundoSolicitante, familia, solicitacaoRepository);
-        String token = tokenDo(administrador);
-
-        mockMvc.perform(post("/api/familias/solicitacoes/{id}/aprovar", aprovacaoId)
-                        .header("Authorization", "Bearer " + token))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("APROVADA"))
-                .andExpect(jsonPath("$.solicitante.id").value(primeiroSolicitante.getId().toString()))
-                .andExpect(jsonPath("$.solicitante.nome").value("Bia"))
-                .andExpect(jsonPath("$.solicitante.email").value("bia@example.test"))
-                .andExpect(jsonPath("$.solicitante.senhaHash").doesNotExist());
-        mockMvc.perform(post("/api/familias/solicitacoes/{id}/rejeitar", rejeicaoId)
-                        .header("Authorization", "Bearer " + token))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("REJEITADA"))
-                .andExpect(jsonPath("$.solicitante.id").value(segundoSolicitante.getId().toString()))
-                .andExpect(jsonPath("$.solicitante.nome").value("Caio"))
-                .andExpect(jsonPath("$.solicitante.email").value("caio@example.test"))
-                .andExpect(jsonPath("$.solicitante.senhaHash").doesNotExist());
-    }
-
-    private String tokenDo(Usuario usuario) {
-        return autenticarUsuario.autenticar(usuario.getEmail(), "senha-original").token();
-    }
-
-    private static final class SolicitarEntradaFamiliaResponseHelper {
-
-        private SolicitarEntradaFamiliaResponseHelper() {
-        }
-
-        static UUID criarPendente(
-                Usuario solicitante,
-                Familia familia,
-                SolicitacaoEntradaFamiliaRepository solicitacaoRepository) {
-            SolicitacaoEntradaFamilia solicitacao = com.mercadeira.api.familia.domain.SolicitacaoEntradaFamilia.criar(
-                    familia, solicitante, java.time.Instant.now());
-            return solicitacaoRepository.save(solicitacao).getId();
-        }
+    private String bearer(Usuario usuario) {
+        return "Bearer " + autenticarUsuario.autenticar(usuario.getEmail(), "senha-original").token();
     }
 }

@@ -28,9 +28,9 @@ public class CriarListaCompra {
     }
 
     @Transactional
-    public ListaCompra criar(UUID usuarioId, String nome, CategoriaCompra categoria, String estabelecimento) {
+    public ListaCompra criar(UUID usuarioId, UUID familiaId, String nome, CategoriaCompra categoria, String estabelecimento) {
         if (nome == null || nome.isBlank() || categoria == null) throw new IllegalArgumentException("Nome e categoria sao obrigatorios.");
-        MembroFamilia criador = acesso.membroAtivoDoUsuario(usuarioId);
+        MembroFamilia criador = acesso.membroAtivoNaFamilia(usuarioId, familiaId);
         if (criador.getFamilia().getStatus() != StatusFamilia.ATIVA) throw new FamiliaInativaException();
         ListaCompra lista = listaRepository.save(ListaCompra.criar(
                 criador.getFamilia(), nome, categoria, estabelecimento, criador, clock.instant()));

@@ -17,8 +17,8 @@ public class ListarListasFamilia {
         this.acesso = acesso; this.listaRepository = listaRepository;
     }
     @Transactional(readOnly = true)
-    public List<ListaCompra> listar(UUID usuarioId) {
-        MembroFamilia membro = acesso.membroAtivoDoUsuario(usuarioId);
-        return listaRepository.findByFamilia_IdOrderByAtualizadaEmDesc(membro.getFamilia().getId());
+    public List<ListaCompra> listar(UUID usuarioId, UUID familiaId) {
+        acesso.membroAtivoNaFamilia(usuarioId, familiaId);
+        return listaRepository.findByFamilia_IdOrderByAtualizadaEmDesc(familiaId);
     }
 }

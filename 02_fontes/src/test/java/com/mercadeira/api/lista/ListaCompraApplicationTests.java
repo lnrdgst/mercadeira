@@ -99,7 +99,7 @@ class ListaCompraApplicationTests {
         Usuario usuario = usuario("Ana");
         criarFamilia.criar(usuario.getId(), "Casa da Ana");
 
-        ListaCompra lista = criarLista.criar(usuario.getId(), "Compras", CategoriaCompra.SUPERMERCADO, null);
+        ListaCompra lista = criarLista.criar(usuario.getId(), membroAtivo(usuario).getFamilia().getId(), "Compras", CategoriaCompra.SUPERMERCADO, null);
 
         assertThat(lista.getStatus()).isEqualTo(StatusListaCompra.EM_PREPARACAO);
         assertThat(participanteRepository.findByListaCompra_IdAndSaiuEmIsNull(lista.getId()))
@@ -115,26 +115,41 @@ class ListaCompraApplicationTests {
 
     @Test
     void impedeCriacaoSemFamiliaAtiva() {
-        assertThatThrownBy(() -> criarLista.criar(usuario("Sem familia").getId(), "Lista", CategoriaCompra.OUTROS, null))
+        assertThatThrownBy(() -> criarLista.criar(usuario("Sem familia").getId(), UUID.randomUUID(), "Lista", CategoriaCompra.OUTROS, null))
                 .isInstanceOf(MembroFamiliaInvalidoException.class);
     }
 
     @Test
     void listaApenasListasDaPropriaFamiliaEImpedeConsultaExterna() {
         Usuario ana = usuario("Ana"); criarFamilia.criar(ana.getId(), "Casa Ana");
-        ListaCompra listaAna = criarLista.criar(ana.getId(), "Ana", CategoriaCompra.OUTROS, null);
+        ListaCompra listaAna = criarLista.criar(ana.getId(), membroAtivo(ana).getFamilia().getId(), "Ana", CategoriaCompra.OUTROS, null);
         Usuario bia = usuario("Bia"); criarFamilia.criar(bia.getId(), "Casa Bia");
-        criarLista.criar(bia.getId(), "Bia", CategoriaCompra.OUTROS, null);
+        criarLista.criar(bia.getId(), membroAtivo(bia).getFamilia().getId(), "Bia", CategoriaCompra.OUTROS, null);
 
-        assertThat(listarListas.listar(ana.getId())).extracting(ListaCompra::getId).containsExactly(listaAna.getId());
+        assertThat(listarListas.listar(ana.getId(), listaAna.getFamilia().getId())).extracting(ListaCompra::getId).containsExactly(listaAna.getId());
         assertThatThrownBy(() -> consultarLista.consultar(bia.getId(), listaAna.getId()))
                 .isInstanceOf(MembroFamiliaInvalidoException.class);
     }
 
     @Test
+    void utilizaFamiliaExplicitaQuandoUsuarioParticipaDeMultiplasFamilias() {
+        Usuario ana = usuario("Ana");
+        Familia familiaA = criarFamilia.criar(ana.getId(), "Casa Ana");
+        Familia familiaB = criarFamilia.criar(ana.getId(), "Casa Pais");
+
+        ListaCompra listaA = criarLista.criar(ana.getId(), familiaA.getId(), "Lista A", CategoriaCompra.OUTROS, null);
+        ListaCompra listaB = criarLista.criar(ana.getId(), familiaB.getId(), "Lista B", CategoriaCompra.OUTROS, null);
+
+        assertThat(listarListas.listar(ana.getId(), familiaA.getId()))
+                .extracting(ListaCompra::getId).containsExactly(listaA.getId());
+        assertThat(listarListas.listar(ana.getId(), familiaB.getId()))
+                .extracting(ListaCompra::getId).containsExactly(listaB.getId());
+    }
+
+    @Test
     void adicionaParticipanteDaMesmaFamiliaEImpedeMembroExterno() {
         Usuario ana = usuario("Ana"); Familia familia = criarFamilia.criar(ana.getId(), "Casa Ana");
-        ListaCompra lista = criarLista.criar(ana.getId(), "Lista", CategoriaCompra.OUTROS, null);
+        ListaCompra lista = criarLista.criar(ana.getId(), membroAtivo(ana).getFamilia().getId(), "Lista", CategoriaCompra.OUTROS, null);
         MembroFamilia bia = adicionarMembro(familia, usuario("Bia"));
         Usuario externa = usuario("Externa"); criarFamilia.criar(externa.getId(), "Casa externa");
         MembroFamilia membroExterno = membroAtivo(externa);
@@ -149,7 +164,7 @@ class ListaCompraApplicationTests {
     @Test
     void removeParticipanteLogicamenteEReativaMesmoVinculo() {
         Usuario ana = usuario("Ana"); Familia familia = criarFamilia.criar(ana.getId(), "Casa Ana");
-        ListaCompra lista = criarLista.criar(ana.getId(), "Lista", CategoriaCompra.OUTROS, null);
+        ListaCompra lista = criarLista.criar(ana.getId(), membroAtivo(ana).getFamilia().getId(), "Lista", CategoriaCompra.OUTROS, null);
         MembroFamilia bia = adicionarMembro(familia, usuario("Bia"));
         ParticipanteLista participante = adicionarParticipante.adicionar(ana.getId(), lista.getId(), bia.getId());
 
@@ -164,7 +179,7 @@ class ListaCompraApplicationTests {
     @Test
     void impedeRemocaoDoCriador() {
         Usuario ana = usuario("Ana"); criarFamilia.criar(ana.getId(), "Casa Ana");
-        ListaCompra lista = criarLista.criar(ana.getId(), "Lista", CategoriaCompra.OUTROS, null);
+        ListaCompra lista = criarLista.criar(ana.getId(), membroAtivo(ana).getFamilia().getId(), "Lista", CategoriaCompra.OUTROS, null);
         assertThatThrownBy(() -> removerParticipante.remover(ana.getId(), lista.getId(), lista.getCriadaPorMembroFamilia().getId()))
                 .isInstanceOf(CriadorListaNaoPodeSerRemovidoException.class);
     }
@@ -172,7 +187,7 @@ class ListaCompraApplicationTests {
     @Test
     void adicionaEEditaItemComoParticipanteMasImpedeNaoParticipante() {
         Usuario ana = usuario("Ana"); Familia familia = criarFamilia.criar(ana.getId(), "Casa Ana");
-        ListaCompra lista = criarLista.criar(ana.getId(), "Lista", CategoriaCompra.OUTROS, null);
+        ListaCompra lista = criarLista.criar(ana.getId(), membroAtivo(ana).getFamilia().getId(), "Lista", CategoriaCompra.OUTROS, null);
         Usuario biaUsuario = usuario("Bia"); adicionarMembro(familia, biaUsuario);
 
         assertThatThrownBy(() -> adicionarItem.adicionar(biaUsuario.getId(), lista.getId(), "Leite", null, null, null, null))
@@ -186,7 +201,7 @@ class ListaCompraApplicationTests {
     @Test
     void removeItemLogicamenteENaoOListaEntreAtivos() {
         Usuario ana = usuario("Ana"); criarFamilia.criar(ana.getId(), "Casa Ana");
-        ListaCompra lista = criarLista.criar(ana.getId(), "Lista", CategoriaCompra.OUTROS, null);
+        ListaCompra lista = criarLista.criar(ana.getId(), membroAtivo(ana).getFamilia().getId(), "Lista", CategoriaCompra.OUTROS, null);
         ItemLista item = adicionarItem.adicionar(ana.getId(), lista.getId(), "Leite", null, null, null, null);
         removerItem.remover(ana.getId(), lista.getId(), item.getId());
         assertThat(item.getRemovidoEm()).isNotNull();
@@ -196,7 +211,7 @@ class ListaCompraApplicationTests {
     @Test
     void atribuiOrdemDeInclusaoEReordenaItens() {
         Usuario ana = usuario("Ana"); criarFamilia.criar(ana.getId(), "Casa Ana");
-        ListaCompra lista = criarLista.criar(ana.getId(), "Lista", CategoriaCompra.OUTROS, null);
+        ListaCompra lista = criarLista.criar(ana.getId(), membroAtivo(ana).getFamilia().getId(), "Lista", CategoriaCompra.OUTROS, null);
         ItemLista primeiro = adicionarItem.adicionar(ana.getId(), lista.getId(), "Primeiro", null, null, null, null);
         ItemLista segundo = adicionarItem.adicionar(ana.getId(), lista.getId(), "Segundo", null, null, null, null);
         assertThat(listarItens.listar(ana.getId(), lista.getId())).extracting(ItemLista::getId).containsExactly(primeiro.getId(), segundo.getId());
@@ -207,7 +222,7 @@ class ListaCompraApplicationTests {
     @Test
     void rejeitaReordenacaoIncompletaDuplicadaOuComIdInvalido() {
         Usuario ana = usuario("Ana"); criarFamilia.criar(ana.getId(), "Casa Ana");
-        ListaCompra lista = criarLista.criar(ana.getId(), "Lista", CategoriaCompra.OUTROS, null);
+        ListaCompra lista = criarLista.criar(ana.getId(), membroAtivo(ana).getFamilia().getId(), "Lista", CategoriaCompra.OUTROS, null);
         ItemLista primeiro = adicionarItem.adicionar(ana.getId(), lista.getId(), "Primeiro", null, null, null, null);
         ItemLista segundo = adicionarItem.adicionar(ana.getId(), lista.getId(), "Segundo", null, null, null, null);
         assertThatThrownBy(() -> reordenarItens.reordenar(ana.getId(), lista.getId(), List.of(primeiro.getId()))).isInstanceOf(OrdemItensInvalidaException.class);
@@ -226,7 +241,7 @@ class ListaCompraApplicationTests {
     }
 
     private Usuario usuario(String nome) { return cadastrarUsuario.cadastrar(nome, nome.toLowerCase() + UUID.randomUUID() + "@test.local", "senha-original"); }
-    private MembroFamilia membroAtivo(Usuario usuario) { return membroRepository.findByUsuario_IdAndStatus(usuario.getId(), StatusMembroFamilia.ATIVO).orElseThrow(); }
+    private MembroFamilia membroAtivo(Usuario usuario) { return membroRepository.findByUsuario_IdAndStatusOrderByFamilia_NomeAsc(usuario.getId(), StatusMembroFamilia.ATIVO).getFirst(); }
     private MembroFamilia adicionarMembro(Familia familia, Usuario usuario) {
         entityManager.flush();
         jdbcTemplate.update("insert into membro_familia (id, familia_id, usuario_id, papel, status, criado_em, atualizado_em) values (?, ?, ?, 'MEMBRO', 'ATIVO', ?, ?)",

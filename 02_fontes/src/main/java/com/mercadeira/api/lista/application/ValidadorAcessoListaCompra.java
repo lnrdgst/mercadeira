@@ -27,8 +27,9 @@ class ValidadorAcessoListaCompra {
         this.participanteRepository = participanteRepository;
     }
 
-    MembroFamilia membroAtivoDoUsuario(UUID usuarioId) {
-        return membroRepository.findByUsuario_IdAndStatus(usuarioId, StatusMembroFamilia.ATIVO)
+    MembroFamilia membroAtivoNaFamilia(UUID usuarioId, UUID familiaId) {
+        return membroRepository.findByFamilia_IdAndUsuario_IdAndStatus(
+                familiaId, usuarioId, StatusMembroFamilia.ATIVO)
                 .orElseThrow(MembroFamiliaInvalidoException::new);
     }
 
@@ -37,11 +38,7 @@ class ValidadorAcessoListaCompra {
     }
 
     MembroFamilia validarMembroDaFamilia(UUID usuarioId, ListaCompra lista) {
-        MembroFamilia membro = membroAtivoDoUsuario(usuarioId);
-        if (!membro.getFamilia().getId().equals(lista.getFamilia().getId())) {
-            throw new MembroFamiliaInvalidoException();
-        }
-        return membro;
+        return membroAtivoNaFamilia(usuarioId, lista.getFamilia().getId());
     }
 
     void validarPreparacao(ListaCompra lista) {

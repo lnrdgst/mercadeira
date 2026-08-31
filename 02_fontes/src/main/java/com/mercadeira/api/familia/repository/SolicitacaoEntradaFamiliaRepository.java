@@ -7,7 +7,9 @@ import java.util.UUID;
 import com.mercadeira.api.familia.domain.SolicitacaoEntradaFamilia;
 import com.mercadeira.api.familia.domain.StatusSolicitacaoEntradaFamilia;
 import org.springframework.data.jpa.repository.EntityGraph;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.JpaRepository;
+import jakarta.persistence.LockModeType;
 
 public interface SolicitacaoEntradaFamiliaRepository extends JpaRepository<SolicitacaoEntradaFamilia, UUID> {
 
@@ -16,7 +18,8 @@ public interface SolicitacaoEntradaFamiliaRepository extends JpaRepository<Solic
             UUID familiaId,
             StatusSolicitacaoEntradaFamilia status);
 
-    @EntityGraph(attributePaths = "solicitanteUsuario")
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @EntityGraph(attributePaths = { "familia", "solicitanteUsuario" })
     Optional<SolicitacaoEntradaFamilia> findById(UUID id);
 
     Optional<SolicitacaoEntradaFamilia> findByFamilia_IdAndSolicitanteUsuario_IdAndStatus(

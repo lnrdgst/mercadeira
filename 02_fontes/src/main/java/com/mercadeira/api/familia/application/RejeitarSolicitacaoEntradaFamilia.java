@@ -27,9 +27,12 @@ public class RejeitarSolicitacaoEntradaFamilia {
     }
 
     @Transactional
-    public SolicitacaoEntradaFamilia rejeitar(UUID solicitacaoId, UUID executorMembroId) {
+    public SolicitacaoEntradaFamilia rejeitar(UUID familiaId, UUID solicitacaoId, UUID executorMembroId) {
         SolicitacaoEntradaFamilia solicitacao = solicitacaoRepository.findById(solicitacaoId)
                 .orElseThrow(() -> new SolicitacaoNaoEncontradaException(solicitacaoId));
+        if (!solicitacao.getFamilia().getId().equals(familiaId)) {
+            throw new SolicitacaoNaoEncontradaException(solicitacaoId);
+        }
         if (solicitacao.getStatus() != StatusSolicitacaoEntradaFamilia.PENDENTE) {
             throw new SolicitacaoNaoPendenteException();
         }

@@ -1,5 +1,6 @@
 package com.mercadeira.api.familia.repository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -11,9 +12,13 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface MembroFamiliaRepository extends JpaRepository<MembroFamilia, UUID> {
 
     @EntityGraph(attributePaths = "familia")
-    Optional<MembroFamilia> findByUsuario_IdAndStatus(UUID usuarioId, StatusMembroFamilia status);
+    List<MembroFamilia> findByUsuario_IdAndStatusOrderByFamilia_NomeAsc(UUID usuarioId, StatusMembroFamilia status);
 
     Optional<MembroFamilia> findByFamilia_IdAndUsuario_Id(UUID familiaId, UUID usuarioId);
 
-    boolean existsByUsuario_IdAndStatus(UUID usuarioId, StatusMembroFamilia status);
+    @EntityGraph(attributePaths = "familia")
+    Optional<MembroFamilia> findByFamilia_IdAndUsuario_IdAndStatus(
+            UUID familiaId, UUID usuarioId, StatusMembroFamilia status);
+
+    boolean existsByFamilia_IdAndUsuario_IdAndStatus(UUID familiaId, UUID usuarioId, StatusMembroFamilia status);
 }

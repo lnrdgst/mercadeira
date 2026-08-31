@@ -61,17 +61,17 @@ JWT_DURATION=PT1H
 
 ## Regras de familia
 
-- Um usuario possui no maximo um `MembroFamilia` com status `ATIVO`.
+- Um usuario pode possuir zero ou mais `MembroFamilia` com status `ATIVO`, em familias diferentes.
 - Papeis: `ADMINISTRADOR` e `MEMBRO`. Familias: `ATIVA` e `INATIVA`.
 - Ao criar familia, o criador passa a ser `ADMINISTRADOR` ativo e recebe um `codigoIngresso`.
 - Um usuario sem familia ativa pode solicitar entrada em mais de uma familia. A solicitacao nasce `PENDENTE`.
 - Um administrador pode `APROVAR` ou `REJEITAR`. A aprovacao cria um vinculo `MEMBRO` ativo.
-- Aprovacao ou criacao da propria familia cancelam automaticamente as demais solicitacoes pendentes do usuario, usando `CANCELADA` e nao `REJEITADA`.
+- Aprovacao e criacao de familia nao alteram solicitacoes pendentes de outras familias.
 - `PENDENTE` e `CANCELADA` nao possuem responsavel nem data de resolucao; `APROVADA` e `REJEITADA` possuem ambos.
 
 ## Concorrencia
 
-Operacoes sensiveis de solicitacao, aprovacao e criacao de familia serializam por usuario com lock pessimista. Depois do lock, o vinculo ativo e revalidado. O indice unico parcial de membro ativo permanece como garantia final do banco, e nao como fluxo normal de controle da aplicacao.
+Decisoes concorrentes sobre a mesma solicitacao usam lock pessimista na propria solicitacao. Vínculos e papeis sao sempre validados na familia do recurso. O indice parcial de membro ativo por usuario nao e unico e existe apenas para consultas eficientes.
 
 ## Endpoints disponiveis
 
@@ -81,13 +81,13 @@ Rotas protegidas exigem `Authorization: Bearer <token>`. A identidade do executo
 | --- | --- | --- |
 | `POST` | `/api/usuarios` | Cadastra usuario. |
 | `POST` | `/api/autenticacao/login` | Autentica por email e senha e retorna JWT. |
-| `GET` | `/api/familias/ativa` | Consulta a familia ativa do usuario. |
+| `GET` | `/api/familias` | Lista as familias ativas do usuario. |
 | `POST` | `/api/familias` | Cria familia para o usuario autenticado. |
 | `POST` | `/api/familias/solicitacoes` | Solicita entrada por codigo da familia. |
-| `GET` | `/api/familias/solicitacoes` | Lista solicitacoes pendentes para o administrador. |
+| `GET` | `/api/familias/{familiaId}/solicitacoes` | Lista solicitacoes pendentes para administrador da familia. |
 | `GET` | `/api/familias/solicitacoes/minhas-pendentes` | Lista pendencias do usuario para onboarding. |
-| `POST` | `/api/familias/solicitacoes/{id}/aprovar` | Aprova solicitacao como administrador. |
-| `POST` | `/api/familias/solicitacoes/{id}/rejeitar` | Rejeita solicitacao como administrador. |
+| `POST` | `/api/familias/{familiaId}/solicitacoes/{id}/aprovar` | Aprova solicitacao como administrador da familia. |
+| `POST` | `/api/familias/{familiaId}/solicitacoes/{id}/rejeitar` | Rejeita solicitacao como administrador da familia. |
 
 Os dois primeiros endpoints sao publicos; os demais sao protegidos.
 
@@ -95,11 +95,11 @@ Os dois primeiros endpoints sao publicos; os demais sao protegidos.
 
 ```text
 Login
-  -> GET /api/familias/ativa
-     -> 200: usuario possui familia ativa
-     -> 204: GET /api/familias/solicitacoes/minhas-pendentes
-             -> 200: usuario aguarda aprovacao em uma ou mais familias
-             -> 204: usuario pode criar familia ou solicitar entrada
+  -> GET /api/familias
+     -> 200: lista de familias ativas, possivelmente vazia
+  -> GET /api/familias/solicitacoes/minhas-pendentes
+     -> 200: usuario aguarda aprovacao em uma ou mais familias
+     -> 204: usuario nao possui pendencias
 ```
 
 Este fluxo descreve o estado de dominio/API, nao a navegacao visual do frontend.

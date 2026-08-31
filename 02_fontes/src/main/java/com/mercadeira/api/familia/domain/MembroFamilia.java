@@ -72,6 +72,12 @@ public class MembroFamilia {
         return membro;
     }
 
+    public void reativarComoMembro(Instant agora) {
+        this.papel = PapelMembroFamilia.MEMBRO;
+        this.status = StatusMembroFamilia.ATIVO;
+        this.atualizadoEm = agora;
+    }
+
     public UUID getId() {
         return id;
     }
