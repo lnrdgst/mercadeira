@@ -15,6 +15,10 @@ import com.mercadeira.api.lista.application.ListarParticipantesLista;
 import com.mercadeira.api.lista.application.RemoverItemLista;
 import com.mercadeira.api.lista.application.RemoverParticipanteLista;
 import com.mercadeira.api.lista.application.ReordenarItensLista;
+import com.mercadeira.api.lista.repository.ListaCompraRepository;
+import com.mercadeira.api.lista.repository.ParticipanteListaRepository;
+import com.mercadeira.api.familia.repository.MembroFamiliaRepository;
+import com.mercadeira.api.familia.domain.StatusMembroFamilia;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -36,14 +40,16 @@ public class ListaCompraController {
     private final AdicionarParticipanteLista adicionarParticipante; private final RemoverParticipanteLista removerParticipante;
     private final ListarItensLista itens; private final AdicionarItemLista adicionarItem;
     private final EditarItemLista editarItem; private final RemoverItemLista removerItem; private final ReordenarItensLista reordenar;
+    private final ListaCompraRepository listaRepository; private final MembroFamiliaRepository membroRepository; private final ParticipanteListaRepository participanteRepository;
 
     public ListaCompraController(UsuarioAutenticado usuario, CriarListaCompra criar, ListarListasFamilia listar,
             ConsultarListaCompra consultar, ListarParticipantesLista participantes, AdicionarParticipanteLista adicionarParticipante,
             RemoverParticipanteLista removerParticipante, ListarItensLista itens, AdicionarItemLista adicionarItem,
-            EditarItemLista editarItem, RemoverItemLista removerItem, ReordenarItensLista reordenar) {
+            EditarItemLista editarItem, RemoverItemLista removerItem, ReordenarItensLista reordenar, ListaCompraRepository listaRepository, MembroFamiliaRepository membroRepository, ParticipanteListaRepository participanteRepository) {
         this.usuario = usuario; this.criar = criar; this.listar = listar; this.consultar = consultar;
         this.participantes = participantes; this.adicionarParticipante = adicionarParticipante; this.removerParticipante = removerParticipante;
         this.itens = itens; this.adicionarItem = adicionarItem; this.editarItem = editarItem; this.removerItem = removerItem; this.reordenar = reordenar;
+        this.listaRepository = listaRepository; this.membroRepository = membroRepository; this.participanteRepository = participanteRepository;
     }
 
     @GetMapping public List<ListaCompraResponse> listar(@PathVariable UUID familiaId) {
@@ -53,8 +59,12 @@ public class ListaCompraController {
         return ResponseEntity.status(HttpStatus.CREATED).body(ListaCompraResponse.from(
                 criar.criar(usuario.getId(), familiaId, request.nome(), request.categoria(), request.estabelecimento())));
     }
-    @GetMapping("/{listaId}") public ListaCompraResponse consultar(@PathVariable UUID familiaId, @PathVariable UUID listaId) {
-        return ListaCompraResponse.from(consultar.consultar(usuario.getId(), familiaId, listaId));
+    @GetMapping("/{listaId}") public ListaCompraDetalheResponse consultar(@PathVariable UUID familiaId, @PathVariable UUID listaId) {
+        consultar.consultar(usuario.getId(), familiaId, listaId);
+        var lista = listaRepository.findDetalheById(listaId).orElseThrow();
+        var membro = membroRepository.findByFamilia_IdAndUsuario_IdAndStatus(familiaId, usuario.getId(), StatusMembroFamilia.ATIVO).orElseThrow();
+        boolean participanteAtivo = participanteRepository.findByListaCompra_IdAndMembroFamilia_Id(listaId, membro.getId()).map(p -> p.getSaiuEm() == null).orElse(false);
+        return ListaCompraDetalheResponse.from(lista, membro, participanteAtivo);
     }
     @GetMapping("/{listaId}/participantes") public List<ParticipanteListaResponse> participantes(@PathVariable UUID familiaId, @PathVariable UUID listaId) {
         return participantes.listar(usuario.getId(), familiaId, listaId).stream().map(ParticipanteListaResponse::from).toList();

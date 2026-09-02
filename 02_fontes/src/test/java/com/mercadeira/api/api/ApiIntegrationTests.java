@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -29,6 +30,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
+import jakarta.persistence.EntityManager;
 import org.springframework.test.annotation.Rollback;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -66,6 +69,8 @@ class ApiIntegrationTests {
     @Autowired private SolicitarEntradaFamiliaPorCodigo solicitarEntrada;
     @Autowired private SolicitacaoEntradaFamiliaRepository solicitacaoRepository;
     @Autowired private CriarListaCompra criarListaCompra;
+    @Autowired private JdbcTemplate jdbcTemplate;
+    @Autowired private EntityManager entityManager;
     private MockMvc mockMvc;
 
     @BeforeEach
@@ -159,6 +164,77 @@ class ApiIntegrationTests {
                 .andExpect(status().isOk()).andExpect(jsonPath("$.id").value(lista.getId().toString()));
         mockMvc.perform(get("/api/familias/{familiaId}/listas/{listaId}", familiaB.getId(), lista.getId()).header("Authorization", bearer(bia)))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void usuarioAutenticadoConsultaPropriosDadosSemCredenciais() throws Exception {
+        Usuario usuario = usuario("Leonardo");
+        mockMvc.perform(get("/api/usuarios/me").header("Authorization", bearer(usuario)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.id").value(usuario.getId().toString()))
+                .andExpect(jsonPath("$.nome").value("Leonardo")).andExpect(jsonPath("$.email").value(usuario.getEmail()))
+                .andExpect(jsonPath("$.senha").doesNotExist()).andExpect(jsonPath("$.senhaHash").doesNotExist());
+        mockMvc.perform(get("/api/usuarios/me")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void membroAtivoListaMembrosAtivosOrdenadosESemAcessoExterno() throws Exception {
+        Usuario ana = usuario("Ana"); Familia familiaA = criarFamilia.criar(ana.getId(), "A");
+        Usuario bia = usuario("Bia");
+        entityManager.flush();
+        jdbcTemplate.update("insert into membro_familia (id, familia_id, usuario_id, papel, status, criado_em, atualizado_em) values (?, ?, ?, 'MEMBRO', 'ATIVO', now(), now())", UUID.randomUUID(), familiaA.getId(), bia.getId());
+        Usuario inativo = usuario("Zoe");
+        entityManager.flush();
+        jdbcTemplate.update("insert into membro_familia (id, familia_id, usuario_id, papel, status, criado_em, atualizado_em) values (?, ?, ?, 'MEMBRO', 'INATIVO', now(), now())", UUID.randomUUID(), familiaA.getId(), inativo.getId());
+        mockMvc.perform(get("/api/familias/{id}/membros", familiaA.getId()).header("Authorization", bearer(ana)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].nome").value("Ana")).andExpect(jsonPath("$[0].membroFamiliaId").exists())
+                .andExpect(jsonPath("$[0].usuarioId").exists()).andExpect(jsonPath("$[0].email").exists()).andExpect(jsonPath("$[0].papel").exists());
+        Familia familiaB = criarFamilia.criar(inativo.getId(), "B");
+        mockMvc.perform(get("/api/familias/{id}/membros", familiaA.getId()).header("Authorization", bearer(inativo)))
+                .andExpect(status().isForbidden());
+        assertThat(familiaB).isNotNull();
+    }
+
+    @Test
+    void detalheDaListaExplicitaCriadorEContextoDoParticipante() throws Exception {
+        Usuario ana = usuario("Ana"); Familia familia = criarFamilia.criar(ana.getId(), "A");
+        ListaCompra lista = criarListaCompra.criar(ana.getId(), familia.getId(), "Lista", CategoriaCompra.OUTROS, null);
+        mockMvc.perform(get("/api/familias/{familiaId}/listas/{listaId}", familia.getId(), lista.getId()).header("Authorization", bearer(ana)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.criador.membroFamiliaId").value(lista.getCriadaPorMembroFamilia().getId().toString()))
+                .andExpect(jsonPath("$.criador.usuarioId").value(ana.getId().toString())).andExpect(jsonPath("$.criador.nome").value("Ana"))
+                .andExpect(jsonPath("$.contextoUsuario.participanteAtivo").value(true))
+                .andExpect(jsonPath("$.contextoUsuario.podeGerenciarParticipantes").value(true))
+                .andExpect(jsonPath("$.contextoUsuario.podeAlterarItens").value(true));
+    }
+
+    @Test
+    void detalheDistingueAdministradorEMembroNaoParticipantes() throws Exception {
+        Usuario criador = usuario("Criador"); Familia familia = criarFamilia.criar(criador.getId(), "A");
+        ListaCompra lista = criarListaCompra.criar(criador.getId(), familia.getId(), "Lista", CategoriaCompra.OUTROS, null);
+        Usuario admin = usuario("Admin"); Usuario membro = usuario("Membro"); entityManager.flush();
+        UUID adminId = UUID.randomUUID(); UUID membroId = UUID.randomUUID();
+        jdbcTemplate.update("insert into membro_familia (id, familia_id, usuario_id, papel, status, criado_em, atualizado_em) values (?, ?, ?, 'ADMINISTRADOR', 'ATIVO', now(), now())", adminId, familia.getId(), admin.getId());
+        jdbcTemplate.update("insert into membro_familia (id, familia_id, usuario_id, papel, status, criado_em, atualizado_em) values (?, ?, ?, 'MEMBRO', 'ATIVO', now(), now())", membroId, familia.getId(), membro.getId());
+        mockMvc.perform(get("/api/familias/{f}/listas/{l}", familia.getId(), lista.getId()).header("Authorization", bearer(admin)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.contextoUsuario.participanteAtivo").value(false)).andExpect(jsonPath("$.contextoUsuario.podeGerenciarParticipantes").value(true)).andExpect(jsonPath("$.contextoUsuario.podeAlterarItens").value(false));
+        mockMvc.perform(get("/api/familias/{f}/listas/{l}", familia.getId(), lista.getId()).header("Authorization", bearer(membro)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.contextoUsuario.participanteAtivo").value(false)).andExpect(jsonPath("$.contextoUsuario.podeGerenciarParticipantes").value(false)).andExpect(jsonPath("$.contextoUsuario.podeAlterarItens").value(false));
+        mockMvc.perform(post("/api/familias/{f}/listas/{l}/participantes", familia.getId(), lista.getId()).header("Authorization", bearer(admin)).contentType(MediaType.APPLICATION_JSON).content("{\"membroFamiliaId\":\"" + adminId + "\"}"))
+                .andExpect(status().isCreated());
+        mockMvc.perform(get("/api/familias/{f}/listas/{l}", familia.getId(), lista.getId()).header("Authorization", bearer(admin)))
+                .andExpect(jsonPath("$.contextoUsuario.participanteAtivo").value(true)).andExpect(jsonPath("$.contextoUsuario.podeGerenciarParticipantes").value(true)).andExpect(jsonPath("$.contextoUsuario.podeAlterarItens").value(true));
+    }
+
+    @Test
+    void detalheNaoPermiteAlterarItensForaDePreparacao() throws Exception {
+        Usuario usuario = usuario("Ana"); Familia familia = criarFamilia.criar(usuario.getId(), "A");
+        ListaCompra lista = criarListaCompra.criar(usuario.getId(), familia.getId(), "Lista", CategoriaCompra.OUTROS, null);
+        entityManager.flush();
+        jdbcTemplate.update("update lista_compra set status = 'EM_COMPRA' where id = ?", lista.getId());
+        entityManager.clear();
+        mockMvc.perform(get("/api/familias/{f}/listas/{l}", familia.getId(), lista.getId()).header("Authorization", bearer(usuario)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.contextoUsuario.participanteAtivo").value(true))
+                .andExpect(jsonPath("$.contextoUsuario.podeAlterarItens").value(false));
     }
 
     private Usuario usuario(String nome) {

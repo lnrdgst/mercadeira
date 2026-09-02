@@ -100,6 +100,13 @@ public class FamiliaController {
                 .toList();
     }
 
+    @GetMapping("/{familiaId}/membros")
+    public List<MembroFamiliaResponse> listarMembros(@PathVariable UUID familiaId) {
+        membroAtivoNaFamilia(familiaId);
+        return membroFamiliaRepository.findByFamilia_IdAndStatusOrderByUsuario_NomeAscIdAsc(familiaId, StatusMembroFamilia.ATIVO)
+                .stream().map(MembroFamiliaResponse::from).toList();
+    }
+
     @PostMapping("/{familiaId}/solicitacoes/{solicitacaoId}/aprovar")
     public SolicitacaoEntradaFamiliaResponse aprovar(@PathVariable UUID familiaId, @PathVariable UUID solicitacaoId) {
         SolicitacaoEntradaFamilia solicitacao = aprovarSolicitacaoEntradaFamilia.aprovar(

@@ -21,4 +21,7 @@ public interface MembroFamiliaRepository extends JpaRepository<MembroFamilia, UU
             UUID familiaId, UUID usuarioId, StatusMembroFamilia status);
 
     boolean existsByFamilia_IdAndUsuario_IdAndStatus(UUID familiaId, UUID usuarioId, StatusMembroFamilia status);
+
+    @EntityGraph(attributePaths = "usuario")
+    List<MembroFamilia> findByFamilia_IdAndStatusOrderByUsuario_NomeAscIdAsc(UUID familiaId, StatusMembroFamilia status);
 }
