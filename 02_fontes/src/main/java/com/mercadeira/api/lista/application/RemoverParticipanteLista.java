@@ -14,8 +14,8 @@ public class RemoverParticipanteLista {
     private final ValidadorAcessoListaCompra acesso; private final ParticipanteListaRepository repository; private final Clock clock;
     public RemoverParticipanteLista(ValidadorAcessoListaCompra acesso, ParticipanteListaRepository repository, Clock clock) { this.acesso = acesso; this.repository = repository; this.clock = clock; }
     @Transactional
-    public void remover(UUID executorUsuarioId, UUID listaId, UUID membroId) {
-        ListaCompra lista = acesso.lista(listaId); acesso.validarPreparacao(lista); acesso.validarGerenciador(executorUsuarioId, lista);
+    public void remover(UUID executorUsuarioId, UUID familiaId, UUID listaId, UUID membroId) {
+        ListaCompra lista = acesso.lista(familiaId, listaId); acesso.validarPreparacao(lista); acesso.validarGerenciador(executorUsuarioId, lista);
         if (lista.getCriadaPorMembroFamilia().getId().equals(membroId)) throw new CriadorListaNaoPodeSerRemovidoException();
         ParticipanteLista participante = repository.findByListaCompra_IdAndMembroFamilia_Id(listaId, membroId)
                 .filter(p -> p.getSaiuEm() == null).orElseThrow(ParticipanteListaNaoEncontradoException::new);

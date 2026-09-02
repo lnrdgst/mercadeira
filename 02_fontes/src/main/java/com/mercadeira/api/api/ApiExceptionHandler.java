@@ -16,6 +16,15 @@ import com.mercadeira.api.familia.application.SolicitanteJaPossuiVinculoAtivoExc
 import com.mercadeira.api.familia.application.UsuarioNaoEncontradoException;
 import com.mercadeira.api.usuario.application.DadosUsuarioInvalidosException;
 import com.mercadeira.api.usuario.application.EmailJaCadastradoException;
+import com.mercadeira.api.lista.application.ItemListaNaoEncontradoException;
+import com.mercadeira.api.lista.application.ListaCompraNaoEncontradaException;
+import com.mercadeira.api.lista.application.MembroFamiliaInvalidoException;
+import com.mercadeira.api.lista.application.UsuarioNaoParticipaDaListaException;
+import com.mercadeira.api.lista.application.ItemListaJaRemovidoException;
+import com.mercadeira.api.lista.application.ListaCompraForaDePreparacaoException;
+import com.mercadeira.api.lista.application.CriadorListaNaoPodeSerRemovidoException;
+import com.mercadeira.api.lista.application.ParticipanteListaNaoEncontradoException;
+import com.mercadeira.api.lista.application.OrdemItensInvalidaException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -56,12 +65,14 @@ public class ApiExceptionHandler {
         return resposta(HttpStatus.UNAUTHORIZED, "NAO_AUTENTICADO", "Credenciais invalidas.", request, Map.of());
     }
 
-    @ExceptionHandler(MembroSemPermissaoException.class)
+    @ExceptionHandler({ MembroSemPermissaoException.class, MembroFamiliaInvalidoException.class,
+            UsuarioNaoParticipaDaListaException.class })
     ResponseEntity<ErroApiResponse> tratarSemPermissao(MembroSemPermissaoException exception, HttpServletRequest request) {
         return resposta(HttpStatus.FORBIDDEN, "ACESSO_NEGADO", "Acesso negado.", request, Map.of());
     }
 
-    @ExceptionHandler({ UsuarioNaoEncontradoException.class, SolicitacaoNaoEncontradaException.class })
+    @ExceptionHandler({ UsuarioNaoEncontradoException.class, SolicitacaoNaoEncontradaException.class,
+            ListaCompraNaoEncontradaException.class, ItemListaNaoEncontradoException.class })
     ResponseEntity<ErroApiResponse> tratarNaoEncontrado(Exception exception, HttpServletRequest request) {
         return resposta(HttpStatus.NOT_FOUND, "RECURSO_NAO_ENCONTRADO", "Recurso nao encontrado.", request, Map.of());
     }
@@ -69,9 +80,16 @@ public class ApiExceptionHandler {
     @ExceptionHandler({ EmailJaCadastradoException.class, SolicitacaoPendenteJaExisteException.class,
             SolicitacaoNaoPendenteException.class,
             SolicitanteJaPossuiVinculoAtivoException.class,
-            FamiliaInativaException.class })
+            FamiliaInativaException.class, ListaCompraForaDePreparacaoException.class,
+            ItemListaJaRemovidoException.class, CriadorListaNaoPodeSerRemovidoException.class,
+            ParticipanteListaNaoEncontradoException.class })
     ResponseEntity<ErroApiResponse> tratarConflito(Exception exception, HttpServletRequest request) {
         return resposta(HttpStatus.CONFLICT, "CONFLITO_DE_ESTADO", exception.getMessage(), request, Map.of());
+    }
+
+    @ExceptionHandler(OrdemItensInvalidaException.class)
+    ResponseEntity<ErroApiResponse> tratarOrdemInvalida(OrdemItensInvalidaException exception, HttpServletRequest request) {
+        return resposta(HttpStatus.BAD_REQUEST, "REQUISICAO_INVALIDA", exception.getMessage(), request, Map.of());
     }
 
     @ExceptionHandler(Exception.class)

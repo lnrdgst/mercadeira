@@ -14,8 +14,8 @@ public class ListarParticipantesLista {
     private final ValidadorAcessoListaCompra acesso; private final ParticipanteListaRepository repository;
     public ListarParticipantesLista(ValidadorAcessoListaCompra acesso, ParticipanteListaRepository repository) { this.acesso = acesso; this.repository = repository; }
     @Transactional(readOnly = true)
-    public List<ParticipanteLista> listar(UUID usuarioId, UUID listaId) {
-        ListaCompra lista = acesso.lista(listaId); acesso.validarMembroDaFamilia(usuarioId, lista);
+    public List<ParticipanteLista> listar(UUID usuarioId, UUID familiaId, UUID listaId) {
+        ListaCompra lista = acesso.lista(familiaId, listaId); acesso.validarMembroDaFamilia(usuarioId, lista);
         return repository.findByListaCompra_IdAndSaiuEmIsNull(listaId);
     }
 }

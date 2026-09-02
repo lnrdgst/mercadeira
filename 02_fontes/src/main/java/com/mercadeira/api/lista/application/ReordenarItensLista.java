@@ -16,8 +16,8 @@ public class ReordenarItensLista {
     private final ValidadorAcessoListaCompra acesso; private final ItemListaRepository repository; private final Clock clock;
     public ReordenarItensLista(ValidadorAcessoListaCompra acesso, ItemListaRepository repository, Clock clock) { this.acesso = acesso; this.repository = repository; this.clock = clock; }
     @Transactional
-    public void reordenar(UUID executorUsuarioId, UUID listaId, List<UUID> idsNaOrdem) {
-        ListaCompra lista = acesso.lista(listaId); acesso.validarPreparacao(lista); acesso.validarParticipanteAtivo(executorUsuarioId, lista);
+    public void reordenar(UUID executorUsuarioId, UUID familiaId, UUID listaId, List<UUID> idsNaOrdem) {
+        ListaCompra lista = acesso.lista(familiaId, listaId); acesso.validarPreparacao(lista); acesso.validarParticipanteAtivo(executorUsuarioId, lista);
         List<ItemLista> ativos = repository.findByListaCompra_IdAndRemovidoEmIsNullOrderByOrdemExibicaoAscIdAsc(listaId);
         if (idsNaOrdem == null || idsNaOrdem.size() != ativos.size() || new HashSet<>(idsNaOrdem).size() != idsNaOrdem.size()
                 || !new HashSet<>(idsNaOrdem).equals(ativos.stream().map(ItemLista::getId).collect(java.util.stream.Collectors.toSet()))) {

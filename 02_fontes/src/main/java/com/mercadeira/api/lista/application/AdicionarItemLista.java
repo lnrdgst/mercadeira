@@ -17,10 +17,10 @@ public class AdicionarItemLista {
     private final ValidadorAcessoListaCompra acesso; private final ItemListaRepository repository; private final Clock clock;
     public AdicionarItemLista(ValidadorAcessoListaCompra acesso, ItemListaRepository repository, Clock clock) { this.acesso = acesso; this.repository = repository; this.clock = clock; }
     @Transactional
-    public ItemLista adicionar(UUID executorUsuarioId, UUID listaId, String descricao, BigDecimal quantidade,
+    public ItemLista adicionar(UUID executorUsuarioId, UUID familiaId, UUID listaId, String descricao, BigDecimal quantidade,
             UnidadeMedida unidadeMedida, String marca, String observacoes) {
         if (descricao == null || descricao.isBlank()) throw new IllegalArgumentException("A descricao e obrigatoria.");
-        ListaCompra lista = acesso.lista(listaId); acesso.validarPreparacao(lista);
+        ListaCompra lista = acesso.lista(familiaId, listaId); acesso.validarPreparacao(lista);
         MembroFamilia executor = acesso.validarParticipanteAtivo(executorUsuarioId, lista);
         int proximaOrdem = repository.findByListaCompra_IdAndRemovidoEmIsNullOrderByOrdemExibicaoAscIdAsc(listaId).size() + 1;
         ItemLista item = repository.save(ItemLista.criar(lista, descricao, quantidade, unidadeMedida, marca, observacoes,

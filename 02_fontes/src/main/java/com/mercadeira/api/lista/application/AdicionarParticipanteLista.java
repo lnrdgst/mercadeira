@@ -17,8 +17,8 @@ public class AdicionarParticipanteLista {
         this.acesso = acesso; this.repository = repository; this.clock = clock;
     }
     @Transactional
-    public ParticipanteLista adicionar(UUID executorUsuarioId, UUID listaId, UUID membroId) {
-        ListaCompra lista = acesso.lista(listaId); acesso.validarPreparacao(lista); acesso.validarGerenciador(executorUsuarioId, lista);
+    public ParticipanteLista adicionar(UUID executorUsuarioId, UUID familiaId, UUID listaId, UUID membroId) {
+        ListaCompra lista = acesso.lista(familiaId, listaId); acesso.validarPreparacao(lista); acesso.validarGerenciador(executorUsuarioId, lista);
         MembroFamilia membro = acesso.membroAtivoDaFamilia(membroId, lista);
         ParticipanteLista participante = repository.findByListaCompra_IdAndMembroFamilia_Id(listaId, membroId)
                 .map(atual -> {

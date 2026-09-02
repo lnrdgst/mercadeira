@@ -11,8 +11,8 @@ public class ConsultarListaCompra {
     private final ValidadorAcessoListaCompra acesso;
     public ConsultarListaCompra(ValidadorAcessoListaCompra acesso) { this.acesso = acesso; }
     @Transactional(readOnly = true)
-    public ListaCompra consultar(UUID usuarioId, UUID listaId) {
-        ListaCompra lista = acesso.lista(listaId);
+    public ListaCompra consultar(UUID usuarioId, UUID familiaId, UUID listaId) {
+        ListaCompra lista = acesso.lista(familiaId, listaId);
         acesso.validarMembroDaFamilia(usuarioId, lista);
         return lista;
     }

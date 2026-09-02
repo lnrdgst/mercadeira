@@ -119,4 +119,6 @@ public class ItemLista {
     public Integer getOrdemExibicao() { return ordemExibicao; }
     public Instant getRemovidoEm() { return removidoEm; }
     public MembroFamilia getAdicionadoPorMembroFamilia() { return adicionadoPorMembroFamilia; }
+    public Instant getCriadoEm() { return criadoEm; }
+    public Instant getAtualizadoEm() { return atualizadoEm; }
 }

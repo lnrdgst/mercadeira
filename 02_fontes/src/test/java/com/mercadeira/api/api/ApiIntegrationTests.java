@@ -18,6 +18,9 @@ import com.mercadeira.api.familia.domain.Familia;
 import com.mercadeira.api.familia.domain.SolicitacaoEntradaFamilia;
 import com.mercadeira.api.familia.domain.StatusSolicitacaoEntradaFamilia;
 import com.mercadeira.api.familia.repository.SolicitacaoEntradaFamiliaRepository;
+import com.mercadeira.api.lista.application.CriarListaCompra;
+import com.mercadeira.api.lista.domain.CategoriaCompra;
+import com.mercadeira.api.lista.domain.ListaCompra;
 import com.mercadeira.api.usuario.application.CadastrarUsuario;
 import com.mercadeira.api.usuario.domain.Usuario;
 import org.junit.jupiter.api.BeforeEach;
@@ -62,6 +65,7 @@ class ApiIntegrationTests {
     @Autowired private CriarFamilia criarFamilia;
     @Autowired private SolicitarEntradaFamiliaPorCodigo solicitarEntrada;
     @Autowired private SolicitacaoEntradaFamiliaRepository solicitacaoRepository;
+    @Autowired private CriarListaCompra criarListaCompra;
     private MockMvc mockMvc;
 
     @BeforeEach
@@ -136,6 +140,24 @@ class ApiIntegrationTests {
 
         mockMvc.perform(post("/api/familias/{familiaId}/solicitacoes/{id}/aprovar", familiaA.getId(), solicitacao.getId())
                         .header("Authorization", bearer(adminA)))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void preparaListaPorApiNoContextoDaFamilia() throws Exception {
+        Usuario ana = usuario("Ana");
+        Familia familiaA = criarFamilia.criar(ana.getId(), "Familia A");
+        Usuario bia = usuario("Bia");
+        Familia familiaB = criarFamilia.criar(bia.getId(), "Familia B");
+
+        mockMvc.perform(post("/api/familias/{familiaId}/listas", familiaA.getId()).header("Authorization", bearer(ana))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"nome\":\"Compra semanal\",\"categoria\":\"SUPERMERCADO\",\"estabelecimento\":\"Mercado\"}"))
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.status").value("EM_PREPARACAO"));
+        ListaCompra lista = criarListaCompra.criar(ana.getId(), familiaA.getId(), "Outra", CategoriaCompra.OUTROS, null);
+        mockMvc.perform(get("/api/familias/{familiaId}/listas/{listaId}", familiaA.getId(), lista.getId()).header("Authorization", bearer(ana)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.id").value(lista.getId().toString()));
+        mockMvc.perform(get("/api/familias/{familiaId}/listas/{listaId}", familiaB.getId(), lista.getId()).header("Authorization", bearer(bia)))
                 .andExpect(status().isNotFound());
     }
 

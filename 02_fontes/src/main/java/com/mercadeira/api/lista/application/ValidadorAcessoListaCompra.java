@@ -37,6 +37,14 @@ class ValidadorAcessoListaCompra {
         return listaRepository.findById(listaId).orElseThrow(() -> new ListaCompraNaoEncontradaException(listaId));
     }
 
+    ListaCompra lista(UUID familiaId, UUID listaId) {
+        ListaCompra lista = lista(listaId);
+        if (!lista.getFamilia().getId().equals(familiaId)) {
+            throw new ListaCompraNaoEncontradaException(listaId);
+        }
+        return lista;
+    }
+
     MembroFamilia validarMembroDaFamilia(UUID usuarioId, ListaCompra lista) {
         return membroAtivoNaFamilia(usuarioId, lista.getFamilia().getId());
     }

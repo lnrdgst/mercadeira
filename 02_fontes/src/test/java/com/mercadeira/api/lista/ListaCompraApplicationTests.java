@@ -107,7 +107,7 @@ class ListaCompraApplicationTests {
         entityManager.flush();
         assertThat(jdbcTemplate.queryForObject("select categoria from lista_compra where id = ?", String.class, lista.getId()))
                 .isEqualTo("SUPERMERCADO");
-        ItemLista item = adicionarItem.adicionar(usuario.getId(), lista.getId(), "Arroz", new BigDecimal("2.500"), UnidadeMedida.KG, null, null);
+        ItemLista item = adicionarItem.adicionar(usuario.getId(), lista.getFamilia().getId(), lista.getId(), "Arroz", new BigDecimal("2.500"), UnidadeMedida.KG, null, null);
         entityManager.flush();
         assertThat(jdbcTemplate.queryForObject("select unidade_medida from item_lista where id = ?", String.class, item.getId()))
                 .isEqualTo("KG");
@@ -127,7 +127,7 @@ class ListaCompraApplicationTests {
         criarLista.criar(bia.getId(), membroAtivo(bia).getFamilia().getId(), "Bia", CategoriaCompra.OUTROS, null);
 
         assertThat(listarListas.listar(ana.getId(), listaAna.getFamilia().getId())).extracting(ListaCompra::getId).containsExactly(listaAna.getId());
-        assertThatThrownBy(() -> consultarLista.consultar(bia.getId(), listaAna.getId()))
+        assertThatThrownBy(() -> consultarLista.consultar(bia.getId(), listaAna.getFamilia().getId(), listaAna.getId()))
                 .isInstanceOf(MembroFamiliaInvalidoException.class);
     }
 
@@ -154,10 +154,10 @@ class ListaCompraApplicationTests {
         Usuario externa = usuario("Externa"); criarFamilia.criar(externa.getId(), "Casa externa");
         MembroFamilia membroExterno = membroAtivo(externa);
 
-        adicionarParticipante.adicionar(ana.getId(), lista.getId(), bia.getId());
+        adicionarParticipante.adicionar(ana.getId(), lista.getFamilia().getId(), lista.getId(), bia.getId());
 
-        assertThat(listarParticipantes.listar(ana.getId(), lista.getId())).extracting(p -> p.getMembroFamilia().getId()).contains(bia.getId());
-        assertThatThrownBy(() -> adicionarParticipante.adicionar(ana.getId(), lista.getId(), membroExterno.getId()))
+        assertThat(listarParticipantes.listar(ana.getId(), lista.getFamilia().getId(), lista.getId())).extracting(p -> p.getMembroFamilia().getId()).contains(bia.getId());
+        assertThatThrownBy(() -> adicionarParticipante.adicionar(ana.getId(), lista.getFamilia().getId(), lista.getId(), membroExterno.getId()))
                 .isInstanceOf(MembroFamiliaInvalidoException.class);
     }
 
@@ -166,10 +166,10 @@ class ListaCompraApplicationTests {
         Usuario ana = usuario("Ana"); Familia familia = criarFamilia.criar(ana.getId(), "Casa Ana");
         ListaCompra lista = criarLista.criar(ana.getId(), membroAtivo(ana).getFamilia().getId(), "Lista", CategoriaCompra.OUTROS, null);
         MembroFamilia bia = adicionarMembro(familia, usuario("Bia"));
-        ParticipanteLista participante = adicionarParticipante.adicionar(ana.getId(), lista.getId(), bia.getId());
+        ParticipanteLista participante = adicionarParticipante.adicionar(ana.getId(), lista.getFamilia().getId(), lista.getId(), bia.getId());
 
-        removerParticipante.remover(ana.getId(), lista.getId(), bia.getId());
-        adicionarParticipante.adicionar(ana.getId(), lista.getId(), bia.getId());
+        removerParticipante.remover(ana.getId(), lista.getFamilia().getId(), lista.getId(), bia.getId());
+        adicionarParticipante.adicionar(ana.getId(), lista.getFamilia().getId(), lista.getId(), bia.getId());
 
         ParticipanteLista reativado = participanteRepository.findByListaCompra_IdAndMembroFamilia_Id(lista.getId(), bia.getId()).orElseThrow();
         assertThat(reativado.getId()).isEqualTo(participante.getId());
@@ -180,7 +180,7 @@ class ListaCompraApplicationTests {
     void impedeRemocaoDoCriador() {
         Usuario ana = usuario("Ana"); criarFamilia.criar(ana.getId(), "Casa Ana");
         ListaCompra lista = criarLista.criar(ana.getId(), membroAtivo(ana).getFamilia().getId(), "Lista", CategoriaCompra.OUTROS, null);
-        assertThatThrownBy(() -> removerParticipante.remover(ana.getId(), lista.getId(), lista.getCriadaPorMembroFamilia().getId()))
+        assertThatThrownBy(() -> removerParticipante.remover(ana.getId(), lista.getFamilia().getId(), lista.getId(), lista.getCriadaPorMembroFamilia().getId()))
                 .isInstanceOf(CriadorListaNaoPodeSerRemovidoException.class);
     }
 
@@ -188,12 +188,16 @@ class ListaCompraApplicationTests {
     void adicionaEEditaItemComoParticipanteMasImpedeNaoParticipante() {
         Usuario ana = usuario("Ana"); Familia familia = criarFamilia.criar(ana.getId(), "Casa Ana");
         ListaCompra lista = criarLista.criar(ana.getId(), membroAtivo(ana).getFamilia().getId(), "Lista", CategoriaCompra.OUTROS, null);
-        Usuario biaUsuario = usuario("Bia"); adicionarMembro(familia, biaUsuario);
+        Usuario biaUsuario = usuario("Bia");
+        MembroFamilia bia = adicionarMembro(familia, biaUsuario);
+        jdbcTemplate.update("update membro_familia set papel = 'ADMINISTRADOR' where id = ?", bia.getId());
+        entityManager.clear();
 
-        assertThatThrownBy(() -> adicionarItem.adicionar(biaUsuario.getId(), lista.getId(), "Leite", null, null, null, null))
+        // Ser administradora da familia nao substitui a participacao ativa na lista.
+        assertThatThrownBy(() -> adicionarItem.adicionar(biaUsuario.getId(), lista.getFamilia().getId(), lista.getId(), "Leite", null, null, null, null))
                 .isInstanceOf(UsuarioNaoParticipaDaListaException.class);
-        ItemLista item = adicionarItem.adicionar(ana.getId(), lista.getId(), "Leite", null, null, null, null);
-        editarItem.editar(ana.getId(), lista.getId(), item.getId(), "Leite integral", BigDecimal.ONE, UnidadeMedida.LITRO, "Marca", "Gelado");
+        ItemLista item = adicionarItem.adicionar(ana.getId(), lista.getFamilia().getId(), lista.getId(), "Leite", null, null, null, null);
+        editarItem.editar(ana.getId(), lista.getFamilia().getId(), lista.getId(), item.getId(), "Leite integral", BigDecimal.ONE, UnidadeMedida.LITRO, "Marca", "Gelado");
         assertThat(item.getDescricao()).isEqualTo("Leite integral");
         assertThat(item.getUnidadeMedida()).isEqualTo(UnidadeMedida.LITRO);
     }
@@ -202,32 +206,32 @@ class ListaCompraApplicationTests {
     void removeItemLogicamenteENaoOListaEntreAtivos() {
         Usuario ana = usuario("Ana"); criarFamilia.criar(ana.getId(), "Casa Ana");
         ListaCompra lista = criarLista.criar(ana.getId(), membroAtivo(ana).getFamilia().getId(), "Lista", CategoriaCompra.OUTROS, null);
-        ItemLista item = adicionarItem.adicionar(ana.getId(), lista.getId(), "Leite", null, null, null, null);
-        removerItem.remover(ana.getId(), lista.getId(), item.getId());
+        ItemLista item = adicionarItem.adicionar(ana.getId(), lista.getFamilia().getId(), lista.getId(), "Leite", null, null, null, null);
+        removerItem.remover(ana.getId(), lista.getFamilia().getId(), lista.getId(), item.getId());
         assertThat(item.getRemovidoEm()).isNotNull();
-        assertThat(listarItens.listar(ana.getId(), lista.getId())).isEmpty();
+        assertThat(listarItens.listar(ana.getId(), lista.getFamilia().getId(), lista.getId())).isEmpty();
     }
 
     @Test
     void atribuiOrdemDeInclusaoEReordenaItens() {
         Usuario ana = usuario("Ana"); criarFamilia.criar(ana.getId(), "Casa Ana");
         ListaCompra lista = criarLista.criar(ana.getId(), membroAtivo(ana).getFamilia().getId(), "Lista", CategoriaCompra.OUTROS, null);
-        ItemLista primeiro = adicionarItem.adicionar(ana.getId(), lista.getId(), "Primeiro", null, null, null, null);
-        ItemLista segundo = adicionarItem.adicionar(ana.getId(), lista.getId(), "Segundo", null, null, null, null);
-        assertThat(listarItens.listar(ana.getId(), lista.getId())).extracting(ItemLista::getId).containsExactly(primeiro.getId(), segundo.getId());
-        reordenarItens.reordenar(ana.getId(), lista.getId(), List.of(segundo.getId(), primeiro.getId()));
-        assertThat(listarItens.listar(ana.getId(), lista.getId())).extracting(ItemLista::getId).containsExactly(segundo.getId(), primeiro.getId());
+        ItemLista primeiro = adicionarItem.adicionar(ana.getId(), lista.getFamilia().getId(), lista.getId(), "Primeiro", null, null, null, null);
+        ItemLista segundo = adicionarItem.adicionar(ana.getId(), lista.getFamilia().getId(), lista.getId(), "Segundo", null, null, null, null);
+        assertThat(listarItens.listar(ana.getId(), lista.getFamilia().getId(), lista.getId())).extracting(ItemLista::getId).containsExactly(primeiro.getId(), segundo.getId());
+        reordenarItens.reordenar(ana.getId(), lista.getFamilia().getId(), lista.getId(), List.of(segundo.getId(), primeiro.getId()));
+        assertThat(listarItens.listar(ana.getId(), lista.getFamilia().getId(), lista.getId())).extracting(ItemLista::getId).containsExactly(segundo.getId(), primeiro.getId());
     }
 
     @Test
     void rejeitaReordenacaoIncompletaDuplicadaOuComIdInvalido() {
         Usuario ana = usuario("Ana"); criarFamilia.criar(ana.getId(), "Casa Ana");
         ListaCompra lista = criarLista.criar(ana.getId(), membroAtivo(ana).getFamilia().getId(), "Lista", CategoriaCompra.OUTROS, null);
-        ItemLista primeiro = adicionarItem.adicionar(ana.getId(), lista.getId(), "Primeiro", null, null, null, null);
-        ItemLista segundo = adicionarItem.adicionar(ana.getId(), lista.getId(), "Segundo", null, null, null, null);
-        assertThatThrownBy(() -> reordenarItens.reordenar(ana.getId(), lista.getId(), List.of(primeiro.getId()))).isInstanceOf(OrdemItensInvalidaException.class);
-        assertThatThrownBy(() -> reordenarItens.reordenar(ana.getId(), lista.getId(), List.of(primeiro.getId(), primeiro.getId()))).isInstanceOf(OrdemItensInvalidaException.class);
-        assertThatThrownBy(() -> reordenarItens.reordenar(ana.getId(), lista.getId(), List.of(primeiro.getId(), UUID.randomUUID()))).isInstanceOf(OrdemItensInvalidaException.class);
+        ItemLista primeiro = adicionarItem.adicionar(ana.getId(), lista.getFamilia().getId(), lista.getId(), "Primeiro", null, null, null, null);
+        ItemLista segundo = adicionarItem.adicionar(ana.getId(), lista.getFamilia().getId(), lista.getId(), "Segundo", null, null, null, null);
+        assertThatThrownBy(() -> reordenarItens.reordenar(ana.getId(), lista.getFamilia().getId(), lista.getId(), List.of(primeiro.getId()))).isInstanceOf(OrdemItensInvalidaException.class);
+        assertThatThrownBy(() -> reordenarItens.reordenar(ana.getId(), lista.getFamilia().getId(), lista.getId(), List.of(primeiro.getId(), primeiro.getId()))).isInstanceOf(OrdemItensInvalidaException.class);
+        assertThatThrownBy(() -> reordenarItens.reordenar(ana.getId(), lista.getFamilia().getId(), lista.getId(), List.of(primeiro.getId(), UUID.randomUUID()))).isInstanceOf(OrdemItensInvalidaException.class);
         assertThat(segundo.getId()).isNotNull();
     }
 
@@ -236,7 +240,7 @@ class ListaCompraApplicationTests {
         Usuario ana = usuario("Ana"); Familia familia = criarFamilia.criar(ana.getId(), "Casa Ana");
         MembroFamilia criador = membroAtivo(ana);
         UUID listaId = inserirListaEmCompra(familia, criador);
-        assertThatThrownBy(() -> adicionarItem.adicionar(ana.getId(), listaId, "Item", null, null, null, null))
+        assertThatThrownBy(() -> adicionarItem.adicionar(ana.getId(), familia.getId(), listaId, "Item", null, null, null, null))
                 .isInstanceOf(ListaCompraForaDePreparacaoException.class);
     }
 
@@ -258,3 +262,4 @@ class ListaCompraApplicationTests {
     }
     private Timestamp timestamp(Instant instant) { return Timestamp.from(instant); }
 }
+
