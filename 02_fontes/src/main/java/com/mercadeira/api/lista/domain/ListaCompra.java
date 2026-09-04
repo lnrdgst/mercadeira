@@ -80,6 +80,14 @@ public class ListaCompra {
         atualizadaEm = agora;
     }
 
+    public void iniciarCompra(Instant agora) {
+        if (status != StatusListaCompra.EM_PREPARACAO) {
+            throw new TransicaoStatusListaCompraInvalidaException(status, StatusListaCompra.EM_COMPRA);
+        }
+        status = StatusListaCompra.EM_COMPRA;
+        atualizadaEm = agora;
+    }
+
     public UUID getId() { return id; }
     public Familia getFamilia() { return familia; }
     public String getNome() { return nome; }

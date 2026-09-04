@@ -75,4 +75,8 @@ public class Compra {
         compra.iniciadaEm = iniciadaEm;
         return compra;
     }
+
+    public StatusCompra getStatus() {
+        return status;
+    }
 }
