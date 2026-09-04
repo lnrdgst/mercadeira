@@ -32,8 +32,8 @@ public class ParticipanteCompra {
     @JoinColumn(name = "compra_id", nullable = false)
     private Compra compra;
 
-    @OneToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "participante_lista_origem_id", nullable = false, unique = true)
+    @OneToOne(fetch = FetchType.LAZY, optional = true)
+    @JoinColumn(name = "participante_lista_origem_id")
     private ParticipanteLista participanteListaOrigem;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

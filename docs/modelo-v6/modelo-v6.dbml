@@ -1,0 +1,133 @@
+Project mercadeira_modelo_v6 {
+  database_type: "PostgreSQL"
+  note: "Estado completo apos V1 a V6. Um usuario pode ter 0..N membros ativos."
+}
+
+Table usuario {
+  id uuid [pk]
+  nome varchar(120) [not null]
+  email varchar(255) [not null, unique]
+  senha_hash varchar(255) [not null]
+  criado_em timestamptz [not null]
+  atualizado_em timestamptz [not null]
+}
+
+Table familia {
+  id uuid [pk]
+  nome varchar(120) [not null]
+  codigo_ingresso varchar(32) [not null, unique]
+  status varchar(20) [not null, default: 'ATIVA', note: "ATIVA, INATIVA"]
+  criada_por_usuario_id uuid [not null, ref: > usuario.id]
+  criada_em timestamptz [not null]
+  atualizada_em timestamptz [not null]
+}
+
+Table membro_familia {
+  id uuid [pk]
+  familia_id uuid [not null, ref: > familia.id]
+  usuario_id uuid [not null, ref: > usuario.id]
+  papel varchar(30) [not null, note: "ADMINISTRADOR, MEMBRO"]
+  status varchar(20) [not null, note: "ATIVO, INATIVO"]
+  apelido varchar(120)
+  criado_em timestamptz [not null]
+  atualizado_em timestamptz [not null]
+  indexes {
+    (familia_id, usuario_id) [unique]
+    usuario_id [note: "Indice parcial nao unico: WHERE status = 'ATIVO'"]
+  }
+}
+
+Table solicitacao_entrada_familia {
+  id uuid [pk]
+  familia_id uuid [not null, ref: > familia.id]
+  solicitante_usuario_id uuid [not null, ref: > usuario.id]
+  status varchar(20) [not null, note: "PENDENTE, APROVADA, REJEITADA, CANCELADA"]
+  solicitada_em timestamptz [not null]
+  resolvida_por_membro_familia_id uuid [ref: > membro_familia.id]
+  resolvida_em timestamptz
+  indexes { (familia_id, solicitante_usuario_id) [unique, note: "Parcial: WHERE status = 'PENDENTE'"] }
+}
+
+Table lista_compra {
+  id uuid [pk]
+  familia_id uuid [not null, ref: > familia.id]
+  nome varchar(120) [not null]
+  categoria varchar(100) [not null]
+  estabelecimento varchar(120)
+  status varchar(30) [not null, default: 'EM_PREPARACAO']
+  criada_por_membro_familia_id uuid [not null, ref: > membro_familia.id]
+  criada_em timestamptz [not null]
+  atualizada_em timestamptz [not null]
+}
+
+Table participante_lista {
+  id uuid [pk]
+  lista_compra_id uuid [not null, ref: > lista_compra.id]
+  membro_familia_id uuid [not null, ref: > membro_familia.id]
+  entrou_em timestamptz [not null]
+  saiu_em timestamptz
+  indexes { (lista_compra_id, membro_familia_id) [unique] }
+}
+
+Table item_lista {
+  id uuid [pk]
+  lista_compra_id uuid [not null, ref: > lista_compra.id]
+  descricao varchar(200) [not null]
+  quantidade numeric(12,3)
+  unidade_medida varchar(30)
+  marca varchar(120)
+  observacoes text
+  ordem_exibicao integer [not null]
+  removido_em timestamptz
+  adicionado_por_membro_familia_id uuid [not null, ref: > membro_familia.id]
+  criado_em timestamptz [not null]
+  atualizado_em timestamptz [not null]
+  indexes { (lista_compra_id, ordem_exibicao) [note: "Parcial: WHERE removido_em IS NULL"] }
+}
+
+Table compra {
+  id uuid [pk]
+  lista_compra_id uuid [not null, unique, ref: > lista_compra.id]
+  iniciada_por_membro_familia_id uuid [not null, ref: > membro_familia.id]
+  nome_lista_snapshot varchar(120) [not null]
+  categoria_snapshot varchar(100) [not null]
+  estabelecimento_snapshot varchar(120)
+  status varchar(30) [not null]
+  iniciada_em timestamptz [not null]
+  finalizada_em timestamptz
+  reaberta_em timestamptz
+  reaberta_por_membro_familia_id uuid [ref: > membro_familia.id]
+}
+
+Table participante_compra {
+  id uuid [pk]
+  compra_id uuid [not null, ref: > compra.id]
+  participante_lista_origem_id uuid [not null, unique, ref: > participante_lista.id]
+  membro_familia_id uuid [not null, ref: > membro_familia.id]
+  nome_snapshot varchar(120) [not null]
+  papel_snapshot varchar(30) [not null]
+  gerado_em timestamptz [not null]
+  indexes { (compra_id, membro_familia_id) [unique] }
+}
+
+Table item_compra {
+  id uuid [pk]
+  compra_id uuid [not null, ref: > compra.id]
+  item_lista_origem_id uuid [unique, ref: > item_lista.id]
+  adicionado_durante_compra boolean [not null]
+  ordem_exibicao integer [not null]
+  descricao_snapshot varchar(200) [not null]
+  quantidade_snapshot numeric(12,3)
+  unidade_medida_snapshot varchar(30)
+  marca_snapshot varchar(120)
+  observacoes_snapshot text
+  status varchar(40) [not null]
+  marcado_por_membro_familia_id uuid [ref: > membro_familia.id]
+  marcado_em timestamptz
+  decisao_remocao varchar(20)
+  remocao_solicitada_por_membro_familia_id uuid [ref: > membro_familia.id]
+  remocao_solicitada_em timestamptz
+  remocao_resolvida_por_membro_familia_id uuid [ref: > membro_familia.id]
+  remocao_resolvida_em timestamptz
+  indexes { (compra_id, ordem_exibicao) }
+}
