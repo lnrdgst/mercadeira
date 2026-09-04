@@ -52,4 +52,23 @@ public class ParticipanteCompra {
 
     protected ParticipanteCompra() {
     }
+
+    public static ParticipanteCompra criarDaPreparacao(Compra compra, ParticipanteLista origem, Instant geradoEm) {
+        return criar(compra, origem, origem.getMembroFamilia(), geradoEm);
+    }
+
+    public static ParticipanteCompra criarDireto(Compra compra, MembroFamilia membro, Instant geradoEm) {
+        return criar(compra, null, membro, geradoEm);
+    }
+
+    private static ParticipanteCompra criar(Compra compra, ParticipanteLista origem, MembroFamilia membro, Instant geradoEm) {
+        ParticipanteCompra participante = new ParticipanteCompra();
+        participante.compra = compra;
+        participante.participanteListaOrigem = origem;
+        participante.membroFamilia = membro;
+        participante.nomeSnapshot = membro.getUsuario().getNome();
+        participante.papelSnapshot = membro.getPapel();
+        participante.geradoEm = geradoEm;
+        return participante;
+    }
 }

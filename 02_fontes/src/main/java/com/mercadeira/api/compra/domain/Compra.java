@@ -63,4 +63,16 @@ public class Compra {
 
     protected Compra() {
     }
+
+    public static Compra iniciar(ListaCompra lista, MembroFamilia iniciador, Instant iniciadaEm) {
+        Compra compra = new Compra();
+        compra.listaCompra = lista;
+        compra.iniciadaPorMembroFamilia = iniciador;
+        compra.nomeListaSnapshot = lista.getNome();
+        compra.categoriaSnapshot = lista.getCategoria().name();
+        compra.estabelecimentoSnapshot = lista.getEstabelecimento();
+        compra.status = StatusCompra.EM_ANDAMENTO;
+        compra.iniciadaEm = iniciadaEm;
+        return compra;
+    }
 }

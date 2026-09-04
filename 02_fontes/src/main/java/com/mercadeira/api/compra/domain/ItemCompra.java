@@ -88,4 +88,19 @@ public class ItemCompra {
 
     protected ItemCompra() {
     }
+
+    public static ItemCompra criarDaPreparacao(Compra compra, ItemLista origem) {
+        ItemCompra item = new ItemCompra();
+        item.compra = compra;
+        item.itemListaOrigem = origem;
+        item.adicionadoDuranteCompra = false;
+        item.ordemExibicao = origem.getOrdemExibicao();
+        item.descricaoSnapshot = origem.getDescricao();
+        item.quantidadeSnapshot = origem.getQuantidade();
+        item.unidadeMedidaSnapshot = origem.getUnidadeMedida() == null ? null : origem.getUnidadeMedida().name();
+        item.marcaSnapshot = origem.getMarca();
+        item.observacoesSnapshot = origem.getObservacoes();
+        item.status = StatusItemCompra.PENDENTE;
+        return item;
+    }
 }
