@@ -7,6 +7,10 @@ import com.mercadeira.api.lista.domain.ListaCompra;
 import com.mercadeira.api.lista.domain.StatusListaCompra;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.EntityGraph;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import jakarta.persistence.LockModeType;
 import java.util.Optional;
 
 public interface ListaCompraRepository extends JpaRepository<ListaCompra, UUID> {
@@ -17,4 +21,8 @@ public interface ListaCompraRepository extends JpaRepository<ListaCompra, UUID> 
 
     @EntityGraph(attributePaths = { "familia", "criadaPorMembroFamilia", "criadaPorMembroFamilia.usuario" })
     Optional<ListaCompra> findDetalheById(UUID id);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select lista from ListaCompra lista where lista.id = :listaId")
+    Optional<ListaCompra> findByIdForUpdate(@Param("listaId") UUID listaId);
 }

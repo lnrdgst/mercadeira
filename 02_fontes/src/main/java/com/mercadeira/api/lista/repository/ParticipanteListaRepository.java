@@ -13,5 +13,7 @@ public interface ParticipanteListaRepository extends JpaRepository<ParticipanteL
     @EntityGraph(attributePaths = { "membroFamilia", "membroFamilia.usuario" })
     List<ParticipanteLista> findByListaCompra_IdAndSaiuEmIsNull(UUID listaCompraId);
 
+    List<ParticipanteLista> findByListaCompra_IdAndSaiuEmIsNullOrderByEntrouEmAscIdAsc(UUID listaCompraId);
+
     Optional<ParticipanteLista> findByListaCompra_IdAndMembroFamilia_Id(UUID listaCompraId, UUID membroFamiliaId);
 }
