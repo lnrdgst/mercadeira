@@ -25,4 +25,7 @@ public interface ItemCompraRepository extends JpaRepository<ItemCompra, UUID> {
     List<ItemCompra> findByCompra_IdAndStatusOrderByOrdemExibicaoAscIdAsc(
             UUID compraId,
             StatusItemCompra status);
+
+    @Query("select coalesce(max(item.ordemExibicao), 0) from ItemCompra item where item.compra.id = :compraId")
+    Integer findMaiorOrdemExibicaoByCompra_Id(@Param("compraId") UUID compraId);
 }

@@ -6,6 +6,7 @@ import java.util.UUID;
 
 import com.mercadeira.api.familia.domain.MembroFamilia;
 import com.mercadeira.api.lista.domain.ItemLista;
+import com.mercadeira.api.lista.domain.UnidadeMedida;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -107,6 +108,31 @@ public class ItemCompra {
         item.unidadeMedidaSnapshot = origem.getUnidadeMedida() == null ? null : origem.getUnidadeMedida().name();
         item.marcaSnapshot = origem.getMarca();
         item.observacoesSnapshot = origem.getObservacoes();
+        item.status = StatusItemCompra.PENDENTE;
+        return item;
+    }
+
+    public static ItemCompra criarDuranteCompra(
+            Compra compra,
+            ParticipanteCompra autor,
+            String descricao,
+            BigDecimal quantidade,
+            UnidadeMedida unidadeMedida,
+            String marca,
+            String observacoes,
+            Integer ordemExibicao,
+            Instant adicionadoEm) {
+        ItemCompra item = new ItemCompra();
+        item.compra = compra;
+        item.adicionadoDuranteCompra = true;
+        item.adicionadoPorParticipanteCompra = autor;
+        item.adicionadoEm = adicionadoEm;
+        item.ordemExibicao = ordemExibicao;
+        item.descricaoSnapshot = descricao;
+        item.quantidadeSnapshot = quantidade;
+        item.unidadeMedidaSnapshot = unidadeMedida == null ? null : unidadeMedida.name();
+        item.marcaSnapshot = marca;
+        item.observacoesSnapshot = observacoes;
         item.status = StatusItemCompra.PENDENTE;
         return item;
     }
