@@ -79,4 +79,6 @@ public class Compra {
     public StatusCompra getStatus() {
         return status;
     }
+
+    public UUID getId() { return id; }
 }

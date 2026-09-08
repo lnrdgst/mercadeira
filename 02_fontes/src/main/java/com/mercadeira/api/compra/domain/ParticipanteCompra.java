@@ -71,4 +71,10 @@ public class ParticipanteCompra {
         participante.geradoEm = geradoEm;
         return participante;
     }
+
+    public UUID getId() { return id; }
+    public MembroFamilia getMembroFamilia() { return membroFamilia; }
+    public String getNomeSnapshot() { return nomeSnapshot; }
+    public PapelMembroFamilia getPapelSnapshot() { return papelSnapshot; }
+    public Instant getGeradoEm() { return geradoEm; }
 }

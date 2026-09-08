@@ -103,4 +103,15 @@ public class ItemCompra {
         item.status = StatusItemCompra.PENDENTE;
         return item;
     }
+
+    public UUID getId() { return id; }
+    public ItemLista getItemListaOrigem() { return itemListaOrigem; }
+    public boolean isAdicionadoDuranteCompra() { return adicionadoDuranteCompra; }
+    public Integer getOrdemExibicao() { return ordemExibicao; }
+    public String getDescricaoSnapshot() { return descricaoSnapshot; }
+    public BigDecimal getQuantidadeSnapshot() { return quantidadeSnapshot; }
+    public String getUnidadeMedidaSnapshot() { return unidadeMedidaSnapshot; }
+    public String getMarcaSnapshot() { return marcaSnapshot; }
+    public String getObservacoesSnapshot() { return observacoesSnapshot; }
+    public StatusItemCompra getStatus() { return status; }
 }

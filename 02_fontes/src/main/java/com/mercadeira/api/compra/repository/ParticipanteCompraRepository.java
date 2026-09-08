@@ -5,10 +5,12 @@ import java.util.Optional;
 import java.util.UUID;
 
 import com.mercadeira.api.compra.domain.ParticipanteCompra;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface ParticipanteCompraRepository extends JpaRepository<ParticipanteCompra, UUID> {
 
+    @EntityGraph(attributePaths = { "membroFamilia", "membroFamilia.usuario" })
     List<ParticipanteCompra> findByCompra_IdOrderByGeradoEmAscIdAsc(UUID compraId);
 
     Optional<ParticipanteCompra> findByCompra_IdAndMembroFamilia_Id(UUID compraId, UUID membroFamiliaId);
