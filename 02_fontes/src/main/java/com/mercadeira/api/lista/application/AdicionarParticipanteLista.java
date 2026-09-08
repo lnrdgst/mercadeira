@@ -7,6 +7,7 @@ import com.mercadeira.api.familia.domain.MembroFamilia;
 import com.mercadeira.api.lista.domain.ListaCompra;
 import com.mercadeira.api.lista.domain.ParticipanteLista;
 import com.mercadeira.api.lista.repository.ParticipanteListaRepository;
+import org.hibernate.Hibernate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,6 +28,8 @@ public class AdicionarParticipanteLista {
                 })
                 .orElseGet(() -> repository.save(ParticipanteLista.criar(lista, membro, clock.instant())));
         lista.registrarAtualizacao(clock.instant());
+        // O controller monta a resposta depois do fim desta transacao.
+        Hibernate.initialize(participante.getMembroFamilia().getUsuario());
         return participante;
     }
 }

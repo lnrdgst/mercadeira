@@ -340,6 +340,52 @@ class ApiIntegrationTests {
         mockMvc.perform(get(compraUrl(familiaA, lista))).andExpect(status().isUnauthorized());
     }
 
+    @Test
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
+    void administradorParticipaComRespostaCompletaAposEncerrarTransacao() throws Exception {
+        Usuario criador = usuario("Criador");
+        Familia familia = criarFamilia.criar(criador.getId(), "Participacao sem sessao externa");
+        ListaCompra lista = criarListaCompra.criar(criador.getId(), familia.getId(), "Lista", CategoriaCompra.OUTROS, null);
+        Usuario admin = usuario("Admin");
+        UUID adminId = UUID.randomUUID();
+        jdbcTemplate.update("insert into membro_familia (id, familia_id, usuario_id, papel, status, criado_em, atualizado_em) values (?, ?, ?, 'ADMINISTRADOR', 'ATIVO', now(), now())",
+                adminId, familia.getId(), admin.getId());
+        UUID criadorId = jdbcTemplate.queryForObject("select id from membro_familia where familia_id = ? and usuario_id = ?",
+                UUID.class, familia.getId(), criador.getId());
+        String url = "/api/familias/" + familia.getId() + "/listas/" + lista.getId();
+        String token = bearer(admin);
+        String body = "{\"membroFamiliaId\":\"" + adminId + "\"}";
+
+        mockMvc.perform(get(url).header("Authorization", token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.contextoUsuario.participanteAtivo").value(false));
+        mockMvc.perform(post(url + "/participantes").header("Authorization", token).contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.membroFamiliaId").value(adminId.toString()))
+                .andExpect(jsonPath("$.usuarioId").value(admin.getId().toString()))
+                .andExpect(jsonPath("$.nome").value("Admin"))
+                .andExpect(jsonPath("$.papelFamilia").value("ADMINISTRADOR"))
+                .andExpect(jsonPath("$.entrouEm").isNotEmpty());
+        for (int consulta = 0; consulta < 2; consulta++) {
+            mockMvc.perform(get(url).header("Authorization", token))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.status").value("EM_PREPARACAO"))
+                    .andExpect(jsonPath("$.contextoUsuario.participanteAtivo").value(true));
+            mockMvc.perform(get(url + "/participantes").header("Authorization", token))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$[?(@.membroFamiliaId == '" + adminId + "')]").isNotEmpty());
+        }
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete(url + "/participantes/" + criadorId).header("Authorization", token))
+                .andExpect(status().is4xxClientError());
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete(url + "/participantes/" + adminId).header("Authorization", token))
+                .andExpect(status().isNoContent());
+        mockMvc.perform(get(url).header("Authorization", token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.contextoUsuario.participanteAtivo").value(false));
+        mockMvc.perform(post(url + "/participantes").header("Authorization", token).contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.nome").value("Admin"));
+    }
     private ListaCompra listaComItens(Usuario usuario, Familia familia, String nome) {
         ListaCompra lista = criarListaCompra.criar(usuario.getId(), familia.getId(), nome, CategoriaCompra.SUPERMERCADO, "Mercado Central");
         adicionarItemLista.adicionar(usuario.getId(), familia.getId(), lista.getId(), "Arroz", BigDecimal.ONE, UnidadeMedida.UNIDADE, "Marca A", null);
