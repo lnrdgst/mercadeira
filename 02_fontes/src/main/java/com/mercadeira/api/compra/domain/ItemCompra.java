@@ -39,6 +39,13 @@ public class ItemCompra {
     @Column(name = "adicionado_durante_compra", nullable = false)
     private boolean adicionadoDuranteCompra;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "adicionado_por_participante_compra_id")
+    private ParticipanteCompra adicionadoPorParticipanteCompra;
+
+    @Column(name = "adicionado_em")
+    private Instant adicionadoEm;
+
     @Column(name = "ordem_exibicao", nullable = false)
     private Integer ordemExibicao;
 
@@ -121,6 +128,8 @@ public class ItemCompra {
     public Compra getCompra() { return compra; }
     public ItemLista getItemListaOrigem() { return itemListaOrigem; }
     public boolean isAdicionadoDuranteCompra() { return adicionadoDuranteCompra; }
+    public ParticipanteCompra getAdicionadoPorParticipanteCompra() { return adicionadoPorParticipanteCompra; }
+    public Instant getAdicionadoEm() { return adicionadoEm; }
     public Integer getOrdemExibicao() { return ordemExibicao; }
     public String getDescricaoSnapshot() { return descricaoSnapshot; }
     public BigDecimal getQuantidadeSnapshot() { return quantidadeSnapshot; }
