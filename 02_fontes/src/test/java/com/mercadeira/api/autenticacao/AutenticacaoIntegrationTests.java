@@ -115,7 +115,11 @@ class AutenticacaoIntegrationTests {
     void rejeitaTokenAdulteradoEExpirado() {
         Usuario usuario = cadastrarUsuario.cadastrar("Ana", "ana@example.test", "senha-original");
         TokenAutenticacao resultado = autenticarUsuario.autenticar("ana@example.test", "senha-original");
-        String tokenAdulterado = resultado.token().substring(0, resultado.token().length() - 1) + "x";
+        String[] segmentos = resultado.token().split("\\.", -1);
+        String assinatura = segmentos[2];
+        char primeiroCaractereAdulterado = assinatura.charAt(0) == 'A' ? 'B' : 'A';
+        String tokenAdulterado = segmentos[0] + "." + segmentos[1] + "."
+                + primeiroCaractereAdulterado + assinatura.substring(1);
         String tokenExpirado = jwtEncoder.encode(JwtEncoderParameters.from(
                 JwsHeader.with(MacAlgorithm.HS256).build(), JwtClaimsSet.builder()
                 .subject(usuario.getId().toString())
