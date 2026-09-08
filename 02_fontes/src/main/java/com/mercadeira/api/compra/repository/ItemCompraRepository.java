@@ -19,7 +19,13 @@ public interface ItemCompraRepository extends JpaRepository<ItemCompra, UUID> {
     @Query("select item from ItemCompra item where item.id = :itemCompraId")
     Optional<ItemCompra> findByIdForUpdate(@Param("itemCompraId") UUID itemCompraId);
 
-    @EntityGraph(attributePaths = "itemListaOrigem")
+    @EntityGraph(attributePaths = {
+            "itemListaOrigem",
+            "adicionadoPorParticipanteCompra",
+            "adicionadoPorParticipanteCompra.membroFamilia",
+            "adicionadoPorParticipanteCompra.membroFamilia.usuario",
+            "marcadoPorMembroFamilia"
+    })
     List<ItemCompra> findByCompra_IdOrderByOrdemExibicaoAscIdAsc(UUID compraId);
 
     List<ItemCompra> findByCompra_IdAndStatusOrderByOrdemExibicaoAscIdAsc(

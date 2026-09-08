@@ -386,6 +386,134 @@ class ApiIntegrationTests {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.nome").value("Admin"));
     }
+
+    @Test
+    void participanteColocaItemNoCarrinhoComReplayEGetPreservaAuditoria() throws Exception {
+        Usuario ana = usuario("Ana");
+        Familia familia = criarFamilia.criar(ana.getId(), "Familia Compra");
+        ListaCompra lista = listaComItens(ana, familia, "Lista");
+        String compra = compraUrl(familia, lista);
+        var inicio = mockMvc.perform(post(compra).header("Authorization", bearer(ana)))
+                .andExpect(status().isCreated()).andReturn();
+        String itemId = com.jayway.jsonpath.JsonPath.read(inicio.getResponse().getContentAsString(), "$.itens[0].id");
+        String url = compra + "/itens/" + itemId + "/colocar-no-carrinho";
+
+        var primeira = mockMvc.perform(post(url).header("Authorization", bearer(ana)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("NO_CARRINHO"))
+                .andExpect(jsonPath("$.adicionadoPor").doesNotExist())
+                .andExpect(jsonPath("$.colocadoNoCarrinhoPor.participanteCompraId").exists())
+                .andExpect(jsonPath("$.colocadoNoCarrinhoPor.usuarioId").value(ana.getId().toString()))
+                .andExpect(jsonPath("$.colocadoNoCarrinhoPor.nome").value("Ana"))
+                .andExpect(jsonPath("$.colocadoNoCarrinhoEm").isNotEmpty())
+                .andReturn();
+        String momento = com.jayway.jsonpath.JsonPath.read(primeira.getResponse().getContentAsString(), "$.colocadoNoCarrinhoEm");
+        String participante = com.jayway.jsonpath.JsonPath.read(primeira.getResponse().getContentAsString(), "$.colocadoNoCarrinhoPor.participanteCompraId");
+
+        mockMvc.perform(post(url).header("Authorization", bearer(ana)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.colocadoNoCarrinhoEm").value(momento))
+                .andExpect(jsonPath("$.colocadoNoCarrinhoPor.participanteCompraId").value(participante));
+        mockMvc.perform(get(compra).header("Authorization", bearer(ana)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.itens[0].status").value("NO_CARRINHO"))
+                .andExpect(jsonPath("$.itens[0].colocadoNoCarrinhoEm").value(momento))
+                .andExpect(jsonPath("$.itens[0].colocadoNoCarrinhoPor.nome").value("Ana"));
+    }
+
+    @Test
+    void participanteAdicionaItemDuranteCompraComAutoriaEGetPersistido() throws Exception {
+        Usuario ana = usuario("Ana");
+        Familia familia = criarFamilia.criar(ana.getId(), "Familia Compra");
+        ListaCompra lista = listaComItens(ana, familia, "Lista");
+        String compra = compraUrl(familia, lista);
+        mockMvc.perform(post(compra).header("Authorization", bearer(ana))).andExpect(status().isCreated());
+
+        var adicao = mockMvc.perform(post(compra + "/itens").header("Authorization", bearer(ana))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"descricao\":\"Carvao\",\"quantidade\":1,\"unidadeMedida\":\"PACOTE\",\"marca\":null,\"observacoes\":\"5 kg\",\"status\":\"REMOVIDO\",\"ordemExibicao\":99}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.itemListaOrigemId").doesNotExist())
+                .andExpect(jsonPath("$.adicionadoDuranteCompra").value(true))
+                .andExpect(jsonPath("$.descricao").value("Carvao"))
+                .andExpect(jsonPath("$.unidadeMedida").value("PACOTE"))
+                .andExpect(jsonPath("$.ordemExibicao").value(3))
+                .andExpect(jsonPath("$.status").value("PENDENTE"))
+                .andExpect(jsonPath("$.adicionadoPor.participanteCompraId").exists())
+                .andExpect(jsonPath("$.adicionadoPor.usuarioId").value(ana.getId().toString()))
+                .andExpect(jsonPath("$.adicionadoPor.nome").value("Ana"))
+                .andExpect(jsonPath("$.adicionadoEm").isNotEmpty())
+                .andExpect(jsonPath("$.colocadoNoCarrinhoPor").doesNotExist())
+                .andReturn();
+        String itemId = com.jayway.jsonpath.JsonPath.read(adicao.getResponse().getContentAsString(), "$.id");
+        String adicionadoEm = com.jayway.jsonpath.JsonPath.read(adicao.getResponse().getContentAsString(), "$.adicionadoEm");
+
+        mockMvc.perform(get(compra).header("Authorization", bearer(ana)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.itens[?(@.id == '" + itemId + "')].adicionadoDuranteCompra").value(true))
+                .andExpect(jsonPath("$.itens[?(@.id == '" + itemId + "')].adicionadoPor.nome").value("Ana"))
+                .andExpect(jsonPath("$.itens[?(@.id == '" + itemId + "')].adicionadoEm").value(adicionadoEm));
+    }
+
+    @Test
+    void mutacoesDeItensDaCompraExigemParticipacaoEValidamDescricao() throws Exception {
+        Usuario ana = usuario("Ana");
+        Familia familia = criarFamilia.criar(ana.getId(), "Familia Compra");
+        ListaCompra lista = listaComItens(ana, familia, "Lista");
+        String compra = compraUrl(familia, lista);
+        var inicio = mockMvc.perform(post(compra).header("Authorization", bearer(ana))).andExpect(status().isCreated()).andReturn();
+        String itemId = com.jayway.jsonpath.JsonPath.read(inicio.getResponse().getContentAsString(), "$.itens[0].id");
+        Usuario observador = usuario("Observador");
+        Usuario admin = usuario("Admin");
+        entityManager.flush();
+        jdbcTemplate.update("insert into membro_familia (id, familia_id, usuario_id, papel, status, criado_em, atualizado_em) values (?, ?, ?, 'MEMBRO', 'ATIVO', now(), now())",
+                UUID.randomUUID(), familia.getId(), observador.getId());
+        jdbcTemplate.update("insert into membro_familia (id, familia_id, usuario_id, papel, status, criado_em, atualizado_em) values (?, ?, ?, 'ADMINISTRADOR', 'ATIVO', now(), now())",
+                UUID.randomUUID(), familia.getId(), admin.getId());
+
+        for (Usuario usuarioSemParticipacao : java.util.List.of(observador, admin)) {
+            mockMvc.perform(post(compra + "/itens").header("Authorization", bearer(usuarioSemParticipacao))
+                            .contentType(MediaType.APPLICATION_JSON).content("{\"descricao\":\"Cafe\"}"))
+                    .andExpect(status().isForbidden());
+            mockMvc.perform(post(compra + "/itens/" + itemId + "/colocar-no-carrinho")
+                            .header("Authorization", bearer(usuarioSemParticipacao)))
+                    .andExpect(status().isForbidden());
+        }
+        mockMvc.perform(post(compra + "/itens").header("Authorization", bearer(ana))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"descricao\":\"\"}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void mutacoesDeItensDaCompraRejeitamContextoIncompativelEConflitosDeEstado() throws Exception {
+        Usuario ana = usuario("Ana");
+        Familia familia = criarFamilia.criar(ana.getId(), "Familia Compra");
+        ListaCompra listaA = listaComItens(ana, familia, "Lista A");
+        ListaCompra listaB = listaComItens(ana, familia, "Lista B");
+        String compraA = compraUrl(familia, listaA);
+        String compraB = compraUrl(familia, listaB);
+        mockMvc.perform(post(compraA).header("Authorization", bearer(ana))).andExpect(status().isCreated());
+        var inicioB = mockMvc.perform(post(compraB).header("Authorization", bearer(ana))).andExpect(status().isCreated()).andReturn();
+        String itemDaCompraB = com.jayway.jsonpath.JsonPath.read(inicioB.getResponse().getContentAsString(), "$.itens[0].id");
+        mockMvc.perform(post(compraA + "/itens/" + itemDaCompraB + "/colocar-no-carrinho").header("Authorization", bearer(ana)))
+                .andExpect(status().isNotFound());
+
+        UUID compraAId = jdbcTemplate.queryForObject("select id from compra where lista_compra_id = ?", UUID.class, listaA.getId());
+        jdbcTemplate.update("update compra set status = 'FINALIZADA' where id = ?", compraAId);
+        entityManager.clear();
+        mockMvc.perform(post(compraA + "/itens").header("Authorization", bearer(ana))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"descricao\":\"Cafe\"}"))
+                .andExpect(status().isConflict());
+
+        UUID compraBId = jdbcTemplate.queryForObject("select id from compra where lista_compra_id = ?", UUID.class, listaB.getId());
+        UUID membroAna = jdbcTemplate.queryForObject("select id from membro_familia where familia_id = ? and usuario_id = ?", UUID.class, familia.getId(), ana.getId());
+        jdbcTemplate.update("update item_compra set status = 'REMOCAO_SOLICITADA', remocao_solicitada_por_membro_familia_id = ?, remocao_solicitada_em = now() where id = ?",
+                membroAna, UUID.fromString(itemDaCompraB));
+        mockMvc.perform(post(compraB + "/itens/" + itemDaCompraB + "/colocar-no-carrinho").header("Authorization", bearer(ana)))
+                .andExpect(status().isConflict());
+        assertThat(compraBId).isNotNull();
+    }
+
     private ListaCompra listaComItens(Usuario usuario, Familia familia, String nome) {
         ListaCompra lista = criarListaCompra.criar(usuario.getId(), familia.getId(), nome, CategoriaCompra.SUPERMERCADO, "Mercado Central");
         adicionarItemLista.adicionar(usuario.getId(), familia.getId(), lista.getId(), "Arroz", BigDecimal.ONE, UnidadeMedida.UNIDADE, "Marca A", null);
