@@ -104,7 +104,21 @@ public class ItemCompra {
         return item;
     }
 
+    public boolean colocarNoCarrinho(MembroFamilia executor, Instant instante) {
+        if (status == StatusItemCompra.NO_CARRINHO) {
+            return false;
+        }
+        if (status != StatusItemCompra.PENDENTE) {
+            throw new TransicaoStatusItemCompraInvalidaException(status);
+        }
+        status = StatusItemCompra.NO_CARRINHO;
+        marcadoPorMembroFamilia = executor;
+        marcadoEm = instante;
+        return true;
+    }
+
     public UUID getId() { return id; }
+    public Compra getCompra() { return compra; }
     public ItemLista getItemListaOrigem() { return itemListaOrigem; }
     public boolean isAdicionadoDuranteCompra() { return adicionadoDuranteCompra; }
     public Integer getOrdemExibicao() { return ordemExibicao; }
@@ -114,4 +128,6 @@ public class ItemCompra {
     public String getMarcaSnapshot() { return marcaSnapshot; }
     public String getObservacoesSnapshot() { return observacoesSnapshot; }
     public StatusItemCompra getStatus() { return status; }
+    public MembroFamilia getMarcadoPorMembroFamilia() { return marcadoPorMembroFamilia; }
+    public Instant getMarcadoEm() { return marcadoEm; }
 }
