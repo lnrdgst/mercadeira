@@ -81,4 +81,9 @@ public class Compra {
     }
 
     public UUID getId() { return id; }
+    public ListaCompra getListaCompra() { return listaCompra; }
+    public String getNomeListaSnapshot() { return nomeListaSnapshot; }
+    public String getCategoriaSnapshot() { return categoriaSnapshot; }
+    public String getEstabelecimentoSnapshot() { return estabelecimentoSnapshot; }
+    public Instant getIniciadaEm() { return iniciadaEm; }
 }

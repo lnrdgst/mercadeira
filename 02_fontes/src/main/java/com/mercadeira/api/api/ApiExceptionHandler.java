@@ -25,6 +25,10 @@ import com.mercadeira.api.lista.application.ListaCompraForaDePreparacaoException
 import com.mercadeira.api.lista.application.CriadorListaNaoPodeSerRemovidoException;
 import com.mercadeira.api.lista.application.ParticipanteListaNaoEncontradoException;
 import com.mercadeira.api.lista.application.OrdemItensInvalidaException;
+import com.mercadeira.api.compra.application.CompraListaInconsistenteException;
+import com.mercadeira.api.compra.application.CompraNaoEncontradaException;
+import com.mercadeira.api.compra.application.ListaCompraSemItensException;
+import com.mercadeira.api.compra.application.ListaCompraSemParticipantesException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -67,12 +71,13 @@ public class ApiExceptionHandler {
 
     @ExceptionHandler({ MembroSemPermissaoException.class, MembroFamiliaInvalidoException.class,
             UsuarioNaoParticipaDaListaException.class })
-    ResponseEntity<ErroApiResponse> tratarSemPermissao(MembroSemPermissaoException exception, HttpServletRequest request) {
+    ResponseEntity<ErroApiResponse> tratarSemPermissao(Exception exception, HttpServletRequest request) {
         return resposta(HttpStatus.FORBIDDEN, "ACESSO_NEGADO", "Acesso negado.", request, Map.of());
     }
 
     @ExceptionHandler({ UsuarioNaoEncontradoException.class, SolicitacaoNaoEncontradaException.class,
-            ListaCompraNaoEncontradaException.class, ItemListaNaoEncontradoException.class })
+            ListaCompraNaoEncontradaException.class, ItemListaNaoEncontradoException.class,
+            CompraNaoEncontradaException.class })
     ResponseEntity<ErroApiResponse> tratarNaoEncontrado(Exception exception, HttpServletRequest request) {
         return resposta(HttpStatus.NOT_FOUND, "RECURSO_NAO_ENCONTRADO", "Recurso nao encontrado.", request, Map.of());
     }
@@ -82,7 +87,8 @@ public class ApiExceptionHandler {
             SolicitanteJaPossuiVinculoAtivoException.class,
             FamiliaInativaException.class, ListaCompraForaDePreparacaoException.class,
             ItemListaJaRemovidoException.class, CriadorListaNaoPodeSerRemovidoException.class,
-            ParticipanteListaNaoEncontradoException.class })
+            ParticipanteListaNaoEncontradoException.class, ListaCompraSemItensException.class,
+            ListaCompraSemParticipantesException.class, CompraListaInconsistenteException.class })
     ResponseEntity<ErroApiResponse> tratarConflito(Exception exception, HttpServletRequest request) {
         return resposta(HttpStatus.CONFLICT, "CONFLITO_DE_ESTADO", exception.getMessage(), request, Map.of());
     }

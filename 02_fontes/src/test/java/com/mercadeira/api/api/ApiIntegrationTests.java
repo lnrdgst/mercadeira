@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.nio.charset.StandardCharsets;
+import java.math.BigDecimal;
 import java.util.Base64;
 import java.util.UUID;
 
@@ -20,8 +21,10 @@ import com.mercadeira.api.familia.domain.SolicitacaoEntradaFamilia;
 import com.mercadeira.api.familia.domain.StatusSolicitacaoEntradaFamilia;
 import com.mercadeira.api.familia.repository.SolicitacaoEntradaFamiliaRepository;
 import com.mercadeira.api.lista.application.CriarListaCompra;
+import com.mercadeira.api.lista.application.AdicionarItemLista;
 import com.mercadeira.api.lista.domain.CategoriaCompra;
 import com.mercadeira.api.lista.domain.ListaCompra;
+import com.mercadeira.api.lista.domain.UnidadeMedida;
 import com.mercadeira.api.usuario.application.CadastrarUsuario;
 import com.mercadeira.api.usuario.domain.Usuario;
 import org.junit.jupiter.api.BeforeEach;
@@ -69,6 +72,7 @@ class ApiIntegrationTests {
     @Autowired private SolicitarEntradaFamiliaPorCodigo solicitarEntrada;
     @Autowired private SolicitacaoEntradaFamiliaRepository solicitacaoRepository;
     @Autowired private CriarListaCompra criarListaCompra;
+    @Autowired private AdicionarItemLista adicionarItemLista;
     @Autowired private JdbcTemplate jdbcTemplate;
     @Autowired private EntityManager entityManager;
     private MockMvc mockMvc;
@@ -235,6 +239,116 @@ class ApiIntegrationTests {
         mockMvc.perform(get("/api/familias/{f}/listas/{l}", familia.getId(), lista.getId()).header("Authorization", bearer(usuario)))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.contextoUsuario.participanteAtivo").value(true))
                 .andExpect(jsonPath("$.contextoUsuario.podeAlterarItens").value(false));
+    }
+
+    @Test
+    void iniciaCompraRetornaSnapshotsEReplayIdempotente() throws Exception {
+        Usuario ana = usuario("Ana");
+        Familia familia = criarFamilia.criar(ana.getId(), "Familia Compra");
+        ListaCompra lista = listaComItens(ana, familia, "Compra da semana");
+
+        var primeiro = mockMvc.perform(post(compraUrl(familia, lista)).header("Authorization", bearer(ana)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.listaId").value(lista.getId().toString()))
+                .andExpect(jsonPath("$.nomeLista").value("Compra da semana"))
+                .andExpect(jsonPath("$.categoria").value("SUPERMERCADO"))
+                .andExpect(jsonPath("$.status").value("EM_ANDAMENTO"))
+                .andExpect(jsonPath("$.participantes.length()").value(1))
+                .andExpect(jsonPath("$.participantes[0].nome").value("Ana"))
+                .andExpect(jsonPath("$.participantes[0].papel").value("ADMINISTRADOR"))
+                .andExpect(jsonPath("$.itens.length()").value(2))
+                .andExpect(jsonPath("$.itens[0].descricao").value("Arroz"))
+                .andExpect(jsonPath("$.itens[0].unidadeMedida").value("UNIDADE"))
+                .andExpect(jsonPath("$.itens[0].adicionadoDuranteCompra").value(false))
+                .andExpect(jsonPath("$.itens[0].status").value("PENDENTE"))
+                .andExpect(jsonPath("$.itens[0].ordemExibicao").value(1))
+                .andExpect(jsonPath("$.itens[1].ordemExibicao").value(2))
+                .andExpect(jsonPath("$.contextoUsuario.participanteCompra").value(true))
+                .andExpect(jsonPath("$.nomeListaSnapshot").doesNotExist())
+                .andExpect(jsonPath("$.categoriaSnapshot").doesNotExist())
+                .andReturn();
+        String compraId = com.jayway.jsonpath.JsonPath.read(primeiro.getResponse().getContentAsString(), "$.id");
+
+        mockMvc.perform(post(compraUrl(familia, lista)).header("Authorization", bearer(ana)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.id").value(compraId));
+        mockMvc.perform(get(compraUrl(familia, lista)).header("Authorization", bearer(ana)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.id").value(compraId))
+                .andExpect(jsonPath("$.contextoUsuario.participanteCompra").value(true));
+
+        assertThat(jdbcTemplate.queryForObject("select count(*) from compra where lista_compra_id = ?", Integer.class, lista.getId())).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject("select count(*) from participante_compra where compra_id = ?", Integer.class, UUID.fromString(compraId))).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject("select count(*) from item_compra where compra_id = ?", Integer.class, UUID.fromString(compraId))).isEqualTo(2);
+    }
+
+    @Test
+    void membroObservadorConsultaCompraSemSerParticipante() throws Exception {
+        Usuario ana = usuario("Ana");
+        Familia familia = criarFamilia.criar(ana.getId(), "Familia Compra");
+        ListaCompra lista = listaComItens(ana, familia, "Lista");
+        mockMvc.perform(post(compraUrl(familia, lista)).header("Authorization", bearer(ana))).andExpect(status().isCreated());
+
+        Usuario observador = usuario("Bia");
+        entityManager.flush();
+        jdbcTemplate.update("insert into membro_familia (id, familia_id, usuario_id, papel, status, criado_em, atualizado_em) values (?, ?, ?, 'MEMBRO', 'ATIVO', now(), now())",
+                UUID.randomUUID(), familia.getId(), observador.getId());
+
+        mockMvc.perform(get(compraUrl(familia, lista)).header("Authorization", bearer(observador)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.contextoUsuario.participanteCompra").value(false));
+    }
+
+    @Test
+    void impedeInicioPorMembrosNaoParticipantesMesmoQuandoAdministrador() throws Exception {
+        Usuario criador = usuario("Criador");
+        Familia familia = criarFamilia.criar(criador.getId(), "Familia Compra");
+        ListaCompra lista = listaComItens(criador, familia, "Lista");
+        Usuario administrador = usuario("Admin");
+        Usuario membro = usuario("Membro");
+        entityManager.flush();
+        jdbcTemplate.update("insert into membro_familia (id, familia_id, usuario_id, papel, status, criado_em, atualizado_em) values (?, ?, ?, 'ADMINISTRADOR', 'ATIVO', now(), now())",
+                UUID.randomUUID(), familia.getId(), administrador.getId());
+        jdbcTemplate.update("insert into membro_familia (id, familia_id, usuario_id, papel, status, criado_em, atualizado_em) values (?, ?, ?, 'MEMBRO', 'ATIVO', now(), now())",
+                UUID.randomUUID(), familia.getId(), membro.getId());
+
+        mockMvc.perform(post(compraUrl(familia, lista)).header("Authorization", bearer(administrador))).andExpect(status().isForbidden());
+        mockMvc.perform(post(compraUrl(familia, lista)).header("Authorization", bearer(membro))).andExpect(status().isForbidden());
+    }
+
+    @Test
+    void inicioInformaConflitosParaListaSemItensEOuForaDePreparacao() throws Exception {
+        Usuario ana = usuario("Ana");
+        Familia familia = criarFamilia.criar(ana.getId(), "Familia Compra");
+        ListaCompra semItens = criarListaCompra.criar(ana.getId(), familia.getId(), "Sem itens", CategoriaCompra.OUTROS, null);
+        mockMvc.perform(post(compraUrl(familia, semItens)).header("Authorization", bearer(ana))).andExpect(status().isConflict());
+
+        ListaCompra finalizada = listaComItens(ana, familia, "Finalizada");
+        entityManager.flush();
+        jdbcTemplate.update("update lista_compra set status = 'FINALIZADA' where id = ?", finalizada.getId());
+        entityManager.clear();
+        mockMvc.perform(post(compraUrl(familia, finalizada)).header("Authorization", bearer(ana))).andExpect(status().isConflict());
+    }
+
+    @Test
+    void consultaCompraRespeitaAusenciaContextoFamiliarEAutenticacao() throws Exception {
+        Usuario ana = usuario("Ana");
+        Familia familiaA = criarFamilia.criar(ana.getId(), "Familia A");
+        ListaCompra lista = listaComItens(ana, familiaA, "Lista");
+        Usuario bia = usuario("Bia");
+        Familia familiaB = criarFamilia.criar(bia.getId(), "Familia B");
+
+        mockMvc.perform(get(compraUrl(familiaA, lista)).header("Authorization", bearer(ana))).andExpect(status().isNotFound());
+        mockMvc.perform(get(compraUrl(familiaB, lista)).header("Authorization", bearer(bia))).andExpect(status().isNotFound());
+        mockMvc.perform(get(compraUrl(familiaA, lista))).andExpect(status().isUnauthorized());
+    }
+
+    private ListaCompra listaComItens(Usuario usuario, Familia familia, String nome) {
+        ListaCompra lista = criarListaCompra.criar(usuario.getId(), familia.getId(), nome, CategoriaCompra.SUPERMERCADO, "Mercado Central");
+        adicionarItemLista.adicionar(usuario.getId(), familia.getId(), lista.getId(), "Arroz", BigDecimal.ONE, UnidadeMedida.UNIDADE, "Marca A", null);
+        adicionarItemLista.adicionar(usuario.getId(), familia.getId(), lista.getId(), "Feijao", BigDecimal.TWO, UnidadeMedida.UNIDADE, "Marca B", "Organico");
+        return lista;
+    }
+
+    private String compraUrl(Familia familia, ListaCompra lista) {
+        return "/api/familias/" + familia.getId() + "/listas/" + lista.getId() + "/compra";
     }
 
     private Usuario usuario(String nome) {
