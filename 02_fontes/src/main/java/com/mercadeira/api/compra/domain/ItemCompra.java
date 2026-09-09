@@ -150,6 +150,50 @@ public class ItemCompra {
         return true;
     }
 
+    public boolean solicitarRemocao(MembroFamilia solicitante, Instant instante) {
+        if (status == StatusItemCompra.REMOCAO_SOLICITADA) {
+            return false;
+        }
+        if (status != StatusItemCompra.NO_CARRINHO) {
+            throw new TransicaoStatusItemCompraInvalidaException(status);
+        }
+        remocaoSolicitadaPorMembroFamilia = solicitante;
+        remocaoSolicitadaEm = instante;
+        decisaoRemocao = null;
+        remocaoResolvidaPorMembroFamilia = null;
+        remocaoResolvidaEm = null;
+        status = StatusItemCompra.REMOCAO_SOLICITADA;
+        return true;
+    }
+
+    public boolean aprovarRemocao(MembroFamilia decisor, Instant instante) {
+        if (status == StatusItemCompra.REMOVIDO && decisaoRemocao == DecisaoRemocao.APROVADA) {
+            return false;
+        }
+        if (status != StatusItemCompra.REMOCAO_SOLICITADA) {
+            throw new TransicaoStatusItemCompraInvalidaException(status);
+        }
+        decisaoRemocao = DecisaoRemocao.APROVADA;
+        remocaoResolvidaPorMembroFamilia = decisor;
+        remocaoResolvidaEm = instante;
+        status = StatusItemCompra.REMOVIDO;
+        return true;
+    }
+
+    public boolean rejeitarRemocao(MembroFamilia decisor, Instant instante) {
+        if (status == StatusItemCompra.NO_CARRINHO && decisaoRemocao == DecisaoRemocao.REJEITADA) {
+            return false;
+        }
+        if (status != StatusItemCompra.REMOCAO_SOLICITADA) {
+            throw new TransicaoStatusItemCompraInvalidaException(status);
+        }
+        decisaoRemocao = DecisaoRemocao.REJEITADA;
+        remocaoResolvidaPorMembroFamilia = decisor;
+        remocaoResolvidaEm = instante;
+        status = StatusItemCompra.NO_CARRINHO;
+        return true;
+    }
+
     public UUID getId() { return id; }
     public Compra getCompra() { return compra; }
     public ItemLista getItemListaOrigem() { return itemListaOrigem; }
@@ -165,4 +209,9 @@ public class ItemCompra {
     public StatusItemCompra getStatus() { return status; }
     public MembroFamilia getMarcadoPorMembroFamilia() { return marcadoPorMembroFamilia; }
     public Instant getMarcadoEm() { return marcadoEm; }
+    public DecisaoRemocao getDecisaoRemocao() { return decisaoRemocao; }
+    public MembroFamilia getRemocaoSolicitadaPorMembroFamilia() { return remocaoSolicitadaPorMembroFamilia; }
+    public Instant getRemocaoSolicitadaEm() { return remocaoSolicitadaEm; }
+    public MembroFamilia getRemocaoResolvidaPorMembroFamilia() { return remocaoResolvidaPorMembroFamilia; }
+    public Instant getRemocaoResolvidaEm() { return remocaoResolvidaEm; }
 }
