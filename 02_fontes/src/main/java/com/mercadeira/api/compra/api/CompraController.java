@@ -3,6 +3,9 @@ package com.mercadeira.api.compra.api;
 import java.net.URI;
 import java.util.UUID;
 
+import com.mercadeira.api.compra.application.SolicitarRemocaoItemCompra;
+import com.mercadeira.api.compra.application.AprovarRemocaoItemCompra;
+import com.mercadeira.api.compra.application.RejeitarRemocaoItemCompra;
 import com.mercadeira.api.autenticacao.security.UsuarioAutenticado;
 import com.mercadeira.api.compra.application.ConsultarCompraDaLista;
 import com.mercadeira.api.compra.application.AdicionarItemDuranteCompra;
@@ -23,6 +26,9 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/familias/{familiaId}/listas/{listaId}/compra")
 public class CompraController {
 
+    private final SolicitarRemocaoItemCompra solicitarRemocao;
+    private final AprovarRemocaoItemCompra aprovarRemocao;
+    private final RejeitarRemocaoItemCompra rejeitarRemocao;
     private final UsuarioAutenticado usuario;
     private final IniciarCompra iniciarCompra;
     private final ConsultarCompraDaLista consultarCompra;
@@ -31,7 +37,11 @@ public class CompraController {
 
     public CompraController(UsuarioAutenticado usuario, IniciarCompra iniciarCompra,
             ConsultarCompraDaLista consultarCompra, ColocarItemNoCarrinho colocarItemNoCarrinho,
-            AdicionarItemDuranteCompra adicionarItemDuranteCompra) {
+            AdicionarItemDuranteCompra adicionarItemDuranteCompra, SolicitarRemocaoItemCompra solicitarRemocao,
+            AprovarRemocaoItemCompra aprovarRemocao, RejeitarRemocaoItemCompra rejeitarRemocao) {
+        this.solicitarRemocao = solicitarRemocao;
+        this.aprovarRemocao = aprovarRemocao;
+        this.rejeitarRemocao = rejeitarRemocao;
         this.usuario = usuario;
         this.iniciarCompra = iniciarCompra;
         this.consultarCompra = consultarCompra;
@@ -42,7 +52,7 @@ public class CompraController {
     @PostMapping
     public ResponseEntity<CompraAtivaResponse> iniciar(@PathVariable UUID familiaId, @PathVariable UUID listaId) {
         var resultado = iniciarCompra.iniciar(usuario.getId(), familiaId, listaId);
-        var response = CompraAtivaResponse.from(consultarCompra.consultar(usuario.getId(), familiaId, listaId));
+        var response = CompraAtivaResponse.from(consultarCompra.consultar(usuario.getId(), familiaId, listaId), usuario.getId());
         if (!resultado.criada()) {
             return ResponseEntity.ok(response);
         }
@@ -52,7 +62,7 @@ public class CompraController {
 
     @GetMapping
     public CompraAtivaResponse consultar(@PathVariable UUID familiaId, @PathVariable UUID listaId) {
-        return CompraAtivaResponse.from(consultarCompra.consultar(usuario.getId(), familiaId, listaId));
+        return CompraAtivaResponse.from(consultarCompra.consultar(usuario.getId(), familiaId, listaId), usuario.getId());
     }
 
     @PostMapping("/itens/{itemCompraId}/colocar-no-carrinho")
@@ -71,12 +81,33 @@ public class CompraController {
         return ResponseEntity.status(HttpStatus.CREATED).body(itemResponse(familiaId, listaId, item.getId()));
     }
 
+    @PostMapping("/itens/{itemCompraId}/solicitar-remocao")
+    public ItemCompraResponse solicitarRemocao(@PathVariable UUID familiaId, @PathVariable UUID listaId,
+            @PathVariable UUID itemCompraId) {
+        solicitarRemocao.executar(usuario.getId(), familiaId, listaId, itemCompraId);
+        return itemResponse(familiaId, listaId, itemCompraId);
+    }
+
+    @PostMapping("/itens/{itemCompraId}/aprovar-remocao")
+    public ItemCompraResponse aprovarRemocao(@PathVariable UUID familiaId, @PathVariable UUID listaId,
+            @PathVariable UUID itemCompraId) {
+        aprovarRemocao.executar(usuario.getId(), familiaId, listaId, itemCompraId);
+        return itemResponse(familiaId, listaId, itemCompraId);
+    }
+
+    @PostMapping("/itens/{itemCompraId}/rejeitar-remocao")
+    public ItemCompraResponse rejeitarRemocao(@PathVariable UUID familiaId, @PathVariable UUID listaId,
+            @PathVariable UUID itemCompraId) {
+        rejeitarRemocao.executar(usuario.getId(), familiaId, listaId, itemCompraId);
+        return itemResponse(familiaId, listaId, itemCompraId);
+    }
+
     private ItemCompraResponse itemResponse(UUID familiaId, UUID listaId, UUID itemCompraId) {
         var resultado = consultarCompra.consultar(usuario.getId(), familiaId, listaId);
         return resultado.itens().stream()
                 .filter(item -> item.getId().equals(itemCompraId))
                 .findFirst()
-                .map(item -> ItemCompraResponse.from(item, resultado.participantes()))
+                .map(new ItemCompraResponseMapper(resultado, usuario.getId())::from)
                 .orElseThrow(() -> new IllegalStateException("Item da compra nao encontrado apos operacao."));
     }
 }

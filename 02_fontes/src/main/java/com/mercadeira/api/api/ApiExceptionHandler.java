@@ -4,6 +4,8 @@ import java.time.Clock;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import com.mercadeira.api.compra.application.UsuarioNaoPodeDecidirRemocaoItemCompraException;
+import com.mercadeira.api.compra.application.ResponsavelRemocaoItemCompraInvalidoException;
 import com.mercadeira.api.autenticacao.application.CredenciaisInvalidasException;
 import com.mercadeira.api.autenticacao.security.UsuarioNaoAutenticadoException;
 import com.mercadeira.api.familia.application.CodigoFamiliaInvalidoException;
@@ -74,7 +76,7 @@ public class ApiExceptionHandler {
     }
 
     @ExceptionHandler({ MembroSemPermissaoException.class, MembroFamiliaInvalidoException.class,
-            UsuarioNaoParticipaDaListaException.class, UsuarioNaoParticipaDaCompraException.class })
+            UsuarioNaoParticipaDaListaException.class, UsuarioNaoParticipaDaCompraException.class, UsuarioNaoPodeDecidirRemocaoItemCompraException.class })
     ResponseEntity<ErroApiResponse> tratarSemPermissao(Exception exception, HttpServletRequest request) {
         return resposta(HttpStatus.FORBIDDEN, "ACESSO_NEGADO", "Acesso negado.", request, Map.of());
     }
@@ -93,7 +95,7 @@ public class ApiExceptionHandler {
             ItemListaJaRemovidoException.class, CriadorListaNaoPodeSerRemovidoException.class,
             ParticipanteListaNaoEncontradoException.class, ListaCompraSemItensException.class,
             ListaCompraSemParticipantesException.class, CompraListaInconsistenteException.class,
-            CompraForaDeAndamentoException.class, TransicaoStatusItemCompraInvalidaException.class })
+            CompraForaDeAndamentoException.class, TransicaoStatusItemCompraInvalidaException.class, ResponsavelRemocaoItemCompraInvalidoException.class })
     ResponseEntity<ErroApiResponse> tratarConflito(Exception exception, HttpServletRequest request) {
         return resposta(HttpStatus.CONFLICT, "CONFLITO_DE_ESTADO", exception.getMessage(), request, Map.of());
     }

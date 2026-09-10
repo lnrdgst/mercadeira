@@ -20,8 +20,9 @@ public record CompraAtivaResponse(
         List<ItemCompraResponse> itens,
         ContextoUsuarioCompraResponse contextoUsuario) {
 
-    public static CompraAtivaResponse from(ResultadoConsultaCompra resultado) {
+    public static CompraAtivaResponse from(ResultadoConsultaCompra resultado, UUID usuarioId) {
         var compra = resultado.compra();
+        var mapper = new ItemCompraResponseMapper(resultado, usuarioId);
         return new CompraAtivaResponse(
                 compra.getId(),
                 compra.getListaCompra().getId(),
@@ -38,7 +39,7 @@ public record CompraAtivaResponse(
                         participante.getPapelSnapshot(),
                         participante.getGeradoEm())).toList(),
                 resultado.itens().stream()
-                        .map(item -> ItemCompraResponse.from(item, resultado.participantes()))
+                        .map(mapper::from)
                         .toList(),
                 new ContextoUsuarioCompraResponse(resultado.participanteCompra()));
     }
