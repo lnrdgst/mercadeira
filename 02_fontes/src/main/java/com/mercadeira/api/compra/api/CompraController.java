@@ -3,6 +3,7 @@ package com.mercadeira.api.compra.api;
 import java.net.URI;
 import java.util.UUID;
 
+import com.mercadeira.api.compra.application.FinalizarCompra;
 import com.mercadeira.api.compra.application.SolicitarRemocaoItemCompra;
 import com.mercadeira.api.compra.application.AprovarRemocaoItemCompra;
 import com.mercadeira.api.compra.application.RejeitarRemocaoItemCompra;
@@ -29,6 +30,7 @@ public class CompraController {
     private final SolicitarRemocaoItemCompra solicitarRemocao;
     private final AprovarRemocaoItemCompra aprovarRemocao;
     private final RejeitarRemocaoItemCompra rejeitarRemocao;
+    private final FinalizarCompra finalizarCompra;
     private final UsuarioAutenticado usuario;
     private final IniciarCompra iniciarCompra;
     private final ConsultarCompraDaLista consultarCompra;
@@ -38,10 +40,11 @@ public class CompraController {
     public CompraController(UsuarioAutenticado usuario, IniciarCompra iniciarCompra,
             ConsultarCompraDaLista consultarCompra, ColocarItemNoCarrinho colocarItemNoCarrinho,
             AdicionarItemDuranteCompra adicionarItemDuranteCompra, SolicitarRemocaoItemCompra solicitarRemocao,
-            AprovarRemocaoItemCompra aprovarRemocao, RejeitarRemocaoItemCompra rejeitarRemocao) {
+            AprovarRemocaoItemCompra aprovarRemocao, RejeitarRemocaoItemCompra rejeitarRemocao, FinalizarCompra finalizarCompra) {
         this.solicitarRemocao = solicitarRemocao;
         this.aprovarRemocao = aprovarRemocao;
         this.rejeitarRemocao = rejeitarRemocao;
+        this.finalizarCompra = finalizarCompra;
         this.usuario = usuario;
         this.iniciarCompra = iniciarCompra;
         this.consultarCompra = consultarCompra;
@@ -50,9 +53,9 @@ public class CompraController {
     }
 
     @PostMapping
-    public ResponseEntity<CompraAtivaResponse> iniciar(@PathVariable UUID familiaId, @PathVariable UUID listaId) {
+    public ResponseEntity<CompraResponse> iniciar(@PathVariable UUID familiaId, @PathVariable UUID listaId) {
         var resultado = iniciarCompra.iniciar(usuario.getId(), familiaId, listaId);
-        var response = CompraAtivaResponse.from(consultarCompra.consultar(usuario.getId(), familiaId, listaId), usuario.getId());
+        var response = CompraResponse.from(consultarCompra.consultar(usuario.getId(), familiaId, listaId), usuario.getId());
         if (!resultado.criada()) {
             return ResponseEntity.ok(response);
         }
@@ -60,9 +63,15 @@ public class CompraController {
         return ResponseEntity.created(location).body(response);
     }
 
+    @PostMapping("/finalizar")
+    public CompraResponse finalizar(@PathVariable UUID familiaId, @PathVariable UUID listaId) {
+        finalizarCompra.executar(usuario.getId(), familiaId, listaId);
+        return CompraResponse.from(consultarCompra.consultar(usuario.getId(), familiaId, listaId), usuario.getId());
+    }
+
     @GetMapping
-    public CompraAtivaResponse consultar(@PathVariable UUID familiaId, @PathVariable UUID listaId) {
-        return CompraAtivaResponse.from(consultarCompra.consultar(usuario.getId(), familiaId, listaId), usuario.getId());
+    public CompraResponse consultar(@PathVariable UUID familiaId, @PathVariable UUID listaId) {
+        return CompraResponse.from(consultarCompra.consultar(usuario.getId(), familiaId, listaId), usuario.getId());
     }
 
     @PostMapping("/itens/{itemCompraId}/colocar-no-carrinho")

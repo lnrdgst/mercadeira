@@ -4,11 +4,14 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
+import com.mercadeira.api.compra.application.CompraListaInconsistenteException;
+import com.mercadeira.api.compra.domain.StatusItemCompra;
+import com.mercadeira.api.lista.domain.StatusListaCompra;
 import com.mercadeira.api.compra.application.ResultadoConsultaCompra;
 import com.mercadeira.api.compra.domain.StatusCompra;
 import com.mercadeira.api.familia.domain.PapelMembroFamilia;
 
-public record CompraAtivaResponse(
+public record CompraResponse(
         UUID id,
         UUID listaId,
         String nomeLista,
@@ -16,14 +19,26 @@ public record CompraAtivaResponse(
         String estabelecimento,
         StatusCompra status,
         Instant iniciadaEm,
+        ParticipanteCompraReferenciaResponse finalizadaPor,
+        Instant finalizadaEm,
         List<ParticipanteCompraResponse> participantes,
         List<ItemCompraResponse> itens,
         ContextoUsuarioCompraResponse contextoUsuario) {
 
-    public static CompraAtivaResponse from(ResultadoConsultaCompra resultado, UUID usuarioId) {
+    public static CompraResponse from(ResultadoConsultaCompra resultado, UUID usuarioId) {
         var compra = resultado.compra();
         var mapper = new ItemCompraResponseMapper(resultado, usuarioId);
-        return new CompraAtivaResponse(
+        var finalizadaPor = compra.getFinalizadaPorParticipanteCompra() == null ? null
+                : resultado.participantes().stream()
+                        .filter(p -> p.getId().equals(compra.getFinalizadaPorParticipanteCompra().getId()))
+                        .findFirst().map(ParticipanteCompraReferenciaResponse::from)
+                        .orElseThrow(CompraListaInconsistenteException::new);
+        boolean podeFinalizar = resultado.participanteCompra()
+                && compra.getStatus() == StatusCompra.EM_ANDAMENTO
+                && compra.getListaCompra().getStatus() == StatusListaCompra.EM_COMPRA
+                && !resultado.itens().isEmpty()
+                && resultado.itens().stream().noneMatch(item -> item.getStatus() == StatusItemCompra.REMOCAO_SOLICITADA);
+        return new CompraResponse(
                 compra.getId(),
                 compra.getListaCompra().getId(),
                 compra.getNomeListaSnapshot(),
@@ -31,6 +46,8 @@ public record CompraAtivaResponse(
                 compra.getEstabelecimentoSnapshot(),
                 compra.getStatus(),
                 compra.getIniciadaEm(),
+                finalizadaPor,
+                compra.getFinalizadaEm(),
                 resultado.participantes().stream().map(participante -> new ParticipanteCompraResponse(
                         participante.getId(),
                         participante.getMembroFamilia().getId(),
@@ -41,7 +58,7 @@ public record CompraAtivaResponse(
                 resultado.itens().stream()
                         .map(mapper::from)
                         .toList(),
-                new ContextoUsuarioCompraResponse(resultado.participanteCompra()));
+                new ContextoUsuarioCompraResponse(resultado.participanteCompra(), podeFinalizar));
     }
 
     public record ParticipanteCompraResponse(
@@ -53,6 +70,6 @@ public record CompraAtivaResponse(
             Instant geradoEm) {
     }
 
-    public record ContextoUsuarioCompraResponse(boolean participanteCompra) {
+    public record ContextoUsuarioCompraResponse(boolean participanteCompra, boolean podeFinalizarCompra) {
     }
 }

@@ -80,6 +80,30 @@ public class Compra {
         return compra;
     }
 
+    public boolean finalizar(ParticipanteCompra executor, Instant instante) {
+        if (executor == null || instante == null || id == null
+                || !id.equals(executor.getCompra().getId())) {
+            throw new FinalizacaoCompraInvalidaException("Autor da finalizacao deve pertencer a mesma compra.");
+        }
+        if (status == StatusCompra.FINALIZADA) {
+            if (finalizadaEm == null || finalizadaPorParticipanteCompra == null
+                    || !id.equals(finalizadaPorParticipanteCompra.getCompra().getId())) {
+                throw new FinalizacaoCompraInvalidaException("A compra finalizada possui autoria ou data inconsistente.");
+            }
+            return false;
+        }
+        if (status != StatusCompra.EM_ANDAMENTO) {
+            throw new FinalizacaoCompraInvalidaException("A compra nao esta em andamento.");
+        }
+        if (finalizadaEm != null || finalizadaPorParticipanteCompra != null) {
+            throw new FinalizacaoCompraInvalidaException("A compra em andamento possui finalizacao anterior.");
+        }
+        status = StatusCompra.FINALIZADA;
+        finalizadaPorParticipanteCompra = executor;
+        finalizadaEm = instante;
+        return true;
+    }
+
     public StatusCompra getStatus() {
         return status;
     }

@@ -72,6 +72,7 @@ public class ParticipanteCompra {
         return participante;
     }
 
+    public Compra getCompra() { return compra; }
     public UUID getId() { return id; }
     public MembroFamilia getMembroFamilia() { return membroFamilia; }
     public String getNomeSnapshot() { return nomeSnapshot; }

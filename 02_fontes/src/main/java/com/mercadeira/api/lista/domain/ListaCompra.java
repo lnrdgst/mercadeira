@@ -88,6 +88,17 @@ public class ListaCompra {
         atualizadaEm = agora;
     }
 
+    public void finalizarCompra(Instant instante) {
+        if (status != StatusListaCompra.EM_COMPRA) {
+            throw new TransicaoStatusListaCompraInvalidaException(status, StatusListaCompra.FINALIZADA);
+        }
+        if (instante == null) {
+            throw new IllegalArgumentException("O instante da finalizacao e obrigatorio.");
+        }
+        status = StatusListaCompra.FINALIZADA;
+        atualizadaEm = instante;
+    }
+
     public UUID getId() { return id; }
     public Familia getFamilia() { return familia; }
     public String getNome() { return nome; }

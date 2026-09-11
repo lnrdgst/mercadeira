@@ -4,6 +4,8 @@ import java.time.Clock;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import com.mercadeira.api.compra.domain.FinalizacaoCompraInvalidaException;
+import com.mercadeira.api.compra.application.CompraComRemocaoPendenteException;
 import com.mercadeira.api.compra.application.UsuarioNaoPodeDecidirRemocaoItemCompraException;
 import com.mercadeira.api.compra.application.ResponsavelRemocaoItemCompraInvalidoException;
 import com.mercadeira.api.autenticacao.application.CredenciaisInvalidasException;
@@ -95,7 +97,7 @@ public class ApiExceptionHandler {
             ItemListaJaRemovidoException.class, CriadorListaNaoPodeSerRemovidoException.class,
             ParticipanteListaNaoEncontradoException.class, ListaCompraSemItensException.class,
             ListaCompraSemParticipantesException.class, CompraListaInconsistenteException.class,
-            CompraForaDeAndamentoException.class, TransicaoStatusItemCompraInvalidaException.class, ResponsavelRemocaoItemCompraInvalidoException.class })
+            FinalizacaoCompraInvalidaException.class, CompraComRemocaoPendenteException.class, CompraForaDeAndamentoException.class, TransicaoStatusItemCompraInvalidaException.class, ResponsavelRemocaoItemCompraInvalidoException.class })
     ResponseEntity<ErroApiResponse> tratarConflito(Exception exception, HttpServletRequest request) {
         return resposta(HttpStatus.CONFLICT, "CONFLITO_DE_ESTADO", exception.getMessage(), request, Map.of());
     }
