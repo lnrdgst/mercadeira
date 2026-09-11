@@ -94,6 +94,13 @@ public class ItemCompra {
     @Column(name = "remocao_resolvida_em")
     private Instant remocaoResolvidaEm;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "restaurado_por_participante_compra_id")
+    private ParticipanteCompra restauradoPorParticipanteCompra;
+
+    @Column(name = "restaurado_em")
+    private Instant restauradoEm;
+
     protected ItemCompra() {
     }
 
@@ -194,6 +201,8 @@ public class ItemCompra {
         return true;
     }
 
+    public ParticipanteCompra getRestauradoPorParticipanteCompra() { return restauradoPorParticipanteCompra; }
+    public Instant getRestauradoEm() { return restauradoEm; }
     public UUID getId() { return id; }
     public Compra getCompra() { return compra; }
     public ItemLista getItemListaOrigem() { return itemListaOrigem; }

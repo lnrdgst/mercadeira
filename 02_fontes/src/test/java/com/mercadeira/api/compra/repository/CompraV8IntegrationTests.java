@@ -68,10 +68,10 @@ class CompraV8IntegrationTests {
     private static final Instant AGORA = Instant.parse("2026-09-10T18:00:00Z");
 
     @Test
-    void flywayAplicaV1AteV8EHibernateValidaSchema() {
+    void flywayAplicaV1AteV9EHibernateValidaSchema() {
         assertThat(jdbc.queryForList(
                 "select version from flyway_schema_history where success and version is not null order by installed_rank",
-                String.class)).containsExactly("1", "2", "3", "4", "5", "6", "7", "8");
+                String.class)).containsExactly("1", "2", "3", "4", "5", "6", "7", "8", "9");
         assertThat(environment.getProperty("spring.jpa.hibernate.ddl-auto")).isEqualTo("validate");
         assertThat(environment.getProperty("spring.jpa.open-in-view")).isEqualTo("false");
     }
