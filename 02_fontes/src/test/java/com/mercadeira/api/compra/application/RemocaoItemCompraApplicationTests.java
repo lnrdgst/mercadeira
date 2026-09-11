@@ -214,7 +214,13 @@ class RemocaoItemCompraApplicationTests {
     void compraFinalizadaRejeitaOperacaoAposDescartarContextoJpa(String acao) {
         Contexto c = solicitada();
         entityManager.flush();
-        jdbcTemplate.update("update compra set status = 'FINALIZADA' where id = ?", c.compraId());
+        jdbcTemplate.update("""
+                update compra set status = 'FINALIZADA', finalizada_em = CURRENT_TIMESTAMP,
+                    finalizada_por_participante_compra_id = (
+                        select pc.id from participante_compra pc
+                        where pc.compra_id = compra.id order by pc.id limit 1)
+                where id = ?
+                """, c.compraId());
         entityManager.clear();
         assertThatThrownBy(() -> executar(acao, c.usuarioResponsavel(), c)).isInstanceOf(CompraForaDeAndamentoException.class);
     }

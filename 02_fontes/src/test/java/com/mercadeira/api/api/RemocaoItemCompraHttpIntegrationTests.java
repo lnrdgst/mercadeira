@@ -196,7 +196,13 @@ class RemocaoItemCompraHttpIntegrationTests {
         var c = contexto();
         colocar(c);
         acao(c, "solicitar", c.outro(), 200);
-        jdbc.update("update compra set status = 'FINALIZADA' where lista_compra_id = ?", c.listaId());
+        jdbc.update("""
+                update compra set status = 'FINALIZADA', finalizada_em = CURRENT_TIMESTAMP,
+                    finalizada_por_participante_compra_id = (
+                        select pc.id from participante_compra pc
+                        where pc.compra_id = compra.id order by pc.id limit 1)
+                where lista_compra_id = ?
+                """, c.listaId());
         acoes(getItem(c, c.responsavel()), false, false);
         acao(c, acao, c.responsavel(), 409);
     }

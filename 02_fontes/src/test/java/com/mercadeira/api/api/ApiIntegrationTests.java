@@ -499,7 +499,13 @@ class ApiIntegrationTests {
                 .andExpect(status().isNotFound());
 
         UUID compraAId = jdbcTemplate.queryForObject("select id from compra where lista_compra_id = ?", UUID.class, listaA.getId());
-        jdbcTemplate.update("update compra set status = 'FINALIZADA' where id = ?", compraAId);
+        jdbcTemplate.update("""
+                update compra set status = 'FINALIZADA', finalizada_em = CURRENT_TIMESTAMP,
+                    finalizada_por_participante_compra_id = (
+                        select pc.id from participante_compra pc
+                        where pc.compra_id = compra.id order by pc.id limit 1)
+                where id = ?
+                """, compraAId);
         entityManager.clear();
         mockMvc.perform(post(compraA + "/itens").header("Authorization", bearer(ana))
                         .contentType(MediaType.APPLICATION_JSON).content("{\"descricao\":\"Cafe\"}"))

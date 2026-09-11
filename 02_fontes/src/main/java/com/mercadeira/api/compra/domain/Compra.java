@@ -54,6 +54,10 @@ public class Compra {
     @Column(name = "finalizada_em")
     private Instant finalizadaEm;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "finalizada_por_participante_compra_id")
+    private ParticipanteCompra finalizadaPorParticipanteCompra;
+
     @Column(name = "reaberta_em")
     private Instant reabertaEm;
 
@@ -86,4 +90,6 @@ public class Compra {
     public String getCategoriaSnapshot() { return categoriaSnapshot; }
     public String getEstabelecimentoSnapshot() { return estabelecimentoSnapshot; }
     public Instant getIniciadaEm() { return iniciadaEm; }
+    public Instant getFinalizadaEm() { return finalizadaEm; }
+    public ParticipanteCompra getFinalizadaPorParticipanteCompra() { return finalizadaPorParticipanteCompra; }
 }

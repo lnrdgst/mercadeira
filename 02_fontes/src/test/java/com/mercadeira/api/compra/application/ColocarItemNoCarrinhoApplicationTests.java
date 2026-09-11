@@ -124,7 +124,13 @@ class ColocarItemNoCarrinhoApplicationTests {
     @Test
     void bloqueiaCompraForaDeAndamentoEEstadosDeRemocao() {
         Contexto compraFinalizada = criarContexto("Ana");
-        jdbcTemplate.update("update compra set status = 'FINALIZADA' where id = ?", compraFinalizada.compraId());
+        jdbcTemplate.update("""
+                update compra set status = 'FINALIZADA', finalizada_em = CURRENT_TIMESTAMP,
+                    finalizada_por_participante_compra_id = (
+                        select pc.id from participante_compra pc
+                        where pc.compra_id = compra.id order by pc.id limit 1)
+                where id = ?
+                """, compraFinalizada.compraId());
         entityManager.clear();
         assertThatThrownBy(() -> colocarItemNoCarrinho.executar(compraFinalizada.usuario().getId(), compraFinalizada.familia().getId(), compraFinalizada.lista().getId(), compraFinalizada.item().getId()))
                 .isInstanceOf(CompraForaDeAndamentoException.class);

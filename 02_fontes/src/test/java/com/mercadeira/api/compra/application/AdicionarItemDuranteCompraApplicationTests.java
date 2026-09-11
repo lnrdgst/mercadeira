@@ -154,7 +154,13 @@ class AdicionarItemDuranteCompraApplicationTests {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("A descricao e obrigatoria.");
 
-        jdbcTemplate.update("update compra set status = 'FINALIZADA' where id = ?", contexto.compraId());
+        jdbcTemplate.update("""
+                update compra set status = 'FINALIZADA', finalizada_em = CURRENT_TIMESTAMP,
+                    finalizada_por_participante_compra_id = (
+                        select pc.id from participante_compra pc
+                        where pc.compra_id = compra.id order by pc.id limit 1)
+                where id = ?
+                """, contexto.compraId());
         entityManager.clear();
         assertThatThrownBy(() -> adicionarItemDuranteCompra.executar(
                 contexto.usuario().getId(), contexto.familia().getId(), contexto.lista().getId(),
