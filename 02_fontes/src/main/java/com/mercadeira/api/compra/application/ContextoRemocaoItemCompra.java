@@ -44,7 +44,7 @@ class ContextoRemocaoItemCompra {
         MembroFamilia membro = membroRepository.findByFamilia_IdAndUsuario_IdAndStatus(
                 familiaId, usuarioId, StatusMembroFamilia.ATIVO)
                 .orElseThrow(com.mercadeira.api.lista.application.MembroFamiliaInvalidoException::new);
-        Compra compra = compraRepository.findByListaCompra_Id(listaId)
+        Compra compra = compraRepository.findByListaCompra_IdForUpdate(listaId)
                 .orElseThrow(() -> new CompraNaoEncontradaException(listaId));
         if (compra.getStatus() != StatusCompra.EM_ANDAMENTO) {
             throw new CompraForaDeAndamentoException();

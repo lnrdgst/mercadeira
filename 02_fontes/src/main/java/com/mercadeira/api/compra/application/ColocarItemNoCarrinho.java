@@ -46,7 +46,7 @@ public class ColocarItemNoCarrinho {
         var membro = membroRepository.findByFamilia_IdAndUsuario_IdAndStatus(
                 familiaId, usuarioId, StatusMembroFamilia.ATIVO)
                 .orElseThrow(MembroFamiliaInvalidoException::new);
-        var compra = compraRepository.findByListaCompra_Id(listaId)
+        var compra = compraRepository.findByListaCompra_IdForUpdate(listaId)
                 .orElseThrow(() -> new CompraNaoEncontradaException(listaId));
         if (compra.getStatus() != StatusCompra.EM_ANDAMENTO) {
             throw new CompraForaDeAndamentoException();
