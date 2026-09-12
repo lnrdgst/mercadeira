@@ -22,6 +22,7 @@ public record ItemCompraResponse(
         ParticipanteCompraReferenciaResponse colocadoNoCarrinhoPor,
         Instant colocadoNoCarrinhoEm,
         RemocaoItemCompraResponse remocao,
+        RestauracaoItemCompraResponse restauracao,
         AcoesItemCompraResponse acoes) {
 
 }

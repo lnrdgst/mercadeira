@@ -6,6 +6,7 @@ import java.util.UUID;
 import com.mercadeira.api.compra.application.ResultadoConsultaCompra;
 import com.mercadeira.api.compra.application.ResponsavelRemocaoItemCompraInvalidoException;
 import com.mercadeira.api.compra.domain.ItemCompra;
+import com.mercadeira.api.compra.domain.DecisaoRemocao;
 import com.mercadeira.api.compra.domain.StatusCompra;
 import com.mercadeira.api.compra.domain.StatusItemCompra;
 
@@ -36,6 +37,9 @@ final class ItemCompraResponseMapper {
                 item.getRemocaoResolvidaPorMembroFamilia() == null ? null
                         : referenciaRemocao(item.getRemocaoResolvidaPorMembroFamilia().getId()),
                 item.getRemocaoResolvidaEm());
+        // Apenas o ID da associacao LAZY; a referencia vem dos snapshots ja carregados em lote.
+        var restauracao = item.getRestauradoPorParticipanteCompra() == null ? null : new RestauracaoItemCompraResponse(
+                porParticipante.get(item.getRestauradoPorParticipanteCompra().getId()), item.getRestauradoEm());
         boolean participanteAtivo = emAndamento && membroAtual != null;
         return new ItemCompraResponse(
                 item.getId(), item.getItemListaOrigem() == null ? null : item.getItemListaOrigem().getId(),
@@ -44,11 +48,25 @@ final class ItemCompraResponseMapper {
                 item.getOrdemExibicao(), item.getStatus(),
                 item.getAdicionadoPorParticipanteCompra() == null ? null
                         : porParticipante.get(item.getAdicionadoPorParticipanteCompra().getId()),
-                item.getAdicionadoEm(), porMembro.get(marcador), item.getMarcadoEm(), remocao,
+                item.getAdicionadoEm(), porMembro.get(marcador), item.getMarcadoEm(), remocao, restauracao,
                 new AcoesItemCompraResponse(
                         participanteAtivo && item.getStatus() == StatusItemCompra.NO_CARRINHO,
                         participanteAtivo && item.getStatus() == StatusItemCompra.REMOCAO_SOLICITADA
-                                && membroAtual.equals(marcador)));
+                                && membroAtual.equals(marcador),
+                        participanteAtivo && remocaoAprovadaCoerente(item)));
+    }
+
+    private boolean remocaoAprovadaCoerente(ItemCompra item) {
+        return item.getStatus() == StatusItemCompra.REMOVIDO
+                && item.getDecisaoRemocao() == DecisaoRemocao.APROVADA
+                && item.getRemocaoSolicitadaPorMembroFamilia() != null
+                && item.getRemocaoSolicitadaEm() != null
+                && item.getRemocaoResolvidaPorMembroFamilia() != null
+                && item.getRemocaoResolvidaEm() != null
+                && !item.getRemocaoResolvidaEm().isBefore(item.getRemocaoSolicitadaEm())
+                && item.getMarcadoPorMembroFamilia() != null
+                && item.getMarcadoEm() != null
+                && item.getMarcadoPorMembroFamilia().getId().equals(item.getRemocaoResolvidaPorMembroFamilia().getId());
     }
 
     private ParticipanteCompraReferenciaResponse referenciaRemocao(UUID membroId) {

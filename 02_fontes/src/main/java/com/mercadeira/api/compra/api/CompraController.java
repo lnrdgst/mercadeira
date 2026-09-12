@@ -4,6 +4,7 @@ import java.net.URI;
 import java.util.UUID;
 
 import com.mercadeira.api.compra.application.FinalizarCompra;
+import com.mercadeira.api.compra.application.RestaurarItemNoCarrinho;
 import com.mercadeira.api.compra.application.SolicitarRemocaoItemCompra;
 import com.mercadeira.api.compra.application.AprovarRemocaoItemCompra;
 import com.mercadeira.api.compra.application.RejeitarRemocaoItemCompra;
@@ -31,6 +32,7 @@ public class CompraController {
     private final AprovarRemocaoItemCompra aprovarRemocao;
     private final RejeitarRemocaoItemCompra rejeitarRemocao;
     private final FinalizarCompra finalizarCompra;
+    private final RestaurarItemNoCarrinho restaurarItemNoCarrinho;
     private final UsuarioAutenticado usuario;
     private final IniciarCompra iniciarCompra;
     private final ConsultarCompraDaLista consultarCompra;
@@ -40,11 +42,13 @@ public class CompraController {
     public CompraController(UsuarioAutenticado usuario, IniciarCompra iniciarCompra,
             ConsultarCompraDaLista consultarCompra, ColocarItemNoCarrinho colocarItemNoCarrinho,
             AdicionarItemDuranteCompra adicionarItemDuranteCompra, SolicitarRemocaoItemCompra solicitarRemocao,
-            AprovarRemocaoItemCompra aprovarRemocao, RejeitarRemocaoItemCompra rejeitarRemocao, FinalizarCompra finalizarCompra) {
+            AprovarRemocaoItemCompra aprovarRemocao, RejeitarRemocaoItemCompra rejeitarRemocao, FinalizarCompra finalizarCompra,
+            RestaurarItemNoCarrinho restaurarItemNoCarrinho) {
         this.solicitarRemocao = solicitarRemocao;
         this.aprovarRemocao = aprovarRemocao;
         this.rejeitarRemocao = rejeitarRemocao;
         this.finalizarCompra = finalizarCompra;
+        this.restaurarItemNoCarrinho = restaurarItemNoCarrinho;
         this.usuario = usuario;
         this.iniciarCompra = iniciarCompra;
         this.consultarCompra = consultarCompra;
@@ -108,6 +112,13 @@ public class CompraController {
     public ItemCompraResponse rejeitarRemocao(@PathVariable UUID familiaId, @PathVariable UUID listaId,
             @PathVariable UUID itemCompraId) {
         rejeitarRemocao.executar(usuario.getId(), familiaId, listaId, itemCompraId);
+        return itemResponse(familiaId, listaId, itemCompraId);
+    }
+
+    @PostMapping("/itens/{itemCompraId}/restaurar-no-carrinho")
+    public ItemCompraResponse restaurarNoCarrinho(@PathVariable UUID familiaId, @PathVariable UUID listaId,
+            @PathVariable UUID itemCompraId) {
+        restaurarItemNoCarrinho.executar(usuario.getId(), familiaId, listaId, itemCompraId);
         return itemResponse(familiaId, listaId, itemCompraId);
     }
 
