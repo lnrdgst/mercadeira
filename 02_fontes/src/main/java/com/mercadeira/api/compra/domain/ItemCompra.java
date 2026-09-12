@@ -201,6 +201,41 @@ public class ItemCompra {
         return true;
     }
 
+    public boolean restaurarNoCarrinho(ParticipanteCompra restaurador, Instant instante) {
+        if (restaurador == null || restaurador.getCompra() == null || compra == null
+                || compra.getId() == null || !compra.getId().equals(restaurador.getCompra().getId())
+                || restaurador.getMembroFamilia() == null || instante == null) {
+            throw new RestauracaoItemCompraInvalidaException();
+        }
+        boolean aprovacaoCoerente = decisaoRemocao == DecisaoRemocao.APROVADA
+                && remocaoSolicitadaPorMembroFamilia != null && remocaoSolicitadaEm != null
+                && remocaoResolvidaPorMembroFamilia != null && remocaoResolvidaEm != null
+                && !remocaoResolvidaEm.isBefore(remocaoSolicitadaEm);
+        if (!aprovacaoCoerente) {
+            throw new RestauracaoItemCompraInvalidaException();
+        }
+        if (status == StatusItemCompra.NO_CARRINHO) {
+            boolean replay = restauradoPorParticipanteCompra != null && restauradoEm != null
+                    && compra.getId().equals(restauradoPorParticipanteCompra.getCompra().getId())
+                    && !restauradoEm.isBefore(remocaoResolvidaEm)
+                    && restauradoEm.equals(marcadoEm) && marcadoPorMembroFamilia != null
+                    && marcadoPorMembroFamilia.getId().equals(restauradoPorParticipanteCompra.getMembroFamilia().getId());
+            if (!replay) throw new RestauracaoItemCompraInvalidaException();
+            return false;
+        }
+        if (status != StatusItemCompra.REMOVIDO || instante.isBefore(remocaoResolvidaEm)
+                || marcadoPorMembroFamilia == null || marcadoEm == null
+                || !marcadoPorMembroFamilia.getId().equals(remocaoResolvidaPorMembroFamilia.getId())) {
+            throw new RestauracaoItemCompraInvalidaException();
+        }
+        status = StatusItemCompra.NO_CARRINHO;
+        restauradoPorParticipanteCompra = restaurador;
+        restauradoEm = instante;
+        marcadoPorMembroFamilia = restaurador.getMembroFamilia();
+        marcadoEm = instante;
+        return true;
+    }
+
     public ParticipanteCompra getRestauradoPorParticipanteCompra() { return restauradoPorParticipanteCompra; }
     public Instant getRestauradoEm() { return restauradoEm; }
     public UUID getId() { return id; }
