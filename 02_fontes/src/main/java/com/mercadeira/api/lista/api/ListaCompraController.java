@@ -9,6 +9,7 @@ import com.mercadeira.api.lista.application.AdicionarParticipanteLista;
 import com.mercadeira.api.lista.application.ConsultarListaCompra;
 import com.mercadeira.api.lista.application.CriarListaCompra;
 import com.mercadeira.api.lista.application.EditarItemLista;
+import com.mercadeira.api.lista.application.EditarDadosBasicosLista;
 import com.mercadeira.api.lista.application.ListarItensLista;
 import com.mercadeira.api.lista.application.ListarListasFamilia;
 import com.mercadeira.api.lista.application.ListarParticipantesLista;
@@ -35,6 +36,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/familias/{familiaId}/listas")
 public class ListaCompraController {
     private final UsuarioAutenticado usuario;
+    private final EditarDadosBasicosLista editarDados;
     private final CriarListaCompra criar; private final ListarListasFamilia listar;
     private final ConsultarListaCompra consultar; private final ListarParticipantesLista participantes;
     private final AdicionarParticipanteLista adicionarParticipante; private final RemoverParticipanteLista removerParticipante;
@@ -42,11 +44,11 @@ public class ListaCompraController {
     private final EditarItemLista editarItem; private final RemoverItemLista removerItem; private final ReordenarItensLista reordenar;
     private final ListaCompraRepository listaRepository; private final MembroFamiliaRepository membroRepository; private final ParticipanteListaRepository participanteRepository;
 
-    public ListaCompraController(UsuarioAutenticado usuario, CriarListaCompra criar, ListarListasFamilia listar,
+    public ListaCompraController(EditarDadosBasicosLista editarDados, UsuarioAutenticado usuario, CriarListaCompra criar, ListarListasFamilia listar,
             ConsultarListaCompra consultar, ListarParticipantesLista participantes, AdicionarParticipanteLista adicionarParticipante,
             RemoverParticipanteLista removerParticipante, ListarItensLista itens, AdicionarItemLista adicionarItem,
             EditarItemLista editarItem, RemoverItemLista removerItem, ReordenarItensLista reordenar, ListaCompraRepository listaRepository, MembroFamiliaRepository membroRepository, ParticipanteListaRepository participanteRepository) {
-        this.usuario = usuario; this.criar = criar; this.listar = listar; this.consultar = consultar;
+        this.editarDados = editarDados; this.usuario = usuario; this.criar = criar; this.listar = listar; this.consultar = consultar;
         this.participantes = participantes; this.adicionarParticipante = adicionarParticipante; this.removerParticipante = removerParticipante;
         this.itens = itens; this.adicionarItem = adicionarItem; this.editarItem = editarItem; this.removerItem = removerItem; this.reordenar = reordenar;
         this.listaRepository = listaRepository; this.membroRepository = membroRepository; this.participanteRepository = participanteRepository;
@@ -58,6 +60,12 @@ public class ListaCompraController {
     @PostMapping public ResponseEntity<ListaCompraResponse> criar(@PathVariable UUID familiaId, @Valid @RequestBody ListaCompraRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(ListaCompraResponse.from(
                 criar.criar(usuario.getId(), familiaId, request.nome(), request.categoria(), request.estabelecimento())));
+    }
+    @PutMapping("/{listaId}")
+    public ListaCompraDetalheResponse editarDados(@PathVariable UUID familiaId, @PathVariable UUID listaId,
+            @Valid @RequestBody ListaCompraRequest request) {
+        editarDados.editar(usuario.getId(), familiaId, listaId, request.nome(), request.categoria(), request.estabelecimento());
+        return consultar(familiaId, listaId);
     }
     @GetMapping("/{listaId}") public ListaCompraDetalheResponse consultar(@PathVariable UUID familiaId, @PathVariable UUID listaId) {
         consultar.consultar(usuario.getId(), familiaId, listaId);

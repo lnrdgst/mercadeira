@@ -76,6 +76,20 @@ public class ListaCompra {
         return lista;
     }
 
+    public void editarDadosBasicos(String nome, CategoriaCompra categoria, String estabelecimento, Instant agora) {
+        if (status != StatusListaCompra.EM_PREPARACAO) {
+            throw new IllegalStateException("A lista deve estar em preparacao para editar seus dados.");
+        }
+        if (nome == null || nome.isBlank() || nome.length() > 120 || categoria == null
+                || (estabelecimento != null && estabelecimento.length() > 120)) {
+            throw new IllegalArgumentException("Nome e categoria obrigatorios; nome e estabelecimento limitados a 120 caracteres.");
+        }
+        this.nome = nome;
+        this.categoria = categoria;
+        this.estabelecimento = estabelecimento;
+        this.atualizadaEm = agora;
+    }
+
     public void registrarAtualizacao(Instant agora) {
         atualizadaEm = agora;
     }

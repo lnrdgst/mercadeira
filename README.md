@@ -107,6 +107,8 @@ O criador torna-se participante. As mutações respeitam `EM_PREPARACAO` e as pe
 
 Iniciar exige participante da lista com vínculo familiar ativo e pelo menos um item ativo (`removidoEm IS NULL`). Cria snapshots dos participantes e itens, muda a lista para `EM_COMPRA` e cria Compra `EM_ANDAMENTO`. ItemLista da preparação e ItemCompra do snapshot são recursos distintos.
 
+Edição de nome, categoria e estabelecimento: PUT /api/familias/{familiaId}/listas/{listaId}, com 200 e detalhe completo. Somente criador ou administrador ativo da família, durante EM_PREPARACAO, conforme contextoUsuario.podeEditarDadosBasicos. A edição usa lock compartilhado com o início da Compra; após iniciar, recebe 409. [Contrato e validações](docs/contrato-edicao-lista.md).
+
 ## Compra
 
 Prefixo das rotas: `/api/familias/{familiaId}/listas/{listaId}/compra`.
@@ -169,7 +171,7 @@ Relatórios: `02_fontes/target/surefire-reports/`. A evidência registrada no co
 
 ## Limites atuais e V1
 
-Ainda sem endpoint para editar dados básicos da lista (nome, categoria e estabelecimento), histórico dedicado/agregado, reabertura, cancelamento operacional ou atualização em tempo real por WebSocket.
+Ainda sem histórico dedicado/agregado, reabertura, cancelamento operacional ou atualização em tempo real por WebSocket.
 
 Não há histórico completo de ciclos de remoção/restauração, versionamento de comandos ou idempotency-key. Replay de restauração considera o estado vigente; não permite reconstruir ciclos anteriores.
 
