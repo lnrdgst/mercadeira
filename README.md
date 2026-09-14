@@ -109,6 +109,8 @@ Iniciar exige participante da lista com vínculo familiar ativo e pelo menos um 
 
 Edição de nome, categoria e estabelecimento: PUT /api/familias/{familiaId}/listas/{listaId}, com 200 e detalhe completo. Somente criador ou administrador ativo da família, durante EM_PREPARACAO, conforme contextoUsuario.podeEditarDadosBasicos. A edição usa lock compartilhado com o início da Compra; após iniciar, recebe 409. [Contrato e validações](docs/contrato-edicao-lista.md).
 
+Sugestões de itens por família: GET /api/familias/{familiaId}/itens/sugestoes?termo=arr. Membro ativo recebe até 10 descrições/unidades derivadas dos itens existentes, sem duplicatas por caixa/espaços; termo vazio retorna recentes. [Contrato](docs/contrato-sugestoes-itens.md).
+
 ## Compra
 
 Prefixo das rotas: `/api/familias/{familiaId}/listas/{listaId}/compra`.
