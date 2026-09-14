@@ -58,7 +58,7 @@ public record CompraResponse(
                 resultado.itens().stream()
                         .map(mapper::from)
                         .toList(),
-                new ContextoUsuarioCompraResponse(resultado.participanteCompra(), podeFinalizar));
+                new ContextoUsuarioCompraResponse(resultado.participanteCompra(), podeFinalizar, compra.getStatus() == StatusCompra.FINALIZADA && compra.getListaCompra().getStatus() == StatusListaCompra.FINALIZADA && compra.getListaCompra().getFamilia().getStatus() == com.mercadeira.api.familia.domain.StatusFamilia.ATIVA && resultado.itens().stream().noneMatch(item -> item.getStatus() == StatusItemCompra.REMOCAO_SOLICITADA)));
     }
 
     public record ParticipanteCompraResponse(
@@ -70,6 +70,6 @@ public record CompraResponse(
             Instant geradoEm) {
     }
 
-    public record ContextoUsuarioCompraResponse(boolean participanteCompra, boolean podeFinalizarCompra) {
+    public record ContextoUsuarioCompraResponse(boolean participanteCompra, boolean podeFinalizarCompra, boolean podeReutilizarLista) {
     }
 }

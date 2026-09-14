@@ -93,6 +93,7 @@ Prefixo das rotas: `/api/familias/{familiaId}/listas`.
 | --- | --- | --- |
 | `GET` | (raiz) | Lista listas da família, incluindo finalizadas. |
 | `POST` | (raiz) | Cria lista; retorna 201. |
+| `POST` | `/{listaId}/reutilizar` | Cria preparação independente de Compra finalizada; retorna 201 e Location. |
 | `GET` | `/{listaId}` | Consulta detalhes e contexto do usuário. |
 | `GET` | `/{listaId}/participantes` | Consulta participantes ativos. |
 | `POST` | `/{listaId}/participantes` | Adiciona participante; retorna 201. |
@@ -180,3 +181,7 @@ Não há histórico completo de ciclos de remoção/restauração, versionamento
 No piloto reduzido da V1, resumos das compras finalizadas acessíveis pelo frontend em Minhas Listas são suficientes. Histórico dedicado permanece no backlog; sua ausência não impede consultar Compra finalizada.
 
 Não versionar `.env`, `DB_PASSWORD` ou `JWT_SECRET`; não incluir família/papel no JWT nem confiar em identificadores de executor enviados pelo cliente.
+
+## Reutilização da Compra finalizada
+
+Capability contextoUsuario.podeReutilizarLista no resumo. POST sem body cria nova lista em preparação na mesma família, com executor como criador/único participante. Copia snapshots NO_CARRINHO e PENDENTE (inclusive inclusões durante compra) em novos ItemLista; exclui REMOVIDO e não transporta vínculos, estados ou auditorias operacionais. Origem intacta, transação atômica, preparação vazia permitida, sem retry automático. [Contrato e testes](docs/contrato-reutilizacao-lista.md).
