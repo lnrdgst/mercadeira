@@ -16,16 +16,22 @@ final class ItemCompraResponseMapper {
     private final Map<UUID, ParticipanteCompraReferenciaResponse> porMembro = new HashMap<>();
     private final boolean emAndamento;
     private final UUID membroAtual;
+    private final boolean presente;
 
     ItemCompraResponseMapper(ResultadoConsultaCompra resultado, UUID usuarioId) {
         UUID atual = null;
+        boolean presencaAtual = false;
         for (var participante : resultado.participantes()) {
             var referencia = ParticipanteCompraReferenciaResponse.from(participante);
             porParticipante.put(referencia.participanteCompraId(), referencia);
             porMembro.put(referencia.membroFamiliaId(), referencia);
-            if (referencia.usuarioId().equals(usuarioId)) atual = referencia.membroFamiliaId();
+            if (referencia.usuarioId().equals(usuarioId)) {
+                atual = referencia.membroFamiliaId();
+                presencaAtual = participante.estaPresente();
+            }
         }
         membroAtual = resultado.participanteCompra() ? atual : null;
+        presente = resultado.participanteCompra() && presencaAtual;
         emAndamento = resultado.compra().getStatus() == StatusCompra.EM_ANDAMENTO;
     }
 
@@ -50,10 +56,11 @@ final class ItemCompraResponseMapper {
                         : porParticipante.get(item.getAdicionadoPorParticipanteCompra().getId()),
                 item.getAdicionadoEm(), porMembro.get(marcador), item.getMarcadoEm(), remocao, restauracao,
                 new AcoesItemCompraResponse(
+                        participanteAtivo && presente && item.getStatus() == StatusItemCompra.PENDENTE,
                         participanteAtivo && item.getStatus() == StatusItemCompra.NO_CARRINHO,
                         participanteAtivo && item.getStatus() == StatusItemCompra.REMOCAO_SOLICITADA
                                 && membroAtual.equals(marcador),
-                        participanteAtivo && remocaoAprovadaCoerente(item)));
+                        participanteAtivo && presente && remocaoAprovadaCoerente(item)));
     }
 
     private boolean remocaoAprovadaCoerente(ItemCompra item) {

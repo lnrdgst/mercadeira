@@ -1,5 +1,7 @@
 # CONTRATOS PARA REPASSE AO FRONTEND — COMPRA 4
 
+> Atualização de presença operacional (V10): colocação e restauração exigem PRESENTE, inclusive em replay. As regras de remoção permanecem iguais. Consulte [o contrato atual de presença](contrato-presenca-operacional.md).
+
 Marco Compra 4C: restauração de ItemCompra no carrinho. Validado em 12/09/2026.
 
 ## Endpoint e request

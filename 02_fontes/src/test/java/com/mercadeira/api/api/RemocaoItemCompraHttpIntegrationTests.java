@@ -314,6 +314,12 @@ class RemocaoItemCompraHttpIntegrationTests {
         String url="/api/familias/"+familia.getId()+"/listas/"+lista.getId()+"/compra";
         String token=bearer(ana);
         var inicio=mvc.perform(post(url).header("Authorization",token)).andExpect(status().isCreated()).andReturn();
+        // Mantem a mesma disponibilidade de restauracao nas comparacoes integrais entre participantes.
+        for (var participante : List.of(bia, caio)) {
+            mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put(url + "/minha-presenca")
+                    .header("Authorization", bearer(participante)).contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"estado\":\"PRESENTE\"}")).andExpect(status().isOk());
+        }
         String itemId=JsonPath.read(inicio.getResponse().getContentAsString(),"$.itens[0].id");
         UUID anaMembro=jdbc.queryForObject("select id from membro_familia where familia_id=? and usuario_id=?",UUID.class,familia.getId(),ana.getId());
         return new Contexto(url,itemId,token,bearer(bia),bearer(caio),familia.getId(),lista.getId(),ana.getId(),bia.getId(),anaMembro,biaMembro);

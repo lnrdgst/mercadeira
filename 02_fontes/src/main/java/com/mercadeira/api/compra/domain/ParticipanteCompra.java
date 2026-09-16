@@ -50,6 +50,30 @@ public class ParticipanteCompra {
     @Column(name = "gerado_em", nullable = false)
     private Instant geradoEm;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "presenca_operacional", nullable = false, length = 20)
+    private PresencaOperacional presencaOperacional = PresencaOperacional.NAO_INFORMADA;
+
+    @Column(name = "presenca_alterada_em")
+    private Instant presencaAlteradaEm;
+
+    public boolean alterarPresenca(PresencaOperacional estado, Instant instante) {
+        if (estado == null || estado == PresencaOperacional.NAO_INFORMADA || instante == null) {
+            throw new IllegalArgumentException("Declare PRESENTE ou NAO_PRESENTE com um instante valido.");
+        }
+        if (compra.getStatus() != StatusCompra.EM_ANDAMENTO) {
+            throw new com.mercadeira.api.compra.application.CompraForaDeAndamentoException();
+        }
+        if (presencaOperacional == estado) return false;
+        presencaOperacional = estado;
+        presencaAlteradaEm = instante.truncatedTo(java.time.temporal.ChronoUnit.MICROS);
+        return true;
+    }
+
+    public PresencaOperacional getPresencaOperacional() { return presencaOperacional; }
+    public Instant getPresencaAlteradaEm() { return presencaAlteradaEm; }
+    public boolean estaPresente() { return presencaOperacional == PresencaOperacional.PRESENTE; }
+
     protected ParticipanteCompra() {
     }
 

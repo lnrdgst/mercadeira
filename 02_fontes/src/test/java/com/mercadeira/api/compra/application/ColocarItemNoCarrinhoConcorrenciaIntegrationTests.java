@@ -57,6 +57,7 @@ class ColocarItemNoCarrinhoConcorrenciaIntegrationTests {
 
     @Autowired private ColocarItemNoCarrinho colocarItemNoCarrinho;
     @Autowired private IniciarCompra iniciarCompra;
+    @Autowired private AlterarMinhaPresencaCompra presenca;
     @Autowired private UsuarioRepository usuarioRepository;
     @Autowired private FamiliaRepository familiaRepository;
     @Autowired private MembroFamiliaRepository membroFamiliaRepository;
@@ -140,6 +141,7 @@ class ColocarItemNoCarrinhoConcorrenciaIntegrationTests {
                 lista, "Arroz", BigDecimal.ONE, UnidadeMedida.UNIDADE, null, null, 1, primeiroMembro, agora));
 
         UUID compraId = iniciarCompra.iniciar(primeiroUsuario.getId(), familia.getId(), lista.getId()).compra().getId();
+        presenca.executar(segundoUsuario.getId(), familia.getId(), lista.getId(), com.mercadeira.api.compra.domain.PresencaOperacional.PRESENTE);
         UUID itemCompraId = itemCompraRepository.findByCompra_IdOrderByOrdemExibicaoAscIdAsc(compraId).getFirst().getId();
 
         return new Contexto(

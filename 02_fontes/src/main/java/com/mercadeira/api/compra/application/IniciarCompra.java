@@ -101,10 +101,16 @@ public class IniciarCompra {
             throw new ListaCompraSemItensException();
         }
 
-        Instant agora = clock.instant();
+        Instant agora = clock.instant().truncatedTo(java.time.temporal.ChronoUnit.MICROS);
         Compra compra = compraRepository.save(Compra.iniciar(lista, iniciador, agora));
         participanteCompraRepository.saveAll(participantes.stream()
-                .map(participante -> ParticipanteCompra.criarDaPreparacao(compra, participante, agora))
+                .map(participante -> {
+                    var snapshot = ParticipanteCompra.criarDaPreparacao(compra, participante, agora);
+                    if (participante.getMembroFamilia().getId().equals(iniciador.getId())) {
+                        snapshot.alterarPresenca(com.mercadeira.api.compra.domain.PresencaOperacional.PRESENTE, agora);
+                    }
+                    return snapshot;
+                })
                 .toList());
         itemCompraRepository.saveAll(itens.stream()
                 .map(item -> ItemCompra.criarDaPreparacao(compra, item))

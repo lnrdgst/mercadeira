@@ -48,6 +48,7 @@ Migrations em [02_fontes/src/main/resources/db/migration](02_fontes/src/main/res
 - `V7__adiciona_autoria_item_compra.sql`
 - `V8__adiciona_autoria_finalizacao_compra.sql`
 - `V9__adiciona_restauracao_item_compra.sql`
+- `V10__adiciona_presenca_operacional.sql`
 
 [docs/modelo-v4](docs/modelo-v4/) é uma referência arquitetural; as migrations e os contratos atuais de Compra documentam a evolução posterior.
 
@@ -120,6 +121,7 @@ Prefixo das rotas: `/api/familias/{familiaId}/listas/{listaId}/compra`.
 | --- | --- | --- |
 | `POST` | (raiz) | Inicia sem body: 201 com Location; replay válido retorna 200. Ambos retornam Compra completa. |
 | `GET` | (raiz) | Consulta Compra, inclusive finalizada, com snapshots, itens, auditorias e capabilities. |
+| `PUT` | `/minha-presenca` | Declara a própria presença e retorna Compra completa. |
 | `POST` | `/itens` | Inclui item durante a Compra; body com dados do item, retorna 201 e ItemCompra completo. |
 | `POST` | `/itens/{itemCompraId}/colocar-no-carrinho` | Coloca item no carrinho. |
 | `POST` | `/itens/{itemCompraId}/solicitar-remocao` | Solicita remoção do carrinho. |
@@ -162,7 +164,7 @@ cd 02_fontes
 .\mvnw.cmd clean test
 ```
 
-Em Unix: `./mvnw clean test`. A suíte inclui domínio, aplicação, HTTP com MockMvc/JWT e concorrência. Integrações usam PostgreSQL via Testcontainers, Flyway V1–V9 e validação de schema com Hibernate.
+Em Unix: `./mvnw clean test`. A suíte inclui domínio, aplicação, HTTP com MockMvc/JWT e concorrência. Integrações usam PostgreSQL via Testcontainers, Flyway V1–V10 e validação de schema com Hibernate.
 
 Para executar somente a cobertura HTTP de restauração, dentro de `02_fontes/`:
 
@@ -185,3 +187,11 @@ Não versionar `.env`, `DB_PASSWORD` ou `JWT_SECRET`; não incluir família/pape
 ## Reutilização da Compra finalizada
 
 Capability contextoUsuario.podeReutilizarLista no resumo. POST sem body cria nova lista em preparação na mesma família, com executor como criador/único participante. Copia snapshots NO_CARRINHO e PENDENTE (inclusive inclusões durante compra) em novos ItemLista; exclui REMOVIDO e não transporta vínculos, estados ou auditorias operacionais. Origem intacta, transação atômica, preparação vazia permitida, sem retry automático. [Contrato e testes](docs/contrato-reutilizacao-lista.md).
+
+## Presença operacional
+
+O início efetivo declara apenas o iniciador PRESENTE. Demais participantes e registros anteriores à V10 ficam NAO_INFORMADA, sem inferir ausência. PUT /api/familias/{familiaId}/listas/{listaId}/compra/minha-presenca aceita somente estado PRESENTE/NAO_PRESENTE para o próprio participante autorizado. Repetição preserva timestamp; replay do início não altera presença.
+
+Colocar e restaurar no carrinho exigem PRESENTE, inclusive em replays; ausência de declaração ativa recebe 409. Inclusão de item pendente, remoção/autoaprovação, responsabilidade e finalização mantêm suas regras. Zero presentes é permitido; finalizar congela a última declaração.
+
+GET inclui presencaOperacional em cada participante, contextoUsuario.podeAlterarPresenca e item.acoes.podeColocarNoCarrinho. podeRestaurarNoCarrinho incorpora presença; participanteCompra continua significando participação. Frontend ainda requer integração, com publicação coordenada. [Contrato, compatibilidade e concorrência](docs/contrato-presenca-operacional.md).

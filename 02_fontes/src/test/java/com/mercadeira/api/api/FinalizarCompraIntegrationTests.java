@@ -119,7 +119,7 @@ class FinalizarCompraIntegrationTests {
         assertThat(((List<?>)fim.get("itens")).size()).isEqualTo(somenteRemovidos?1:2);
         assertThat(objeto(removido, "acoes")).containsEntry("podeRestaurarNoCarrinho", true);
         var esperado = new java.util.HashMap<>(removido);
-        esperado.put("acoes", Map.of("podeSolicitarRemocao", false,
+        esperado.put("acoes", Map.of("podeColocarNoCarrinho", false, "podeSolicitarRemocao", false,
                 "podeDecidirRemocao", false, "podeRestaurarNoCarrinho", false));
         assertThat(getItem(c,c.outro())).isEqualTo(esperado);
         assertThat(consultar(c,c.outro())).isEqualTo(fim);
@@ -359,6 +359,12 @@ class FinalizarCompraIntegrationTests {
         String url="/api/familias/"+familia.getId()+"/listas/"+lista.getId()+"/compra";
         String token=bearer(ana);
         var inicio=mvc.perform(post(url).header("Authorization",token)).andExpect(status().isCreated()).andReturn();
+        // Estes cenarios de regressao operam com os demais compradores declarados presentes.
+        for (var participante : List.of(bia, caio)) {
+            mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put(url + "/minha-presenca")
+                    .header("Authorization", bearer(participante)).contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"estado\":\"PRESENTE\"}")).andExpect(status().isOk());
+        }
         String itemId=JsonPath.read(inicio.getResponse().getContentAsString(),"$.itens[0].id");
         UUID anaMembro=jdbc.queryForObject("select id from membro_familia where familia_id=? and usuario_id=?",UUID.class,familia.getId(),ana.getId());
         return new Contexto(url,itemId,token,bearer(bia),bearer(caio),familia.getId(),lista.getId(),ana.getId(),bia.getId(),anaMembro,biaMembro);

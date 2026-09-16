@@ -51,14 +51,14 @@ public class ColocarItemNoCarrinho {
         if (compra.getStatus() != StatusCompra.EM_ANDAMENTO) {
             throw new CompraForaDeAndamentoException();
         }
-        if (!participanteRepository.existsByCompra_IdAndMembroFamilia_Id(compra.getId(), membro.getId())) {
-            throw new UsuarioNaoParticipaDaCompraException();
-        }
+        var participante = participanteRepository.findByCompra_IdAndMembroFamilia_Id(compra.getId(), membro.getId())
+                .orElseThrow(UsuarioNaoParticipaDaCompraException::new);
         var item = itemRepository.findByIdForUpdate(itemCompraId)
                 .orElseThrow(() -> new ItemCompraNaoEncontradoException(itemCompraId));
         if (!item.getCompra().getId().equals(compra.getId())) {
             throw new ItemCompraNaoEncontradoException(itemCompraId);
         }
+        if (!participante.estaPresente()) throw new PresencaOperacionalObrigatoriaException();
         boolean alterado = item.colocarNoCarrinho(membro, clock.instant());
         return new ResultadoColocarItemNoCarrinho(item, alterado);
     }

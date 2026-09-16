@@ -20,6 +20,7 @@ public class RestaurarItemNoCarrinho {
     public ResultadoRestauracaoItemCompra executar(UUID usuarioId, UUID familiaId, UUID listaId, UUID itemCompraId) {
         // Reutiliza validacao de contexto/autorizacao e locks Compra -> Item, sem exigir antigo decisor.
         var carregado = contexto.carregar(usuarioId, familiaId, listaId, itemCompraId);
+        if (!carregado.participante().estaPresente()) throw new PresencaOperacionalObrigatoriaException();
         var instante = clock.instant().truncatedTo(ChronoUnit.MICROS);
         boolean restauradoAgora = carregado.item().restaurarNoCarrinho(carregado.participante(), instante);
         return new ResultadoRestauracaoItemCompra(carregado.item(), restauradoAgora);

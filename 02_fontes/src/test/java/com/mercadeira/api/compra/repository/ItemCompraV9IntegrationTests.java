@@ -74,7 +74,7 @@ class ItemCompraV9IntegrationTests {
     void flywayAplicaV9EHibernateValidaSchema() {
         assertThat(jdbcTemplate.queryForList(
                 "select version from flyway_schema_history where success and version is not null order by installed_rank",
-                String.class)).containsExactly("1","2","3","4","5","6","7","8","9");
+                String.class)).containsExactly("1","2","3","4","5","6","7","8","9","10");
         assertThat(environment.getProperty("spring.jpa.hibernate.ddl-auto")).isEqualTo("validate");
     }
 
@@ -194,7 +194,9 @@ class ItemCompraV9IntegrationTests {
         copiar(schema,"lista_compra","id",c.compra().getListaCompra().getId());
         copiar(schema,"item_lista","id",c.itemLista().getId());
         copiar(schema,"compra","id",c.compra().getId());
-        copiar(schema,"participante_compra","id",c.participanteCompra().getId());
+        String colunasParticipanteV8="id,compra_id,participante_lista_origem_id,membro_familia_id,nome_snapshot,papel_snapshot,gerado_em";
+        jdbcTemplate.update("insert into "+schema+".participante_compra ("+colunasParticipanteV8+") select "+colunasParticipanteV8+
+                " from public.participante_compra where id=?",c.participanteCompra().getId());
         String colunas=jdbcTemplate.queryForObject("""
                 select string_agg(quote_ident(column_name), ', ' order by ordinal_position)
                 from information_schema.columns where table_schema=? and table_name='item_compra'

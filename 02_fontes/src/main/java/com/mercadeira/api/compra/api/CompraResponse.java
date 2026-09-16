@@ -54,11 +54,12 @@ public record CompraResponse(
                         participante.getMembroFamilia().getUsuario().getId(),
                         participante.getNomeSnapshot(),
                         participante.getPapelSnapshot(),
-                        participante.getGeradoEm())).toList(),
+                        participante.getGeradoEm(),
+                        new PresencaOperacionalResponse(participante.getPresencaOperacional(), participante.getPresencaAlteradaEm()))).toList(),
                 resultado.itens().stream()
                         .map(mapper::from)
                         .toList(),
-                new ContextoUsuarioCompraResponse(resultado.participanteCompra(), podeFinalizar, compra.getStatus() == StatusCompra.FINALIZADA && compra.getListaCompra().getStatus() == StatusListaCompra.FINALIZADA && compra.getListaCompra().getFamilia().getStatus() == com.mercadeira.api.familia.domain.StatusFamilia.ATIVA && resultado.itens().stream().noneMatch(item -> item.getStatus() == StatusItemCompra.REMOCAO_SOLICITADA)));
+                new ContextoUsuarioCompraResponse(resultado.participanteCompra(), resultado.participanteCompra() && compra.getStatus() == StatusCompra.EM_ANDAMENTO, podeFinalizar, compra.getStatus() == StatusCompra.FINALIZADA && compra.getListaCompra().getStatus() == StatusListaCompra.FINALIZADA && compra.getListaCompra().getFamilia().getStatus() == com.mercadeira.api.familia.domain.StatusFamilia.ATIVA && resultado.itens().stream().noneMatch(item -> item.getStatus() == StatusItemCompra.REMOCAO_SOLICITADA)));
     }
 
     public record ParticipanteCompraResponse(
@@ -67,9 +68,11 @@ public record CompraResponse(
             UUID usuarioId,
             String nome,
             PapelMembroFamilia papel,
-            Instant geradoEm) {
+            Instant geradoEm, PresencaOperacionalResponse presencaOperacional) {
     }
 
-    public record ContextoUsuarioCompraResponse(boolean participanteCompra, boolean podeFinalizarCompra, boolean podeReutilizarLista) {
+    public record PresencaOperacionalResponse(com.mercadeira.api.compra.domain.PresencaOperacional estado, Instant alteradaEm) {}
+
+    public record ContextoUsuarioCompraResponse(boolean participanteCompra, boolean podeAlterarPresenca, boolean podeFinalizarCompra, boolean podeReutilizarLista) {
     }
 }

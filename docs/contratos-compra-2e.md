@@ -1,5 +1,7 @@
 # CONTRATOS PARA REPASSE AO FRONTEND — COMPRA 2E
 
+> Atualização de presença operacional (V10): colocação e restauração exigem PRESENTE, inclusive em replay. As regras de remoção permanecem iguais. Consulte [o contrato atual de presença](contrato-presenca-operacional.md).
+
 Marco Compra 2E-B, validado em 10/09/2026.
 
 ## Requests e respostas

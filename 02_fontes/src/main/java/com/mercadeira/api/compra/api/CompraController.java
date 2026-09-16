@@ -33,6 +33,7 @@ public class CompraController {
     private final RejeitarRemocaoItemCompra rejeitarRemocao;
     private final FinalizarCompra finalizarCompra;
     private final RestaurarItemNoCarrinho restaurarItemNoCarrinho;
+    private final com.mercadeira.api.compra.application.AlterarMinhaPresencaCompra alterarPresenca;
     private final UsuarioAutenticado usuario;
     private final IniciarCompra iniciarCompra;
     private final ConsultarCompraDaLista consultarCompra;
@@ -43,7 +44,9 @@ public class CompraController {
             ConsultarCompraDaLista consultarCompra, ColocarItemNoCarrinho colocarItemNoCarrinho,
             AdicionarItemDuranteCompra adicionarItemDuranteCompra, SolicitarRemocaoItemCompra solicitarRemocao,
             AprovarRemocaoItemCompra aprovarRemocao, RejeitarRemocaoItemCompra rejeitarRemocao, FinalizarCompra finalizarCompra,
-            RestaurarItemNoCarrinho restaurarItemNoCarrinho) {
+            RestaurarItemNoCarrinho restaurarItemNoCarrinho,
+            com.mercadeira.api.compra.application.AlterarMinhaPresencaCompra alterarPresenca) {
+        this.alterarPresenca = alterarPresenca;
         this.solicitarRemocao = solicitarRemocao;
         this.aprovarRemocao = aprovarRemocao;
         this.rejeitarRemocao = rejeitarRemocao;
@@ -65,6 +68,13 @@ public class CompraController {
         }
         URI location = URI.create("/api/familias/" + familiaId + "/listas/" + listaId + "/compra");
         return ResponseEntity.created(location).body(response);
+    }
+
+    @org.springframework.web.bind.annotation.PutMapping("/minha-presenca")
+    public CompraResponse alterarMinhaPresenca(@PathVariable UUID familiaId, @PathVariable UUID listaId,
+            @Valid @RequestBody AlterarMinhaPresencaRequest request) {
+        alterarPresenca.executar(usuario.getId(), familiaId, listaId, request.estado());
+        return CompraResponse.from(consultarCompra.consultar(usuario.getId(), familiaId, listaId), usuario.getId());
     }
 
     @PostMapping("/finalizar")
