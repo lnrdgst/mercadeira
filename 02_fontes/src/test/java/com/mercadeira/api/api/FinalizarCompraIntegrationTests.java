@@ -95,8 +95,18 @@ class FinalizarCompraIntegrationTests {
         assertThat(instante.toInstant()).isEqualTo(java.time.Instant.parse((String)fim.get("finalizadaEm")));
         assertThat(instante).isAfterOrEqualTo(listaAntes);
         assertThat(finalizar(c,c.outro(),200)).isEqualTo(fim);
-        assertThat(finalizar(c,c.responsavel(),200)).isEqualTo(fim);
-        assertThat(consultar(c,c.responsavel())).isEqualTo(fim);
+        var replayResponsavel=finalizar(c,c.responsavel(),200);
+        assertThat(replayResponsavel).containsEntry("status","FINALIZADA")
+                .containsEntry("finalizadaPor",fim.get("finalizadaPor"))
+                .containsEntry("finalizadaEm",fim.get("finalizadaEm"))
+                .containsEntry("participantes",fim.get("participantes"));
+        var consultaResponsavel=consultar(c,c.responsavel());
+        assertThat(consultaResponsavel).containsEntry("status","FINALIZADA")
+                .containsEntry("finalizadaPor",fim.get("finalizadaPor"))
+                .containsEntry("finalizadaEm",fim.get("finalizadaEm"))
+                .containsEntry("participantes",fim.get("participantes"));
+        assertThat(objeto(consultaResponsavel,"contextoUsuario")).containsEntry("podeFinalizarCompra",false)
+                .containsEntry("podeReassumirResponsabilidade",false);
         assertThat(jdbc.queryForObject("select atualizada_em from lista_compra where id=?",java.sql.Timestamp.class,c.listaId())).isEqualTo(instante);
         acoes(getItem(c,c.responsavel()),false,false);
         java.nio.file.Files.writeString(java.nio.file.Path.of("target/compra-3-finalizada.json"),
@@ -361,9 +371,11 @@ class FinalizarCompraIntegrationTests {
         var inicio=mvc.perform(post(url).header("Authorization",token)).andExpect(status().isCreated()).andReturn();
         // Estes cenarios de regressao operam com os demais compradores declarados presentes.
         for (var participante : List.of(bia, caio)) {
-            mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put(url + "/minha-presenca")
-                    .header("Authorization", bearer(participante)).contentType(MediaType.APPLICATION_JSON)
-                    .content("{\"estado\":\"PRESENTE\"}")).andExpect(status().isOk());
+            var pedido=mvc.perform(post(url + "/minha-presenca/solicitacoes")
+                    .header("Authorization", bearer(participante))).andExpect(status().isOk()).andReturn();
+            String pedidoId=JsonPath.read(pedido.getResponse().getContentAsString(),"$.minhaSolicitacaoPresenca.id");
+            mvc.perform(post(url + "/solicitacoes-presenca/"+pedidoId+"/aprovar")
+                    .header("Authorization", token)).andExpect(status().isOk());
         }
         String itemId=JsonPath.read(inicio.getResponse().getContentAsString(),"$.itens[0].id");
         UUID anaMembro=jdbc.queryForObject("select id from membro_familia where familia_id=? and usuario_id=?",UUID.class,familia.getId(),ana.getId());

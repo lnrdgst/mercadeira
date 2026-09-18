@@ -56,6 +56,7 @@ class PresencaOperacionalIntegrationTests {
     @Autowired AdicionarParticipanteLista adicionarParticipante;
     @Autowired IniciarCompra iniciar;
     @Autowired AlterarMinhaPresencaCompra presenca;
+    @Autowired FluxoPresencaCompra fluxoPresenca;
     @Autowired ColocarItemNoCarrinho colocar;
     @Autowired RestaurarItemNoCarrinho restaurar;
     @Autowired SolicitarRemocaoItemCompra solicitar;
@@ -92,6 +93,20 @@ class PresencaOperacionalIntegrationTests {
         return json(mvc.perform(get(c.url()).with(jwt().jwt(j -> j.subject(u.toString())))).andExpect(status().isOk()).andReturn());
     }
     Map<String,Object> declarar(C c, UUID u, String estado) throws Exception {
+        if ("PRESENTE".equals(estado)) {
+            var pedido = json(mvc.perform(post(c.url()+"/minha-presenca/solicitacoes")
+                    .with(jwt().jwt(j -> j.subject(u.toString())))).andExpect(status().isOk()).andReturn());
+            var minha = (Map<String,Object>) pedido.get("minhaSolicitacaoPresenca");
+            if (minha == null) return pedido;
+            UUID responsavel = jdbc.queryForObject("""
+                    select membro.usuario_id from compra compra
+                    join participante_compra participante on participante.id=compra.responsavel_operacional_id
+                    join membro_familia membro on membro.id=participante.membro_familia_id where compra.id=?
+                    """, UUID.class, c.compra());
+            mvc.perform(post(c.url()+"/solicitacoes-presenca/"+minha.get("id")+"/aprovar")
+                    .with(jwt().jwt(j -> j.subject(responsavel.toString())))).andExpect(status().isOk());
+            return getCompra(c, u);
+        }
         return json(mvc.perform(put(c.url()+"/minha-presenca").with(jwt().jwt(j -> j.subject(u.toString()))).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"estado\":\""+estado+"\"}")).andExpect(status().isOk()).andReturn());
     }
@@ -109,7 +124,7 @@ class PresencaOperacionalIntegrationTests {
         assertThat(registro(c,c.bia())).containsEntry("presenca_operacional","NAO_INFORMADA").containsEntry("presenca_alterada_em",null);
         mvc.perform(get(c.url()).with(jwt().jwt(j -> j.subject(c.bia().toString())))).andExpect(status().isOk())
             .andExpect(jsonPath("$.contextoUsuario.participanteCompra").value(true))
-            .andExpect(jsonPath("$.contextoUsuario.podeAlterarPresenca").value(true))
+            .andExpect(jsonPath("$.contextoUsuario.podeSolicitarPresenca").value(true))
             .andExpect(jsonPath("$.itens[0].acoes.podeColocarNoCarrinho").value(false));
         var antesAna=registro(c,c.ana());
         var resposta=declarar(c,c.bia(),"PRESENTE");
@@ -203,6 +218,71 @@ class PresencaOperacionalIntegrationTests {
         assertThat(jdbc.queryForList("select presenca_operacional from participante_compra where compra_id=?",String.class,novaCompra)).containsExactly("PRESENTE");
     }
 
+    @Test void solicitacaoSucessaoESegundoCicloPreservamAutoridadeOperacional() throws Exception {
+        var c = contexto(true);
+        var solicitacao = json(mvc.perform(post(c.url()+"/minha-presenca/solicitacoes")
+                .with(jwt().jwt(j -> j.subject(c.bia().toString())))).andExpect(status().isOk()).andReturn());
+        var pedido = (Map<String,Object>) solicitacao.get("minhaSolicitacaoPresenca");
+        var pedidoId = UUID.fromString(pedido.get("id").toString());
+        assertThat(pedido).containsEntry("estado", "PENDENTE");
+        assertThat(registro(c,c.bia())).containsEntry("presenca_operacional", "NAO_INFORMADA");
+        var replay = json(mvc.perform(post(c.url()+"/minha-presenca/solicitacoes")
+                .with(jwt().jwt(j -> j.subject(c.bia().toString())))).andExpect(status().isOk()).andReturn());
+        assertThat(((Map<?,?>) replay.get("minhaSolicitacaoPresenca")).get("id")).isEqualTo(pedidoId.toString());
+        mvc.perform(post(c.url()+"/solicitacoes-presenca/"+pedidoId+"/aprovar")
+                .with(jwt().jwt(j -> j.subject(c.ana().toString())))).andExpect(status().isOk());
+        assertThat(registro(c,c.bia())).containsEntry("presenca_operacional", "PRESENTE");
+        declarar(c,c.ana(),"NAO_PRESENTE");
+        assertThat(jdbc.queryForObject("select responsavel_operacional_id from compra where id=?", UUID.class,c.compra()))
+                .isEqualTo(registro(c,c.bia()).get("id"));
+        declarar(c,c.bia(),"NAO_PRESENTE");
+        assertThat(jdbc.queryForObject("select responsavel_operacional_id from compra where id=?", UUID.class,c.compra())).isNull();
+        var novo = json(mvc.perform(post(c.url()+"/minha-presenca/solicitacoes")
+                .with(jwt().jwt(j -> j.subject(c.ana().toString())))).andExpect(status().isOk()).andReturn());
+        assertThat(((Map<?,?>) novo.get("responsabilidadeOperacional")).get("ciclo")).isEqualTo(2);
+        assertThat(registro(c,c.ana())).containsEntry("presenca_operacional", "PRESENTE");
+    }
+
+    @Test void reassuncaoLegadoEFinalizacaoDasPendenciasTemContratoExplicito() throws Exception {
+        var c = contexto(true);
+        mvc.perform(put(c.url()+"/minha-presenca").with(jwt().jwt(j -> j.subject(c.bia().toString())))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"estado\":\"PRESENTE\"}"))
+                .andExpect(status().isConflict());
+        var pedido = json(mvc.perform(post(c.url()+"/minha-presenca/solicitacoes")
+                .with(jwt().jwt(j -> j.subject(c.bia().toString())))).andExpect(status().isOk()).andReturn());
+        var id = UUID.fromString(((Map<?,?>) pedido.get("minhaSolicitacaoPresenca")).get("id").toString());
+        mvc.perform(post(c.url()+"/solicitacoes-presenca/"+id+"/aprovar")
+                .with(jwt().jwt(j -> j.subject(c.ana().toString())))).andExpect(status().isOk());
+        mvc.perform(post(c.url()+"/responsabilidade-operacional/reassumir")
+                .with(jwt().jwt(j -> j.subject(c.bia().toString()))).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"revisao\":1,\"confirmado\":true}"))
+                .andExpect(status().isOk());
+        assertThat(jdbc.queryForObject("select responsabilidade_revisao from compra where id=?", Long.class,c.compra())).isEqualTo(2L);
+        declarar(c,c.bia(),"NAO_PRESENTE");
+        var pendente = json(mvc.perform(post(c.url()+"/minha-presenca/solicitacoes")
+                .with(jwt().jwt(j -> j.subject(c.bia().toString())))).andExpect(status().isOk()).andReturn());
+        var pendenteId = UUID.fromString(((Map<?,?>) pendente.get("minhaSolicitacaoPresenca")).get("id").toString());
+        mvc.perform(post(c.url()+"/finalizar").with(jwt().jwt(j -> j.subject(c.ana().toString())))).andExpect(status().isOk());
+        assertThat(jdbc.queryForMap("select estado,motivo_cancelamento from solicitacao_presenca_compra where id=?",pendenteId))
+                .containsEntry("estado", "CANCELADA").containsEntry("motivo_cancelamento", "COMPRA_FINALIZADA");
+    }
+
+    @Test void duasEntradasNoZeroPresentesGeramUmResponsavelEUmaSolicitacao() throws Exception {
+        var c = contexto(true);
+        declarar(c, c.ana(), "NAO_PRESENTE");
+        var prontas = new CountDownLatch(2); var iniciar = new CountDownLatch(1);
+        var executor = Executors.newFixedThreadPool(2);
+        try {
+            var ana = executor.submit(() -> { prontas.countDown(); aguardar(iniciar); fluxoPresenca.solicitarEntrada(c.ana(),c.familia(),c.lista()); });
+            var bia = executor.submit(() -> { prontas.countDown(); aguardar(iniciar); fluxoPresenca.solicitarEntrada(c.bia(),c.familia(),c.lista()); });
+            assertThat(prontas.await(10, TimeUnit.SECONDS)).isTrue(); iniciar.countDown();
+            ana.get(15, TimeUnit.SECONDS); bia.get(15, TimeUnit.SECONDS);
+        } finally { iniciar.countDown(); executor.shutdownNow(); assertThat(executor.awaitTermination(10,TimeUnit.SECONDS)).isTrue(); }
+        assertThat(jdbc.queryForObject("select count(*) from participante_compra where compra_id=? and presenca_operacional='PRESENTE'", Integer.class,c.compra())).isEqualTo(1);
+        assertThat(jdbc.queryForObject("select count(*) from compra where id=? and responsavel_operacional_id is not null", Integer.class,c.compra())).isEqualTo(1);
+        assertThat(jdbc.queryForObject("select count(*) from solicitacao_presenca_compra where compra_id=? and estado='PENDENTE'", Integer.class,c.compra())).isEqualTo(1);
+    }
+
     void operar(C c, String operacao) {
         switch (operacao) {
             case "PRESENTE", "NAO_PRESENTE" -> presenca.executar(c.ana(),c.familia(),c.lista(),PresencaOperacional.valueOf(operacao));
@@ -211,6 +291,11 @@ class PresencaOperacionalIntegrationTests {
             case "FINALIZAR" -> finalizar.executar(c.ana(),c.familia(),c.lista());
             default -> throw new IllegalArgumentException(operacao);
         }
+    }
+
+    void aguardar(CountDownLatch latch) {
+        try { if (!latch.await(15, TimeUnit.SECONDS)) throw new IllegalStateException("Timeout de concorrencia"); }
+        catch (InterruptedException e) { Thread.currentThread().interrupt(); throw new IllegalStateException(e); }
     }
 
     @ParameterizedTest
@@ -299,11 +384,16 @@ class PresencaOperacionalIntegrationTests {
         String colunas="id,compra_id,participante_lista_origem_id,membro_familia_id,nome_snapshot,papel_snapshot,gerado_em";
         jdbc.execute("insert into "+schema+".participante_compra ("+colunas+") select "+colunas+" from public.participante_compra");
         jdbc.execute("update "+schema+".compra c set status=p.status,finalizada_em=p.finalizada_em,finalizada_por_participante_compra_id=p.finalizada_por_participante_compra_id from public.compra p where c.id=p.id");
-        org.flywaydb.core.Flyway.configure().dataSource(db.getJdbcUrl(),db.getUsername(),db.getPassword()).schemas(schema).defaultSchema(schema).load().migrate();
+        org.flywaydb.core.Flyway.configure().dataSource(db.getJdbcUrl(),db.getUsername(),db.getPassword()).schemas(schema).defaultSchema(schema).target("10").load().migrate();
         assertThat(jdbc.queryForObject("select count(*) from "+schema+".participante_compra where presenca_operacional<>'NAO_INFORMADA' or presenca_alterada_em is not null",Integer.class)).isZero();
         assertThat(jdbc.queryForList("select status from "+schema+".compra where id in (?,?)",String.class,andamento.compra(),encerrada.compra())).containsExactlyInAnyOrder("EM_ANDAMENTO","FINALIZADA");
         for(String atribuicao:List.of("presenca_operacional='PRESENTE'", "presenca_operacional='NAO_PRESENTE'", "presenca_alterada_em=now()", "presenca_operacional='ONLINE'", "presenca_operacional=null"))
             assertThatThrownBy(() -> jdbc.execute("update "+schema+".participante_compra set "+atribuicao)).isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
+        UUID presenteLegado=jdbc.queryForObject("select id from "+schema+".participante_compra where compra_id=? order by id limit 1",UUID.class,andamento.compra());
+        jdbc.update("update "+schema+".participante_compra set presenca_operacional='PRESENTE',presenca_alterada_em=now() where id=?",presenteLegado);
+        org.flywaydb.core.Flyway.configure().dataSource(db.getJdbcUrl(),db.getUsername(),db.getPassword()).schemas(schema).defaultSchema(schema).load().migrate();
+        assertThat(jdbc.queryForObject("select responsavel_operacional_id from "+schema+".compra where id=?",UUID.class,andamento.compra())).isEqualTo(presenteLegado);
+        assertThat(jdbc.queryForObject("select responsavel_operacional_id from "+schema+".compra where id=?",UUID.class,encerrada.compra())).isNull();
         jdbc.execute("update "+schema+".participante_compra set presenca_operacional='PRESENTE',presenca_alterada_em=now()");
         assertThat(jdbc.queryForObject("select count(*) from "+schema+".participante_compra where presenca_operacional='PRESENTE'",Integer.class)).isPositive();
     }

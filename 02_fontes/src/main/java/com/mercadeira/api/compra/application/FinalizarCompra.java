@@ -25,15 +25,17 @@ public class FinalizarCompra {
     private final MembroFamiliaRepository membros;
     private final ParticipanteCompraRepository participantes;
     private final ItemCompraRepository itens;
+    private final FluxoPresencaCompra fluxoPresenca;
     private final Clock clock;
 
     public FinalizarCompra(ListaCompraRepository listas, CompraRepository compras, MembroFamiliaRepository membros,
-            ParticipanteCompraRepository participantes, ItemCompraRepository itens, Clock clock) {
+            ParticipanteCompraRepository participantes, ItemCompraRepository itens, FluxoPresencaCompra fluxoPresenca, Clock clock) {
         this.listas = listas;
         this.compras = compras;
         this.membros = membros;
         this.participantes = participantes;
         this.itens = itens;
+        this.fluxoPresenca = fluxoPresenca;
         this.clock = clock;
     }
 
@@ -73,6 +75,7 @@ public class FinalizarCompra {
         var instante = clock.instant().truncatedTo(java.time.temporal.ChronoUnit.MICROS);
         boolean finalizadaAgora = compra.finalizar(participante, instante);
         if (finalizadaAgora) {
+            fluxoPresenca.cancelarPendentesAoFinalizar(compra, instante);
             lista.finalizarCompra(instante);
         }
         return new ResultadoFinalizacaoCompra(compra, finalizadaAgora);

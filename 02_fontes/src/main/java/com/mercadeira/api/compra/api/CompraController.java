@@ -14,6 +14,9 @@ import com.mercadeira.api.compra.application.AdicionarItemDuranteCompra;
 import com.mercadeira.api.compra.application.AdicionarItemDuranteCompraCommand;
 import com.mercadeira.api.compra.application.ColocarItemNoCarrinho;
 import com.mercadeira.api.compra.application.IniciarCompra;
+import com.mercadeira.api.compra.application.FluxoPresencaCompra;
+import com.mercadeira.api.compra.application.ConflitoPresencaException;
+import com.mercadeira.api.compra.domain.PresencaOperacional;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -34,6 +37,7 @@ public class CompraController {
     private final FinalizarCompra finalizarCompra;
     private final RestaurarItemNoCarrinho restaurarItemNoCarrinho;
     private final com.mercadeira.api.compra.application.AlterarMinhaPresencaCompra alterarPresenca;
+    private final FluxoPresencaCompra fluxoPresenca;
     private final UsuarioAutenticado usuario;
     private final IniciarCompra iniciarCompra;
     private final ConsultarCompraDaLista consultarCompra;
@@ -45,8 +49,10 @@ public class CompraController {
             AdicionarItemDuranteCompra adicionarItemDuranteCompra, SolicitarRemocaoItemCompra solicitarRemocao,
             AprovarRemocaoItemCompra aprovarRemocao, RejeitarRemocaoItemCompra rejeitarRemocao, FinalizarCompra finalizarCompra,
             RestaurarItemNoCarrinho restaurarItemNoCarrinho,
-            com.mercadeira.api.compra.application.AlterarMinhaPresencaCompra alterarPresenca) {
+            com.mercadeira.api.compra.application.AlterarMinhaPresencaCompra alterarPresenca,
+            FluxoPresencaCompra fluxoPresenca) {
         this.alterarPresenca = alterarPresenca;
+        this.fluxoPresenca = fluxoPresenca;
         this.solicitarRemocao = solicitarRemocao;
         this.aprovarRemocao = aprovarRemocao;
         this.rejeitarRemocao = rejeitarRemocao;
@@ -73,7 +79,43 @@ public class CompraController {
     @org.springframework.web.bind.annotation.PutMapping("/minha-presenca")
     public CompraResponse alterarMinhaPresenca(@PathVariable UUID familiaId, @PathVariable UUID listaId,
             @Valid @RequestBody AlterarMinhaPresencaRequest request) {
-        alterarPresenca.executar(usuario.getId(), familiaId, listaId, request.estado());
+        if (request.estado() == PresencaOperacional.PRESENTE)
+            fluxoPresenca.rejeitarEntradaLegada(usuario.getId(), familiaId, listaId);
+        fluxoPresenca.declararSaida(usuario.getId(), familiaId, listaId);
+        return CompraResponse.from(consultarCompra.consultar(usuario.getId(), familiaId, listaId), usuario.getId());
+    }
+
+    @PostMapping("/minha-presenca/solicitacoes")
+    public CompraResponse solicitarPresenca(@PathVariable UUID familiaId, @PathVariable UUID listaId) {
+        fluxoPresenca.solicitarEntrada(usuario.getId(), familiaId, listaId);
+        return CompraResponse.from(consultarCompra.consultar(usuario.getId(), familiaId, listaId), usuario.getId());
+    }
+
+    @PostMapping("/minha-presenca/solicitacoes/{solicitacaoId}/cancelar")
+    public CompraResponse cancelarSolicitacaoPresenca(@PathVariable UUID familiaId, @PathVariable UUID listaId,
+            @PathVariable UUID solicitacaoId) {
+        fluxoPresenca.cancelarSolicitacao(usuario.getId(), familiaId, listaId, solicitacaoId);
+        return CompraResponse.from(consultarCompra.consultar(usuario.getId(), familiaId, listaId), usuario.getId());
+    }
+
+    @PostMapping("/solicitacoes-presenca/{solicitacaoId}/aprovar")
+    public CompraResponse aprovarSolicitacaoPresenca(@PathVariable UUID familiaId, @PathVariable UUID listaId,
+            @PathVariable UUID solicitacaoId) {
+        fluxoPresenca.decidir(usuario.getId(), familiaId, listaId, solicitacaoId, true);
+        return CompraResponse.from(consultarCompra.consultar(usuario.getId(), familiaId, listaId), usuario.getId());
+    }
+
+    @PostMapping("/solicitacoes-presenca/{solicitacaoId}/rejeitar")
+    public CompraResponse rejeitarSolicitacaoPresenca(@PathVariable UUID familiaId, @PathVariable UUID listaId,
+            @PathVariable UUID solicitacaoId) {
+        fluxoPresenca.decidir(usuario.getId(), familiaId, listaId, solicitacaoId, false);
+        return CompraResponse.from(consultarCompra.consultar(usuario.getId(), familiaId, listaId), usuario.getId());
+    }
+
+    @PostMapping("/responsabilidade-operacional/reassumir")
+    public CompraResponse reassumirResponsabilidade(@PathVariable UUID familiaId, @PathVariable UUID listaId,
+            @Valid @RequestBody ReassumirResponsabilidadeRequest request) {
+        fluxoPresenca.reassumir(usuario.getId(), familiaId, listaId, request.revisao(), request.confirmado());
         return CompraResponse.from(consultarCompra.consultar(usuario.getId(), familiaId, listaId), usuario.getId());
     }
 

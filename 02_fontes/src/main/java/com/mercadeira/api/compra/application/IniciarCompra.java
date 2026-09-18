@@ -103,7 +103,7 @@ public class IniciarCompra {
 
         Instant agora = clock.instant().truncatedTo(java.time.temporal.ChronoUnit.MICROS);
         Compra compra = compraRepository.save(Compra.iniciar(lista, iniciador, agora));
-        participanteCompraRepository.saveAll(participantes.stream()
+        var snapshots = participanteCompraRepository.saveAll(participantes.stream()
                 .map(participante -> {
                     var snapshot = ParticipanteCompra.criarDaPreparacao(compra, participante, agora);
                     if (participante.getMembroFamilia().getId().equals(iniciador.getId())) {
@@ -112,6 +112,11 @@ public class IniciarCompra {
                     return snapshot;
                 })
                 .toList());
+        var participanteIniciador = snapshots.stream()
+                .filter(participante -> participante.getMembroFamilia().getId().equals(iniciador.getId()))
+                .findFirst().orElseThrow(CompraListaInconsistenteException::new);
+        compra.mudarResponsabilidade(participanteIniciador, participanteIniciador,
+                com.mercadeira.api.compra.domain.MotivoResponsabilidade.INICIO_COMPRA, agora);
         itemCompraRepository.saveAll(itens.stream()
                 .map(item -> ItemCompra.criarDaPreparacao(compra, item))
                 .toList());

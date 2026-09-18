@@ -9,6 +9,8 @@ import com.mercadeira.api.compra.domain.ParticipanteCompra;
 import com.mercadeira.api.compra.repository.CompraRepository;
 import com.mercadeira.api.compra.repository.ItemCompraRepository;
 import com.mercadeira.api.compra.repository.ParticipanteCompraRepository;
+import com.mercadeira.api.compra.repository.SolicitacaoPresencaCompraRepository;
+import com.mercadeira.api.compra.domain.EstadoSolicitacaoPresenca;
 import com.mercadeira.api.familia.domain.MembroFamilia;
 import com.mercadeira.api.familia.domain.StatusMembroFamilia;
 import com.mercadeira.api.familia.repository.MembroFamiliaRepository;
@@ -27,15 +29,17 @@ public class ConsultarCompraDaLista {
     private final CompraRepository compraRepository;
     private final ParticipanteCompraRepository participanteRepository;
     private final ItemCompraRepository itemRepository;
+    private final SolicitacaoPresencaCompraRepository solicitacaoRepository;
 
     public ConsultarCompraDaLista(ListaCompraRepository listaRepository, MembroFamiliaRepository membroRepository,
             CompraRepository compraRepository, ParticipanteCompraRepository participanteRepository,
-            ItemCompraRepository itemRepository) {
+            ItemCompraRepository itemRepository, SolicitacaoPresencaCompraRepository solicitacaoRepository) {
         this.listaRepository = listaRepository;
         this.membroRepository = membroRepository;
         this.compraRepository = compraRepository;
         this.participanteRepository = participanteRepository;
         this.itemRepository = itemRepository;
+        this.solicitacaoRepository = solicitacaoRepository;
     }
 
     @Transactional(readOnly = true)
@@ -52,7 +56,11 @@ public class ConsultarCompraDaLista {
                 .orElseThrow(() -> new CompraNaoEncontradaException(listaId));
         List<ParticipanteCompra> participantes = participanteRepository.findByCompra_IdOrderByGeradoEmAscIdAsc(compra.getId());
         List<ItemCompra> itens = itemRepository.findByCompra_IdOrderByOrdemExibicaoAscIdAsc(compra.getId());
-        boolean participanteCompra = participanteRepository.existsByCompra_IdAndMembroFamilia_Id(compra.getId(), membro.getId());
-        return new ResultadoConsultaCompra(compra, participantes, itens, participanteCompra);
+        var participanteAtual = participantes.stream().filter(p -> p.getMembroFamilia().getId().equals(membro.getId())).findFirst();
+        boolean participanteCompra = participanteAtual.isPresent();
+        var minhaSolicitacao = participanteAtual.flatMap(p -> solicitacaoRepository
+                .findFirstByCompraIdAndSolicitanteIdOrderBySolicitadaEmDescIdDesc(compra.getId(), p.getId())).orElse(null);
+        var pendentes = solicitacaoRepository.findByCompraIdAndEstadoOrderBySolicitadaEmAscIdAsc(compra.getId(), EstadoSolicitacaoPresenca.PENDENTE);
+        return new ResultadoConsultaCompra(compra, participantes, itens, participanteCompra, minhaSolicitacao, pendentes);
     }
 }

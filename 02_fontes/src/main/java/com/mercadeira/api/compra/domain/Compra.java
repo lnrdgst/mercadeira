@@ -65,6 +65,57 @@ public class Compra {
     @JoinColumn(name = "reaberta_por_membro_familia_id")
     private MembroFamilia reabertaPorMembroFamilia;
 
+    @Column(name = "responsavel_operacional_id")
+    private UUID responsavelOperacionalId;
+    @Column(name = "ciclo_operacional", nullable = false)
+    private long cicloOperacional;
+    @Column(name = "ciclo_operacional_ativo", nullable = false)
+    private boolean cicloOperacionalAtivo;
+    @Column(name = "responsabilidade_revisao", nullable = false)
+    private long responsabilidadeRevisao;
+    @Column(name = "responsabilidade_anterior_id")
+    private UUID responsabilidadeAnteriorId;
+    @Column(name = "responsabilidade_alterada_por_id")
+    private UUID responsabilidadeAlteradaPorId;
+    @Column(name = "responsabilidade_alterada_em")
+    private Instant responsabilidadeAlteradaEm;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "responsabilidade_motivo", length = 30)
+    private MotivoResponsabilidade responsabilidadeMotivo;
+
+    public void mudarResponsabilidade(ParticipanteCompra destino, ParticipanteCompra autor,
+            MotivoResponsabilidade motivo, Instant instante) {
+        if (status != StatusCompra.EM_ANDAMENTO || motivo == null || instante == null)
+            throw new IllegalArgumentException("Mudanca de responsabilidade invalida.");
+        for (var participante : new ParticipanteCompra[]{destino, autor}) {
+            if (participante != null && (id == null || !id.equals(participante.getCompra().getId())))
+                throw new IllegalArgumentException("Responsabilidade deve referenciar a mesma compra.");
+        }
+        if (destino != null && (!destino.estaPresente()
+                || destino.getMembroFamilia().getStatus() != com.mercadeira.api.familia.domain.StatusMembroFamilia.ATIVO))
+            throw new IllegalArgumentException("Responsavel deve estar presente e elegivel.");
+        if (destino != null && !cicloOperacionalAtivo) {
+            cicloOperacional++;
+            cicloOperacionalAtivo = true;
+        }
+        if (motivo == MotivoResponsabilidade.SEM_PRESENTES) cicloOperacionalAtivo = false;
+        responsabilidadeAnteriorId = responsavelOperacionalId;
+        responsavelOperacionalId = destino == null ? null : destino.getId();
+        responsabilidadeAlteradaPorId = autor == null ? null : autor.getId();
+        responsabilidadeAlteradaEm = instante.truncatedTo(java.time.temporal.ChronoUnit.MICROS);
+        responsabilidadeMotivo = motivo;
+        responsabilidadeRevisao++;
+    }
+
+    public UUID getResponsavelOperacionalId() { return responsavelOperacionalId; }
+    public long getCicloOperacional() { return cicloOperacional; }
+    public boolean isCicloOperacionalAtivo() { return cicloOperacionalAtivo; }
+    public long getResponsabilidadeRevisao() { return responsabilidadeRevisao; }
+    public UUID getResponsabilidadeAnteriorId() { return responsabilidadeAnteriorId; }
+    public UUID getResponsabilidadeAlteradaPorId() { return responsabilidadeAlteradaPorId; }
+    public Instant getResponsabilidadeAlteradaEm() { return responsabilidadeAlteradaEm; }
+    public MotivoResponsabilidade getResponsabilidadeMotivo() { return responsabilidadeMotivo; }
+
     protected Compra() {
     }
 
@@ -99,6 +150,7 @@ public class Compra {
             throw new FinalizacaoCompraInvalidaException("A compra em andamento possui finalizacao anterior.");
         }
         status = StatusCompra.FINALIZADA;
+        cicloOperacionalAtivo = false;
         finalizadaPorParticipanteCompra = executor;
         finalizadaEm = instante;
         return true;

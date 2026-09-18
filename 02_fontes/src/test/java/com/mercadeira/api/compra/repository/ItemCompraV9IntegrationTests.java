@@ -74,7 +74,7 @@ class ItemCompraV9IntegrationTests {
     void flywayAplicaV9EHibernateValidaSchema() {
         assertThat(jdbcTemplate.queryForList(
                 "select version from flyway_schema_history where success and version is not null order by installed_rank",
-                String.class)).containsExactly("1","2","3","4","5","6","7","8","9","10");
+                String.class)).containsExactly("1","2","3","4","5","6","7","8","9","10","11");
         assertThat(environment.getProperty("spring.jpa.hibernate.ddl-auto")).isEqualTo("validate");
     }
 
@@ -213,7 +213,12 @@ class ItemCompraV9IntegrationTests {
     }
 
     private void copiar(String schema,String tabela,String coluna,UUID id) {
-        jdbcTemplate.update("insert into "+schema+"."+tabela+" select * from public."+tabela+" where "+coluna+"=?",id);
+        String colunas=jdbcTemplate.queryForObject("""
+                select string_agg(quote_ident(column_name), ', ' order by ordinal_position)
+                from information_schema.columns where table_schema=? and table_name=?
+                """,String.class,schema,tabela);
+        jdbcTemplate.update("insert into "+schema+"."+tabela+" ("+colunas+") select "+colunas+
+                " from public."+tabela+" where "+coluna+"=?",id);
     }
 
     private void atualizar(UUID item,UUID autor,Instant restaurado,UUID marcador,Instant marcado,String status,String decisao) {
