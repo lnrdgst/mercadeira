@@ -106,7 +106,7 @@ class FinalizarCompraIntegrationTests {
                 .containsEntry("finalizadaEm",fim.get("finalizadaEm"))
                 .containsEntry("participantes",fim.get("participantes"));
         assertThat(objeto(consultaResponsavel,"contextoUsuario")).containsEntry("podeFinalizarCompra",false)
-                .containsEntry("podeReassumirResponsabilidade",false);
+                .containsEntry("podeSolicitarResponsabilidade",false);
         assertThat(jdbc.queryForObject("select atualizada_em from lista_compra where id=?",java.sql.Timestamp.class,c.listaId())).isEqualTo(instante);
         acoes(getItem(c,c.responsavel()),false,false);
         java.nio.file.Files.writeString(java.nio.file.Path.of("target/compra-3-finalizada.json"),

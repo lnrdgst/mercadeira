@@ -113,9 +113,29 @@ public class CompraController {
     }
 
     @PostMapping("/responsabilidade-operacional/reassumir")
-    public CompraResponse reassumirResponsabilidade(@PathVariable UUID familiaId, @PathVariable UUID listaId,
+    public CompraResponse reassumirResponsabilidadeLegada(@PathVariable UUID familiaId, @PathVariable UUID listaId,
             @Valid @RequestBody ReassumirResponsabilidadeRequest request) {
-        fluxoPresenca.reassumir(usuario.getId(), familiaId, listaId, request.revisao(), request.confirmado());
+        fluxoPresenca.rejeitarReassuncaoLegada(usuario.getId(), familiaId, listaId);
+        return CompraResponse.from(consultarCompra.consultar(usuario.getId(), familiaId, listaId), usuario.getId());
+    }
+
+    @PostMapping("/responsabilidade-operacional/solicitacoes")
+    public CompraResponse solicitarResponsabilidade(@PathVariable UUID familiaId, @PathVariable UUID listaId) {
+        fluxoPresenca.solicitarResponsabilidade(usuario.getId(), familiaId, listaId);
+        return CompraResponse.from(consultarCompra.consultar(usuario.getId(), familiaId, listaId), usuario.getId());
+    }
+
+    @PostMapping("/responsabilidade-operacional/solicitacoes/{solicitacaoId}/cancelar")
+    public CompraResponse cancelarSolicitacaoResponsabilidade(@PathVariable UUID familiaId, @PathVariable UUID listaId,
+            @PathVariable UUID solicitacaoId) {
+        fluxoPresenca.cancelarSolicitacaoResponsabilidade(usuario.getId(), familiaId, listaId, solicitacaoId);
+        return CompraResponse.from(consultarCompra.consultar(usuario.getId(), familiaId, listaId), usuario.getId());
+    }
+
+    @PostMapping("/solicitacoes-responsabilidade/{solicitacaoId}/{decisao:aprovar|rejeitar}")
+    public CompraResponse decidirSolicitacaoResponsabilidade(@PathVariable UUID familiaId, @PathVariable UUID listaId,
+            @PathVariable UUID solicitacaoId, @PathVariable String decisao) {
+        fluxoPresenca.decidirResponsabilidade(usuario.getId(), familiaId, listaId, solicitacaoId, "aprovar".equals(decisao));
         return CompraResponse.from(consultarCompra.consultar(usuario.getId(), familiaId, listaId), usuario.getId());
     }
 

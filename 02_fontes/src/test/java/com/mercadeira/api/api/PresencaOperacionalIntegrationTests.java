@@ -167,11 +167,13 @@ class PresencaOperacionalIntegrationTests {
         mvc.perform(put(c.url().replace(c.lista().toString(),UUID.randomUUID().toString())+"/minha-presenca")
             .with(jwt().jwt(j -> j.subject(c.ana().toString()))).contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isNotFound());
         declarar(c,c.ana(),"NAO_PRESENTE"); var antes=registro(c,c.ana());
+        mvc.perform(post(c.url()+"/finalizar").with(jwt().jwt(j -> j.subject(c.ana().toString())))).andExpect(status().isConflict());
+        declarar(c,c.ana(),"PRESENTE"); var antesFinalizacao=registro(c,c.ana());
         mvc.perform(post(c.url()+"/finalizar").with(jwt().jwt(j -> j.subject(c.ana().toString())))).andExpect(status().isOk())
             .andExpect(jsonPath("$.contextoUsuario.podeAlterarPresenca").value(false));
         mvc.perform(put(c.url()+"/minha-presenca").with(jwt().jwt(j -> j.subject(c.ana().toString()))).contentType(MediaType.APPLICATION_JSON)
             .content("{\"estado\":\"NAO_PRESENTE\"}")).andExpect(status().isConflict());
-        assertThat(registro(c,c.ana())).isEqualTo(antes);
+        assertThat(registro(c,c.ana())).isEqualTo(antesFinalizacao);
     }
 
     @Test void carrinhoRestauracaoReplaysERemocaoRemotaMantemAuditoria() throws Exception {
@@ -209,8 +211,10 @@ class PresencaOperacionalIntegrationTests {
         postItem(c,c.ana(),"colocar-no-carrinho",409);
         mvc.perform(post(c.url()+"/itens").with(jwt().jwt(j -> j.subject(c.bia().toString()))).contentType(MediaType.APPLICATION_JSON).content("{\"descricao\":\"Leite\"}"))
             .andExpect(status().isCreated());
+        mvc.perform(post(c.url()+"/finalizar").with(jwt().jwt(j -> j.subject(c.bia().toString())))).andExpect(status().isConflict());
+        mvc.perform(post(c.url()+"/minha-presenca/solicitacoes").with(jwt().jwt(j -> j.subject(c.bia().toString())))).andExpect(status().isOk());
         mvc.perform(post(c.url()+"/finalizar").with(jwt().jwt(j -> j.subject(c.bia().toString())))).andExpect(status().isOk());
-        assertThat(registro(c,c.bia())).containsEntry("presenca_operacional","NAO_INFORMADA").containsEntry("presenca_alterada_em",null);
+        assertThat(registro(c,c.bia())).containsEntry("presenca_operacional","PRESENTE");
         var nova=json(mvc.perform(post(c.url().replace("/compra","/reutilizar")).with(jwt().jwt(j -> j.subject(c.bia().toString())))).andExpect(status().isCreated()).andReturn());
         var novaLista=UUID.fromString(nova.get("id").toString());
         assertThat(jdbc.queryForObject("select count(*) from compra where lista_compra_id=?",Integer.class,novaLista)).isZero();
@@ -253,10 +257,16 @@ class PresencaOperacionalIntegrationTests {
         var id = UUID.fromString(((Map<?,?>) pedido.get("minhaSolicitacaoPresenca")).get("id").toString());
         mvc.perform(post(c.url()+"/solicitacoes-presenca/"+id+"/aprovar")
                 .with(jwt().jwt(j -> j.subject(c.ana().toString())))).andExpect(status().isOk());
-        mvc.perform(post(c.url()+"/responsabilidade-operacional/reassumir")
-                .with(jwt().jwt(j -> j.subject(c.bia().toString()))).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"revisao\":1,\"confirmado\":true}"))
-                .andExpect(status().isOk());
+        var transferencia=json(mvc.perform(post(c.url()+"/responsabilidade-operacional/solicitacoes")
+                .with(jwt().jwt(j -> j.subject(c.bia().toString())))).andExpect(status().isOk()).andReturn());
+        UUID transferenciaId=UUID.fromString(((Map<?,?>)transferencia.get("minhaSolicitacaoResponsabilidade")).get("id").toString());
+        jdbc.update("update membro_familia set papel='ADMINISTRADOR' where familia_id=? and usuario_id=?", c.familia(), c.bia());
+        mvc.perform(post(c.url()+"/responsabilidade-operacional/reassumir").with(jwt().jwt(j -> j.subject(c.bia().toString())))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"revisao\":1,\"confirmado\":true}")).andExpect(status().isConflict());
+        mvc.perform(post(c.url()+"/solicitacoes-responsabilidade/"+transferenciaId+"/aprovar")
+                .with(jwt().jwt(j -> j.subject(c.bia().toString())))).andExpect(status().isForbidden());
+        mvc.perform(post(c.url()+"/solicitacoes-responsabilidade/"+transferenciaId+"/aprovar")
+                .with(jwt().jwt(j -> j.subject(c.ana().toString())))).andExpect(status().isOk());
         assertThat(jdbc.queryForObject("select responsabilidade_revisao from compra where id=?", Long.class,c.compra())).isEqualTo(2L);
         declarar(c,c.bia(),"NAO_PRESENTE");
         var pendente = json(mvc.perform(post(c.url()+"/minha-presenca/solicitacoes")
@@ -265,6 +275,31 @@ class PresencaOperacionalIntegrationTests {
         mvc.perform(post(c.url()+"/finalizar").with(jwt().jwt(j -> j.subject(c.ana().toString())))).andExpect(status().isOk());
         assertThat(jdbc.queryForMap("select estado,motivo_cancelamento from solicitacao_presenca_compra where id=?",pendenteId))
                 .containsEntry("estado", "CANCELADA").containsEntry("motivo_cancelamento", "COMPRA_FINALIZADA");
+    }
+
+    @Test void rejeicaoDePresencaEncerraOCicloECancelamentoPermiteNovaSolicitacao() throws Exception {
+        var c = contexto(true);
+        var rejeitada = json(mvc.perform(post(c.url()+"/minha-presenca/solicitacoes")
+                .with(jwt().jwt(j -> j.subject(c.bia().toString())))).andExpect(status().isOk()).andReturn());
+        var rejeitadaId = UUID.fromString(((Map<?,?>) rejeitada.get("minhaSolicitacaoPresenca")).get("id").toString());
+        mvc.perform(post(c.url()+"/solicitacoes-presenca/"+rejeitadaId+"/rejeitar")
+                .with(jwt().jwt(j -> j.subject(c.ana().toString())))).andExpect(status().isOk());
+        mvc.perform(post(c.url()+"/minha-presenca/solicitacoes")
+                .with(jwt().jwt(j -> j.subject(c.bia().toString())))).andExpect(status().isConflict());
+        declarar(c, c.ana(), "NAO_PRESENTE");
+        mvc.perform(post(c.url()+"/minha-presenca/solicitacoes")
+                .with(jwt().jwt(j -> j.subject(c.bia().toString())))).andExpect(status().isOk());
+        assertThat(registro(c,c.bia())).containsEntry("presenca_operacional", "PRESENTE");
+
+        var cancelavel = contexto(true);
+        var pendente = json(mvc.perform(post(cancelavel.url()+"/minha-presenca/solicitacoes")
+                .with(jwt().jwt(j -> j.subject(cancelavel.bia().toString())))).andExpect(status().isOk()).andReturn());
+        var pendenteId = UUID.fromString(((Map<?,?>) pendente.get("minhaSolicitacaoPresenca")).get("id").toString());
+        mvc.perform(post(cancelavel.url()+"/minha-presenca/solicitacoes/"+pendenteId+"/cancelar")
+                .with(jwt().jwt(j -> j.subject(cancelavel.bia().toString())))).andExpect(status().isOk());
+        var nova = json(mvc.perform(post(cancelavel.url()+"/minha-presenca/solicitacoes")
+                .with(jwt().jwt(j -> j.subject(cancelavel.bia().toString())))).andExpect(status().isOk()).andReturn());
+        assertThat(((Map<?,?>) nova.get("minhaSolicitacaoPresenca")).get("id")).isNotEqualTo(pendenteId.toString());
     }
 
     @Test void duasEntradasNoZeroPresentesGeramUmResponsavelEUmaSolicitacao() throws Exception {
@@ -288,7 +323,7 @@ class PresencaOperacionalIntegrationTests {
             case "PRESENTE", "NAO_PRESENTE" -> presenca.executar(c.ana(),c.familia(),c.lista(),PresencaOperacional.valueOf(operacao));
             case "COLOCAR" -> colocar.executar(c.ana(),c.familia(),c.lista(),c.item());
             case "RESTAURAR" -> restaurar.executar(c.ana(),c.familia(),c.lista(),c.item());
-            case "FINALIZAR" -> finalizar.executar(c.ana(),c.familia(),c.lista());
+            case "FINALIZAR" -> { presenca.executar(c.ana(),c.familia(),c.lista(),PresencaOperacional.PRESENTE); finalizar.executar(c.ana(),c.familia(),c.lista()); }
             default -> throw new IllegalArgumentException(operacao);
         }
     }

@@ -6,6 +6,7 @@ import com.mercadeira.api.compra.domain.Compra;
 import com.mercadeira.api.compra.domain.ItemCompra;
 import com.mercadeira.api.compra.domain.ParticipanteCompra;
 import com.mercadeira.api.compra.domain.SolicitacaoPresencaCompra;
+import com.mercadeira.api.compra.domain.SolicitacaoResponsabilidadeOperacional;
 
 public record ResultadoConsultaCompra(
         Compra compra,
@@ -13,5 +14,7 @@ public record ResultadoConsultaCompra(
         List<ItemCompra> itens,
         boolean participanteCompra,
         SolicitacaoPresencaCompra minhaSolicitacao,
-        List<SolicitacaoPresencaCompra> solicitacoesPendentes) {
+        List<SolicitacaoPresencaCompra> solicitacoesPendentes,
+        SolicitacaoResponsabilidadeOperacional minhaSolicitacaoResponsabilidade,
+        List<SolicitacaoResponsabilidadeOperacional> solicitacoesResponsabilidadePendentes) {
 }

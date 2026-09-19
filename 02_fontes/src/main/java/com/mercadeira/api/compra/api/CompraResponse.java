@@ -12,6 +12,7 @@ import com.mercadeira.api.compra.domain.StatusCompra;
 import com.mercadeira.api.familia.domain.PapelMembroFamilia;
 import com.mercadeira.api.compra.domain.EstadoSolicitacaoPresenca;
 import com.mercadeira.api.compra.domain.MotivoCancelamentoPresenca;
+import com.mercadeira.api.compra.domain.EstadoSolicitacaoResponsabilidade;
 
 public record CompraResponse(
         UUID id,
@@ -26,6 +27,8 @@ public record CompraResponse(
         ResponsabilidadeOperacionalResponse responsabilidadeOperacional,
         SolicitacaoPresencaResponse minhaSolicitacaoPresenca,
         List<SolicitacaoPresencaResponse> solicitacoesPresencaPendentes,
+        SolicitacaoResponsabilidadeResponse minhaSolicitacaoResponsabilidade,
+        List<SolicitacaoResponsabilidadeResponse> solicitacoesResponsabilidadePendentes,
         List<ParticipanteCompraResponse> participantes,
         List<ItemCompraResponse> itens,
         ContextoUsuarioCompraResponse contextoUsuario) {
@@ -43,19 +46,31 @@ public record CompraResponse(
                         .filter(p -> p.getId().equals(compra.getFinalizadaPorParticipanteCompra().getId()))
                         .findFirst().map(ParticipanteCompraReferenciaResponse::from)
                         .orElseThrow(CompraListaInconsistenteException::new);
-        boolean podeFinalizar = resultado.participanteCompra()
+        boolean emAndamento = compra.getStatus() == StatusCompra.EM_ANDAMENTO;
+        boolean podeFinalizar = resultado.participanteCompra() && participanteAtual != null && participanteAtual.estaPresente()
                 && compra.getStatus() == StatusCompra.EM_ANDAMENTO
                 && compra.getListaCompra().getStatus() == StatusListaCompra.EM_COMPRA
                 && !resultado.itens().isEmpty()
                 && resultado.itens().stream().noneMatch(item -> item.getStatus() == StatusItemCompra.REMOCAO_SOLICITADA);
-        boolean emAndamento = compra.getStatus() == StatusCompra.EM_ANDAMENTO;
-        boolean podeSolicitarPresenca = participanteAtual != null && emAndamento && !participanteAtual.estaPresente();
+        boolean precisaEstarPresenteParaFinalizar = resultado.participanteCompra() && emAndamento
+                && participanteAtual != null && !participanteAtual.estaPresente()
+                && compra.getListaCompra().getStatus() == StatusListaCompra.EM_COMPRA
+                && !resultado.itens().isEmpty()
+                && resultado.itens().stream().noneMatch(item -> item.getStatus() == StatusItemCompra.REMOCAO_SOLICITADA);
+        boolean rejeitadaNoCiclo = resultado.minhaSolicitacao() != null
+                && resultado.minhaSolicitacao().getEstado() == EstadoSolicitacaoPresenca.REJEITADA
+                && resultado.minhaSolicitacao().getCicloOperacional() == compra.getCicloOperacional();
+        boolean podeSolicitarPresenca = participanteAtual != null && emAndamento && !participanteAtual.estaPresente() && !rejeitadaNoCiclo;
         boolean podeDeclararSaida = participanteAtual != null && emAndamento && participanteAtual.estaPresente();
         boolean podeCancelar = resultado.minhaSolicitacao() != null
                 && resultado.minhaSolicitacao().getEstado() == EstadoSolicitacaoPresenca.PENDENTE;
-        boolean podeReassumir = emAndamento && participanteAtual != null && participanteAtual.estaPresente()
+        boolean podeSolicitarResponsabilidade = emAndamento && participanteAtual != null && participanteAtual.estaPresente()
                 && responsavel != null && responsavel.estaPresente()
-                && !participanteAtual.getId().equals(responsavel.getId());
+                && !participanteAtual.getId().equals(responsavel.getId())
+                && (resultado.minhaSolicitacaoResponsabilidade() == null
+                    || resultado.minhaSolicitacaoResponsabilidade().getEstado() != EstadoSolicitacaoResponsabilidade.PENDENTE);
+        boolean podeCancelarResponsabilidade = resultado.minhaSolicitacaoResponsabilidade() != null
+                && resultado.minhaSolicitacaoResponsabilidade().getEstado() == EstadoSolicitacaoResponsabilidade.PENDENTE;
         var responsabilidade = new ResponsabilidadeOperacionalResponse(
                 responsavel == null ? null : ParticipanteCompraReferenciaResponse.from(responsavel),
                 compra.getCicloOperacional(), compra.isCicloOperacionalAtivo(), compra.getResponsabilidadeRevisao(),
@@ -76,6 +91,10 @@ public record CompraResponse(
                 responsavel != null && participanteAtual != null && responsavel.getId().equals(participanteAtual.getId())
                         ? resultado.solicitacoesPendentes().stream().map(s -> SolicitacaoPresencaResponse.from(s, true)).toList()
                         : List.of(),
+                SolicitacaoResponsabilidadeResponse.from(resultado.minhaSolicitacaoResponsabilidade(), false),
+                responsavel != null && participanteAtual != null && responsavel.getId().equals(participanteAtual.getId())
+                        ? resultado.solicitacoesResponsabilidadePendentes().stream().map(s -> SolicitacaoResponsabilidadeResponse.from(s, true)).toList()
+                        : List.of(),
                 resultado.participantes().stream().map(participante -> new ParticipanteCompraResponse(
                         participante.getId(),
                         participante.getMembroFamilia().getId(),
@@ -89,7 +108,8 @@ public record CompraResponse(
                         .toList(),
                 new ContextoUsuarioCompraResponse(resultado.participanteCompra(), podeDeclararSaida, podeFinalizar,
                         compra.getStatus() == StatusCompra.FINALIZADA && compra.getListaCompra().getStatus() == StatusListaCompra.FINALIZADA && compra.getListaCompra().getFamilia().getStatus() == com.mercadeira.api.familia.domain.StatusFamilia.ATIVA && resultado.itens().stream().noneMatch(item -> item.getStatus() == StatusItemCompra.REMOCAO_SOLICITADA),
-                        podeSolicitarPresenca, podeCancelar, podeDeclararSaida, podeReassumir));
+                        podeSolicitarPresenca, podeCancelar, podeDeclararSaida, podeSolicitarResponsabilidade,
+                        podeCancelarResponsabilidade, precisaEstarPresenteParaFinalizar));
     }
 
     public record ParticipanteCompraResponse(
@@ -125,9 +145,25 @@ public record CompraResponse(
     }
     public record AcoesSolicitacaoPresencaResponse(boolean podeDecidirPresenca) {}
 
+    public record SolicitacaoResponsabilidadeResponse(UUID id, UUID solicitanteParticipanteCompraId,
+            UUID responsavelAtualParticipanteCompraId, long ciclo, long revisao, Instant solicitadaEm,
+            EstadoSolicitacaoResponsabilidade estado, UUID encerradaPorParticipanteCompraId, Instant encerradaEm,
+            AcoesSolicitacaoResponsabilidadeResponse acoes) {
+        static SolicitacaoResponsabilidadeResponse from(com.mercadeira.api.compra.domain.SolicitacaoResponsabilidadeOperacional solicitacao,
+                boolean podeDecidir) {
+            if (solicitacao == null) return null;
+            return new SolicitacaoResponsabilidadeResponse(solicitacao.getId(), solicitacao.getSolicitanteId(),
+                    solicitacao.getResponsavelAtualId(), solicitacao.getCicloOperacional(), solicitacao.getResponsabilidadeRevisao(),
+                    solicitacao.getSolicitadaEm(), solicitacao.getEstado(), solicitacao.getEncerradaPorId(), solicitacao.getEncerradaEm(),
+                    new AcoesSolicitacaoResponsabilidadeResponse(podeDecidir && solicitacao.getEstado() == EstadoSolicitacaoResponsabilidade.PENDENTE));
+        }
+    }
+    public record AcoesSolicitacaoResponsabilidadeResponse(boolean podeDecidirResponsabilidade) {}
+
     public record ContextoUsuarioCompraResponse(boolean participanteCompra, boolean podeAlterarPresenca,
             boolean podeFinalizarCompra, boolean podeReutilizarLista, boolean podeSolicitarPresenca,
             boolean podeCancelarSolicitacaoPresenca, boolean podeDeclararSaida,
-            boolean podeReassumirResponsabilidade) {
+            boolean podeSolicitarResponsabilidade, boolean podeCancelarSolicitacaoResponsabilidade,
+            boolean precisaEstarPresenteParaFinalizar) {
     }
 }

@@ -8,15 +8,18 @@ import java.util.UUID;
 
 import com.mercadeira.api.compra.domain.Compra;
 import com.mercadeira.api.compra.domain.EstadoSolicitacaoPresenca;
+import com.mercadeira.api.compra.domain.EstadoSolicitacaoResponsabilidade;
 import com.mercadeira.api.compra.domain.MotivoCancelamentoPresenca;
 import com.mercadeira.api.compra.domain.MotivoResponsabilidade;
 import com.mercadeira.api.compra.domain.ParticipanteCompra;
 import com.mercadeira.api.compra.domain.PresencaOperacional;
 import com.mercadeira.api.compra.domain.SolicitacaoPresencaCompra;
+import com.mercadeira.api.compra.domain.SolicitacaoResponsabilidadeOperacional;
 import com.mercadeira.api.compra.domain.StatusCompra;
 import com.mercadeira.api.compra.repository.CompraRepository;
 import com.mercadeira.api.compra.repository.ParticipanteCompraRepository;
 import com.mercadeira.api.compra.repository.SolicitacaoPresencaCompraRepository;
+import com.mercadeira.api.compra.repository.SolicitacaoResponsabilidadeOperacionalRepository;
 import com.mercadeira.api.familia.domain.MembroFamilia;
 import com.mercadeira.api.familia.domain.StatusMembroFamilia;
 import com.mercadeira.api.familia.repository.MembroFamiliaRepository;
@@ -33,16 +36,19 @@ public class FluxoPresencaCompra {
     private final MembroFamiliaRepository membros;
     private final ParticipanteCompraRepository participantes;
     private final SolicitacaoPresencaCompraRepository solicitacoes;
+    private final SolicitacaoResponsabilidadeOperacionalRepository solicitacoesResponsabilidade;
     private final Clock clock;
 
     public FluxoPresencaCompra(ListaCompraRepository listas, CompraRepository compras,
             MembroFamiliaRepository membros, ParticipanteCompraRepository participantes,
-            SolicitacaoPresencaCompraRepository solicitacoes, Clock clock) {
+            SolicitacaoPresencaCompraRepository solicitacoes,
+            SolicitacaoResponsabilidadeOperacionalRepository solicitacoesResponsabilidade, Clock clock) {
         this.listas = listas;
         this.compras = compras;
         this.membros = membros;
         this.participantes = participantes;
         this.solicitacoes = solicitacoes;
+        this.solicitacoesResponsabilidade = solicitacoesResponsabilidade;
         this.clock = clock;
     }
 
@@ -62,6 +68,8 @@ public class FluxoPresencaCompra {
         var responsavel = responsavelAtual(compra, participantesDaCompra(compra));
         if (responsavel == null || !elegivel(responsavel))
             throw new ConflitoPresencaException("A compra possui presenca sem responsavel operacional elegivel.");
+        if (solicitacoes.findByCompraIdAndSolicitanteIdAndCicloOperacionalAndEstado(compra.getId(), solicitante.getId(), compra.getCicloOperacional(), EstadoSolicitacaoPresenca.REJEITADA).isPresent())
+            throw new ConflitoPresencaException("A solicitacao de presenca foi rejeitada neste ciclo operacional.");
         if (solicitacoes.findByCompraIdAndSolicitanteIdAndEstado(compra.getId(), solicitante.getId(), EstadoSolicitacaoPresenca.PENDENTE).isEmpty())
             solicitacoes.save(SolicitacaoPresencaCompra.criar(compra, solicitante, agora));
     }
@@ -125,30 +133,72 @@ public class FluxoPresencaCompra {
         }
         compra.mudarResponsabilidade(null, participante, MotivoResponsabilidade.SEM_PRESENTES, agora);
         cancelarPendentes(compra, MotivoCancelamentoPresenca.SEM_PRESENTES, agora);
+        cancelarPendentesResponsabilidade(compra, agora);
     }
 
     @Transactional
-    public void reassumir(UUID usuarioId, UUID familiaId, UUID listaId, long revisao, boolean confirmado) {
-        if (!confirmado) throw new IllegalArgumentException("A reassuncao exige confirmacao explicita.");
+    public void solicitarResponsabilidade(UUID usuarioId, UUID familiaId, UUID listaId) {
         var contexto = carregar(usuarioId, familiaId, listaId);
         var compra = contexto.compra();
         var candidato = contexto.participante();
-        if (revisao != compra.getResponsabilidadeRevisao())
-            throw new ConflitoPresencaException("A responsabilidade operacional mudou. Atualize a compra.");
         var atual = responsavelAtual(compra, participantesDaCompra(compra));
         if (atual == null || !elegivel(atual) || !elegivel(candidato) || candidato.getId().equals(atual.getId()))
             throw new AutoridadePresencaException();
-        compra.mudarResponsabilidade(candidato, candidato, MotivoResponsabilidade.REASSUNCAO, agora());
+        if (solicitacoesResponsabilidade.findByCompraIdAndSolicitanteIdAndEstado(compra.getId(), candidato.getId(), EstadoSolicitacaoResponsabilidade.PENDENTE).isEmpty())
+            solicitacoesResponsabilidade.save(SolicitacaoResponsabilidadeOperacional.criar(compra, candidato, atual, agora()));
+    }
+
+    @Transactional
+    public void cancelarSolicitacaoResponsabilidade(UUID usuarioId, UUID familiaId, UUID listaId, UUID solicitacaoId) {
+        var contexto = carregar(usuarioId, familiaId, listaId);
+        var pedido = pedidoResponsabilidade(solicitacaoId, contexto.compra());
+        if (!pedido.getSolicitanteId().equals(contexto.participante().getId())) throw new AutoridadePresencaException();
+        pedido.encerrar(EstadoSolicitacaoResponsabilidade.CANCELADA, contexto.participante().getId(), agora());
+    }
+
+    @Transactional
+    public void decidirResponsabilidade(UUID usuarioId, UUID familiaId, UUID listaId, UUID solicitacaoId, boolean aprovar) {
+        var contexto = carregar(usuarioId, familiaId, listaId);
+        var compra = contexto.compra(); var decisor = contexto.participante();
+        var pedido = pedidoResponsabilidade(solicitacaoId, compra);
+        if (!decisor.getId().equals(compra.getResponsavelOperacionalId()) || !elegivel(decisor)
+                || !decisor.getId().equals(pedido.getResponsavelAtualId())) throw new AutoridadePresencaException();
+        var destino = aprovar ? EstadoSolicitacaoResponsabilidade.APROVADA : EstadoSolicitacaoResponsabilidade.REJEITADA;
+        if (pedido.getEstado() != EstadoSolicitacaoResponsabilidade.PENDENTE) {
+            if (pedido.getEstado() == destino) return;
+            throw new ConflitoPresencaException("A solicitacao de responsabilidade ja foi encerrada. Atualize a compra.");
+        }
+        if (pedido.getCicloOperacional() != compra.getCicloOperacional() || pedido.getResponsabilidadeRevisao() != compra.getResponsabilidadeRevisao())
+            throw new ConflitoPresencaException("A responsabilidade operacional mudou. Atualize a compra.");
+        var destinoParticipante = participantesDaCompra(compra).stream().filter(p -> p.getId().equals(pedido.getSolicitanteId())).findFirst()
+                .orElseThrow(CompraListaInconsistenteException::new);
+        if (!elegivel(destinoParticipante)) throw new ConflitoPresencaException("O solicitante nao esta elegivel para assumir responsabilidade.");
+        var instante = agora();
+        pedido.encerrar(destino, decisor.getId(), instante);
+        if (aprovar) compra.mudarResponsabilidade(destinoParticipante, decisor, MotivoResponsabilidade.REASSUNCAO, instante);
+    }
+
+    @Transactional
+    public void rejeitarReassuncaoLegada(UUID usuarioId, UUID familiaId, UUID listaId) {
+        carregar(usuarioId, familiaId, listaId);
+        throw new ConflitoPresencaException("Use o fluxo de solicitacao de responsabilidade operacional.");
     }
 
     @Transactional
     public void cancelarPendentesAoFinalizar(Compra compra, Instant instante) {
         cancelarPendentes(compra, MotivoCancelamentoPresenca.COMPRA_FINALIZADA, instante);
+        cancelarPendentesResponsabilidade(compra, instante);
     }
 
     private void cancelarPendentes(Compra compra, MotivoCancelamentoPresenca motivo, Instant instante) {
         for (var pedido : solicitacoes.findByCompraIdAndEstadoOrderBySolicitadaEmAscIdAsc(compra.getId(), EstadoSolicitacaoPresenca.PENDENTE))
             pedido.encerrar(EstadoSolicitacaoPresenca.CANCELADA, null, motivo, instante);
+    }
+
+    private void cancelarPendentesResponsabilidade(Compra compra, Instant instante) {
+        for (var pedido : solicitacoesResponsabilidade.findByCompraIdAndEstadoOrderBySolicitadaEmAscIdAsc(
+                compra.getId(), EstadoSolicitacaoResponsabilidade.PENDENTE))
+            pedido.encerrar(EstadoSolicitacaoResponsabilidade.CANCELADA, null, instante);
     }
 
     private Contexto carregar(UUID usuarioId, UUID familiaId, UUID listaId) {
@@ -173,6 +223,9 @@ public class FluxoPresencaCompra {
     }
     private SolicitacaoPresencaCompra pedidoDaCompra(UUID id, Compra compra) {
         return solicitacoes.findByIdAndCompraId(id, compra.getId()).orElseThrow(CompraListaInconsistenteException::new);
+    }
+    private SolicitacaoResponsabilidadeOperacional pedidoResponsabilidade(UUID id, Compra compra) {
+        return solicitacoesResponsabilidade.findByIdAndCompraId(id, compra.getId()).orElseThrow(CompraListaInconsistenteException::new);
     }
     private boolean elegivel(ParticipanteCompra participante) {
         return participante.estaPresente() && participante.getMembroFamilia().getStatus() == StatusMembroFamilia.ATIVO;

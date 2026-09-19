@@ -6,6 +6,7 @@ import java.util.UUID;
 import com.mercadeira.api.compra.domain.FinalizacaoCompraInvalidaException;
 import com.mercadeira.api.compra.domain.StatusCompra;
 import com.mercadeira.api.compra.domain.StatusItemCompra;
+import com.mercadeira.api.compra.domain.PresencaOperacional;
 import com.mercadeira.api.compra.repository.CompraRepository;
 import com.mercadeira.api.compra.repository.ItemCompraRepository;
 import com.mercadeira.api.compra.repository.ParticipanteCompraRepository;
@@ -63,6 +64,9 @@ public class FinalizarCompra {
                 && lista.getStatus() == StatusListaCompra.EM_COMPRA;
         if (!encerradas && !emAndamento) {
             throw new CompraListaInconsistenteException();
+        }
+        if (emAndamento && participante.getPresencaOperacional() != PresencaOperacional.PRESENTE) {
+            throw new FinalizacaoCompraInvalidaException("Este participante precisa estar presente no mercado para finalizar a compra.");
         }
         var itensCompra = itens.findByCompra_IdOrderByOrdemExibicaoAscIdAsc(compra.getId());
         if (itensCompra.isEmpty()) {

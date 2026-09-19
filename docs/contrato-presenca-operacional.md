@@ -21,23 +21,32 @@ silenciosamente. A saída do responsável escolhe de forma atômica o PRESENTE e
 mais antigo (`presencaAlteradaEm`, depois ID). Sem sucessor, o ciclo é encerrado e
 os pedidos pendentes são cancelados com `SEM_PRESENTES`.
 
-Outro participante PRESENTE pode assumir de modo explícito por
-`POST /responsabilidade-operacional/reassumir`, com `{ "revisao": n,
-"confirmado": true }`. A revisão impede duas abas com visões antigas. Não há
-tomada por polling, offline, heartbeat, administrador familiar ou participante remoto.
-Se o único responsável desaparecer sem declarar saída, esta limitação permanece no
-MVP.
+Na V12, outro participante `PRESENTE` solicita a transferência por
+`POST /responsabilidade-operacional/solicitacoes`. O responsável atual decide em
+`POST /solicitacoes-responsabilidade/{id}/aprovar` ou `/rejeitar`, e o solicitante
+pode cancelar por `POST /responsabilidade-operacional/solicitacoes/{id}/cancelar`.
+A solicitação registra ciclo e revisão da responsabilidade, portanto uma decisão
+atrasada não pode alterar um ciclo ou responsável diferente. O endpoint legado de
+reassunção direta recebe 409; não há tomada por polling, offline, heartbeat,
+administrador familiar ou participante remoto. Se o único responsável desaparecer
+sem declarar saída, esta limitação permanece no MVP.
 
 GET e respostas de comando carregam `responsabilidadeOperacional`, a solicitação
 própria/última decisão, pendências visíveis ao responsável e capabilities explícitas:
 `podeSolicitarPresenca`, `podeCancelarSolicitacaoPresenca`, `podeDeclararSaida`,
-`podeReassumirResponsabilidade` e `pedido.acoes.podeDecidirPresenca`. Eles são um
+`podeSolicitarResponsabilidade`, `podeCancelarSolicitacaoResponsabilidade`,
+`precisaEstarPresenteParaFinalizar`, `pedido.acoes.podeDecidirPresenca` e
+`pedidoResponsabilidade.acoes.podeDecidirResponsabilidade`. Eles são um
 snapshot para F5, polling e reconexão; GET nunca atribui autoridade.
 
 A V11 preserva presenças V10. Para Compra em andamento, prioriza o iniciador ainda
 PRESENTE e elegível; caso contrário, escolhe o PRESENTE elegível mais antigo. Compra
 finalizada não recebe responsável histórico inventado. A finalização cancela pedidos
 PENDENTES com `COMPRA_FINALIZADA`, sem bloquear a regra existente de finalizar.
+
+A V12 acrescenta a entidade distinta `SolicitacaoResponsabilidadeOperacional`, com
+estados `PENDENTE`, `APROVADA`, `REJEITADA` e `CANCELADA`. Ela guarda solicitante,
+responsável atual, ciclo e revisão, sem contaminar o enum físico de presença.
 
 Backend da Issue #13. Frontend e validação integrada serão entregues separadamente.
 
@@ -59,7 +68,7 @@ O primeiro início efetivo marca apenas o iniciador como PRESENTE, na mesma tran
 
 Replay nunca inicializa nem reescreve presença. Dois inícios concorrentes marcam somente o executor da criação efetiva. Alterações posteriores do iniciador permanecem preservadas.
 
-Registros anteriores à V10 ficam NAO_INFORMADA com timestamp nulo, inclusive finalizados. Não se deduz presença por autoria ou iniciador. Em Compra antiga em andamento, cada participante precisa declarar presença antes de colocar/restaurar. Inclusão de pendente, remoção e finalização mantêm a autorização anterior.
+Registros anteriores à V10 ficam NAO_INFORMADA com timestamp nulo, inclusive finalizados. Não se deduz presença por autoria ou iniciador. Em Compra antiga em andamento, cada participante precisa declarar presença antes de colocar/restaurar ou finalizar. Inclusão de pendente e remoção mantêm a autorização anterior.
 
 Reutilização não copia presença. Uma nova Compra inicializa seu próprio iniciador.
 
@@ -109,6 +118,8 @@ Cada participante inclui:
 Novas capabilities:
 
 - contextoUsuario.podeAlterarPresenca/podeDeclararSaida: participante PRESENTE autorizado em Compra EM_ANDAMENTO.
+- contextoUsuario.podeFinalizarCompra: participante ativo, PRESENTE, com as demais pré-condições já existentes. Ser responsável operacional não é requisito.
+- contextoUsuario.precisaEstarPresenteParaFinalizar: explica somente o bloqueio por ausência; o frontend não deve deduzir essa causa localmente.
 - item.acoes.podeColocarNoCarrinho: participante autorizado, PRESENTE, Compra EM_ANDAMENTO e item PENDENTE.
 
 item.acoes.podeRestaurarNoCarrinho incorpora PRESENTE às condições anteriores. As capabilities representam ações disponíveis agora; não são autorização persistente nem promessa de sucesso de um comando concorrente.
@@ -127,7 +138,7 @@ Replays autorizados preservam autoria/timestamps originais. Depois de declarar s
 - Solicitar/aprovar/rejeitar remoção, autoaprovação, replay e responsável permanecem inalterados.
 - Declaração de saída não muda auditorias de itens; quando sair o responsável,
   aplica a sucessão operacional da V11.
-- Finalização independe de presença: zero presentes e finalizador não presente são permitidos nas condições anteriores.
+- Finalização exige que o executor ativo seja participante da Compra e esteja PRESENTE; revisão continua disponível quando essa capability for falsa. A responsabilidade operacional não concede poder adicional de finalização.
 - Ao finalizar, as últimas declarações ficam congeladas; não se marca ausência automaticamente.
 
 Limitação aceita: responsável remoto pode solicitar e autoaprovar remoção. Isso não comprova retirada física e não será resolvido neste marco.
