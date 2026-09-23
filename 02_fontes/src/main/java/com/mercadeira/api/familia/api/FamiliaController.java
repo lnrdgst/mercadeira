@@ -4,6 +4,8 @@ import java.util.List;
 import java.util.UUID;
 
 import com.mercadeira.api.autenticacao.security.UsuarioAutenticado;
+import com.mercadeira.api.compra.domain.StatusCompra;
+import com.mercadeira.api.compra.repository.ParticipanteCompraRepository;
 import com.mercadeira.api.familia.application.AprovarSolicitacaoEntradaFamilia;
 import com.mercadeira.api.familia.application.ConsultarMinhasSolicitacoesPendentes;
 import com.mercadeira.api.familia.application.CriarFamilia;
@@ -11,6 +13,7 @@ import com.mercadeira.api.familia.application.ListarFamiliasAtivasUsuario;
 import com.mercadeira.api.familia.application.ListarSolicitacoesPendentes;
 import com.mercadeira.api.familia.application.MembroSemPermissaoException;
 import com.mercadeira.api.familia.application.RejeitarSolicitacaoEntradaFamilia;
+import com.mercadeira.api.familia.application.RemoverIntegranteFamilia;
 import com.mercadeira.api.familia.application.SolicitarEntradaFamiliaPorCodigo;
 import com.mercadeira.api.familia.application.TransferirAdministracaoFamilia;
 import com.mercadeira.api.familia.domain.Familia;
@@ -23,6 +26,7 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -42,7 +46,9 @@ public class FamiliaController {
     private final AprovarSolicitacaoEntradaFamilia aprovarSolicitacaoEntradaFamilia;
     private final RejeitarSolicitacaoEntradaFamilia rejeitarSolicitacaoEntradaFamilia;
     private final TransferirAdministracaoFamilia transferirAdministracaoFamilia;
+    private final RemoverIntegranteFamilia removerIntegranteFamilia;
     private final MembroFamiliaRepository membroFamiliaRepository;
+    private final ParticipanteCompraRepository participanteCompraRepository;
 
     public FamiliaController(UsuarioAutenticado usuarioAutenticado, CriarFamilia criarFamilia,
             ListarFamiliasAtivasUsuario listarFamiliasAtivasUsuario,
@@ -52,7 +58,9 @@ public class FamiliaController {
             AprovarSolicitacaoEntradaFamilia aprovarSolicitacaoEntradaFamilia,
             RejeitarSolicitacaoEntradaFamilia rejeitarSolicitacaoEntradaFamilia,
             TransferirAdministracaoFamilia transferirAdministracaoFamilia,
-            MembroFamiliaRepository membroFamiliaRepository) {
+            RemoverIntegranteFamilia removerIntegranteFamilia,
+            MembroFamiliaRepository membroFamiliaRepository,
+            ParticipanteCompraRepository participanteCompraRepository) {
         this.usuarioAutenticado = usuarioAutenticado;
         this.criarFamilia = criarFamilia;
         this.listarFamiliasAtivasUsuario = listarFamiliasAtivasUsuario;
@@ -62,7 +70,9 @@ public class FamiliaController {
         this.aprovarSolicitacaoEntradaFamilia = aprovarSolicitacaoEntradaFamilia;
         this.rejeitarSolicitacaoEntradaFamilia = rejeitarSolicitacaoEntradaFamilia;
         this.transferirAdministracaoFamilia = transferirAdministracaoFamilia;
+        this.removerIntegranteFamilia = removerIntegranteFamilia;
         this.membroFamiliaRepository = membroFamiliaRepository;
+        this.participanteCompraRepository = participanteCompraRepository;
     }
 
     @GetMapping
@@ -112,12 +122,23 @@ public class FamiliaController {
         boolean executorEhAdministradorUnico = administradores.size() == 1
                 && administradores.getFirst().getUsuario().getId().equals(usuarioAutenticado.getId());
         return membros.stream().map(membro -> MembroFamiliaResponse.from(membro, usuarioAutenticado.getId(),
-                executorEhAdministradorUnico && membro.getPapel() == PapelMembroFamilia.MEMBRO)).toList();
+                executorEhAdministradorUnico && membro.getPapel() == PapelMembroFamilia.MEMBRO,
+                executorEhAdministradorUnico
+                        && membro.getPapel() == PapelMembroFamilia.MEMBRO
+                        && !membro.getUsuario().getId().equals(usuarioAutenticado.getId())
+                        && !participanteCompraRepository.existsByCompra_ListaCompra_Familia_IdAndCompra_StatusAndMembroFamilia_Id(
+                                familiaId, StatusCompra.EM_ANDAMENTO, membro.getId()))).toList();
     }
 
     @PostMapping("/{familiaId}/membros/{membroId}/transferir-administracao")
     public ResponseEntity<Void> transferirAdministracao(@PathVariable UUID familiaId, @PathVariable UUID membroId) {
         transferirAdministracaoFamilia.transferir(familiaId, usuarioAutenticado.getId(), membroId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/{familiaId}/membros/{membroId}")
+    public ResponseEntity<Void> removerIntegrante(@PathVariable UUID familiaId, @PathVariable UUID membroId) {
+        removerIntegranteFamilia.remover(familiaId, usuarioAutenticado.getId(), membroId);
         return ResponseEntity.noContent().build();
     }
 

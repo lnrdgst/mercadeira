@@ -88,6 +88,11 @@ public class MembroFamilia {
         this.atualizadoEm = agora;
     }
 
+    public void inativar(Instant agora) {
+        this.status = StatusMembroFamilia.INATIVO;
+        this.atualizadoEm = agora;
+    }
+
     public UUID getId() {
         return id;
     }

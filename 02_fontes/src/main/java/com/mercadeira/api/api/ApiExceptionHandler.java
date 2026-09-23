@@ -13,6 +13,7 @@ import com.mercadeira.api.autenticacao.security.UsuarioNaoAutenticadoException;
 import com.mercadeira.api.familia.application.CodigoFamiliaInvalidoException;
 import com.mercadeira.api.familia.application.FamiliaInativaException;
 import com.mercadeira.api.familia.application.MembroSemPermissaoException;
+import com.mercadeira.api.familia.application.RemocaoIntegranteInvalidaException;
 import com.mercadeira.api.familia.application.SolicitacaoNaoEncontradaException;
 import com.mercadeira.api.familia.application.SolicitacaoNaoPendenteException;
 import com.mercadeira.api.familia.application.SolicitacaoPendenteJaExisteException;
@@ -101,7 +102,7 @@ public class ApiExceptionHandler {
             ItemListaJaRemovidoException.class, CriadorListaNaoPodeSerRemovidoException.class,
             ParticipanteListaNaoEncontradoException.class, ListaCompraSemItensException.class,
             ListaCompraSemParticipantesException.class, CompraListaInconsistenteException.class,
-            com.mercadeira.api.compra.application.PresencaOperacionalObrigatoriaException.class, RestauracaoItemCompraInvalidaException.class, FinalizacaoCompraInvalidaException.class, CompraComRemocaoPendenteException.class, CompraForaDeAndamentoException.class, TransicaoStatusItemCompraInvalidaException.class, ResponsavelRemocaoItemCompraInvalidoException.class, ConflitoPresencaException.class, TransferenciaAdministracaoInvalidaException.class })
+            com.mercadeira.api.compra.application.PresencaOperacionalObrigatoriaException.class, RestauracaoItemCompraInvalidaException.class, FinalizacaoCompraInvalidaException.class, CompraComRemocaoPendenteException.class, CompraForaDeAndamentoException.class, TransicaoStatusItemCompraInvalidaException.class, ResponsavelRemocaoItemCompraInvalidoException.class, ConflitoPresencaException.class, TransferenciaAdministracaoInvalidaException.class, RemocaoIntegranteInvalidaException.class })
     ResponseEntity<ErroApiResponse> tratarConflito(Exception exception, HttpServletRequest request) {
         return resposta(HttpStatus.CONFLICT, "CONFLITO_DE_ESTADO", exception.getMessage(), request, Map.of());
     }

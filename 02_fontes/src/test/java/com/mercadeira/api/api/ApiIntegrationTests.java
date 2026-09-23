@@ -3,6 +3,7 @@ package com.mercadeira.api.api;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -259,6 +260,70 @@ class ApiIntegrationTests {
         mockMvc.perform(post("/api/familias/{familiaId}/membros/{membroId}/transferir-administracao", familia.getId(), membroCarla).header("Authorization", bearer(ana)))
                 .andExpect(status().isConflict());
         assertThat(jdbcTemplate.queryForObject("select count(*) from membro_familia where familia_id = ? and status = 'ATIVO' and papel = 'ADMINISTRADOR'", Integer.class, familia.getId())).isEqualTo(2);
+    }
+
+    @Test
+    void administradorRemoveOutroMembroAtivoSemExcluirVinculo() throws Exception {
+        Usuario ana = usuario("Ana");
+        Familia familia = criarFamilia.criar(ana.getId(), "Oliveira");
+        Usuario bia = usuario("Bia");
+        entityManager.flush();
+        UUID membroBia = UUID.randomUUID();
+        jdbcTemplate.update("insert into membro_familia (id, familia_id, usuario_id, papel, status, criado_em, atualizado_em) values (?, ?, ?, 'MEMBRO', 'ATIVO', now(), now())", membroBia, familia.getId(), bia.getId());
+
+        mockMvc.perform(get("/api/familias/{id}/membros", familia.getId()).header("Authorization", bearer(ana)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].acoes.podeRemoverIntegrante").value(false))
+                .andExpect(jsonPath("$[1].acoes.podeRemoverIntegrante").value(true));
+        mockMvc.perform(delete("/api/familias/{familiaId}/membros/{membroId}", familia.getId(), membroBia)
+                        .header("Authorization", bearer(ana)))
+                .andExpect(status().isNoContent());
+
+        entityManager.flush();
+        assertThat(jdbcTemplate.queryForObject("select status from membro_familia where id = ?", String.class, membroBia)).isEqualTo("INATIVO");
+        assertThat(jdbcTemplate.queryForObject("select count(*) from membro_familia where id = ?", Integer.class, membroBia)).isEqualTo(1);
+        mockMvc.perform(get("/api/familias/{id}/membros", familia.getId()).header("Authorization", bearer(ana)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(1));
+    }
+
+    @Test
+    void remocaoRejeitaProprioAdministradorEMembroInativo() throws Exception {
+        Usuario ana = usuario("Ana");
+        Familia familia = criarFamilia.criar(ana.getId(), "Oliveira");
+        Usuario bia = usuario("Bia");
+        entityManager.flush();
+        UUID membroAna = jdbcTemplate.queryForObject("select id from membro_familia where familia_id = ? and usuario_id = ?", UUID.class, familia.getId(), ana.getId());
+        UUID membroBia = UUID.randomUUID();
+        jdbcTemplate.update("insert into membro_familia (id, familia_id, usuario_id, papel, status, criado_em, atualizado_em) values (?, ?, ?, 'MEMBRO', 'INATIVO', now(), now())", membroBia, familia.getId(), bia.getId());
+
+        mockMvc.perform(delete("/api/familias/{familiaId}/membros/{membroId}", familia.getId(), membroAna)
+                        .header("Authorization", bearer(ana)))
+                .andExpect(status().isConflict());
+        mockMvc.perform(delete("/api/familias/{familiaId}/membros/{membroId}", familia.getId(), membroBia)
+                        .header("Authorization", bearer(ana)))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    void remocaoEACapabilitySaoBloqueadasParaParticipanteDeCompraEmAndamento() throws Exception {
+        Usuario ana = usuario("Ana");
+        Familia familia = criarFamilia.criar(ana.getId(), "Oliveira");
+        Usuario bia = usuario("Bia");
+        ListaCompra lista = listaComItens(ana, familia, "Compra semanal");
+        entityManager.flush();
+        UUID membroBia = UUID.randomUUID();
+        jdbcTemplate.update("insert into membro_familia (id, familia_id, usuario_id, papel, status, criado_em, atualizado_em) values (?, ?, ?, 'MEMBRO', 'ATIVO', now(), now())", membroBia, familia.getId(), bia.getId());
+        var inicio = mockMvc.perform(post(compraUrl(familia, lista)).header("Authorization", bearer(ana)))
+                .andExpect(status().isCreated()).andReturn();
+        UUID compraId = UUID.fromString(com.jayway.jsonpath.JsonPath.read(inicio.getResponse().getContentAsString(), "$.id"));
+        jdbcTemplate.update("insert into participante_compra (id, compra_id, participante_lista_origem_id, membro_familia_id, nome_snapshot, papel_snapshot, gerado_em) values (?, ?, null, ?, ?, 'MEMBRO', now())", UUID.randomUUID(), compraId, membroBia, bia.getNome());
+
+        mockMvc.perform(get("/api/familias/{id}/membros", familia.getId()).header("Authorization", bearer(ana)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$[1].acoes.podeRemoverIntegrante").value(false));
+        mockMvc.perform(delete("/api/familias/{familiaId}/membros/{membroId}", familia.getId(), membroBia)
+                        .header("Authorization", bearer(ana)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.mensagem").value("Não é possível remover um integrante participante de uma compra em andamento."));
     }
 
     @Test
