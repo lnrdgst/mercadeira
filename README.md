@@ -97,6 +97,7 @@ Prefixo das rotas: `/api/familias/{familiaId}/listas`.
 | --- | --- | --- |
 | `GET` | (raiz) | Lista listas da família, incluindo finalizadas. |
 | `POST` | (raiz) | Cria lista; retorna 201. |
+| `DELETE` | `/{listaId}` | Exclui definitivamente lista em preparação nunca utilizada; retorna 204. |
 | `POST` | `/{listaId}/reutilizar` | Cria preparação independente de Compra finalizada; retorna 201 e Location. |
 | `GET` | `/{listaId}` | Consulta detalhes e contexto do usuário. |
 | `GET` | `/{listaId}/participantes` | Consulta participantes ativos. |
@@ -109,6 +110,8 @@ Prefixo das rotas: `/api/familias/{familiaId}/listas`.
 | `PUT` | `/{listaId}/itens/ordem` | Reordena itens; retorna 204. |
 
 O criador torna-se participante. As mutações respeitam `EM_PREPARACAO` e as permissões específicas de cada operação. O backend fornece contexto/capabilities e revalida autorização; o frontend não deve reconstruir essas regras.
+
+Uma lista só pode ser excluída definitivamente se ainda estiver `EM_PREPARACAO`, não possuir Compra associada e o executor for seu criador ou administrador ativo da família. A exclusão remove os participantes e itens da própria preparação na mesma transação; listas que já originaram Compra, inclusive finalizada, são preservadas. A capability `contextoUsuario.podeExcluirLista` é apenas a indicação para a interface e a autorização continua sendo revalidada no endpoint. A operação bloqueia a lista na mesma ordem usada ao iniciar Compra, impedindo que início e exclusão concorrentes removam histórico ou produzam estado intermediário.
 
 Iniciar exige participante da lista com vínculo familiar ativo e pelo menos um item ativo (`removidoEm IS NULL`). Cria snapshots dos participantes e itens, muda a lista para `EM_COMPRA` e cria Compra `EM_ANDAMENTO`. ItemLista da preparação e ItemCompra do snapshot são recursos distintos.
 
