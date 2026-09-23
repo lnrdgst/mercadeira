@@ -28,6 +28,7 @@ import com.mercadeira.api.lista.application.MembroFamiliaInvalidoException;
 import com.mercadeira.api.lista.application.UsuarioNaoParticipaDaListaException;
 import com.mercadeira.api.lista.application.ItemListaJaRemovidoException;
 import com.mercadeira.api.lista.application.ListaCompraForaDePreparacaoException;
+import com.mercadeira.api.lista.application.ListaCompraJaUtilizadaException;
 import com.mercadeira.api.lista.application.CriadorListaNaoPodeSerRemovidoException;
 import com.mercadeira.api.lista.application.ParticipanteListaNaoEncontradoException;
 import com.mercadeira.api.lista.application.OrdemItensInvalidaException;
@@ -102,6 +103,7 @@ public class ApiExceptionHandler {
             ItemListaJaRemovidoException.class, CriadorListaNaoPodeSerRemovidoException.class,
             ParticipanteListaNaoEncontradoException.class, ListaCompraSemItensException.class,
             ListaCompraSemParticipantesException.class, CompraListaInconsistenteException.class,
+            ListaCompraJaUtilizadaException.class,
             com.mercadeira.api.compra.application.PresencaOperacionalObrigatoriaException.class, RestauracaoItemCompraInvalidaException.class, FinalizacaoCompraInvalidaException.class, CompraComRemocaoPendenteException.class, CompraForaDeAndamentoException.class, TransicaoStatusItemCompraInvalidaException.class, ResponsavelRemocaoItemCompraInvalidoException.class, ConflitoPresencaException.class, TransferenciaAdministracaoInvalidaException.class, RemocaoIntegranteInvalidaException.class })
     ResponseEntity<ErroApiResponse> tratarConflito(Exception exception, HttpServletRequest request) {
         return resposta(HttpStatus.CONFLICT, "CONFLITO_DE_ESTADO", exception.getMessage(), request, Map.of());

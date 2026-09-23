@@ -16,4 +16,6 @@ public interface ParticipanteListaRepository extends JpaRepository<ParticipanteL
     List<ParticipanteLista> findByListaCompra_IdAndSaiuEmIsNullOrderByEntrouEmAscIdAsc(UUID listaCompraId);
 
     Optional<ParticipanteLista> findByListaCompra_IdAndMembroFamilia_Id(UUID listaCompraId, UUID membroFamiliaId);
+
+    long deleteByListaCompra_Id(UUID listaCompraId);
 }

@@ -369,6 +369,62 @@ class ApiIntegrationTests {
     }
 
     @Test
+    void excluiListaNuncaUtilizadaComItensEParticipantesEExibeCapability() throws Exception {
+        Usuario ana = usuario("Ana");
+        Familia familia = criarFamilia.criar(ana.getId(), "Oliveira");
+        ListaCompra lista = criarListaCompra.criar(ana.getId(), familia.getId(), "Semana", CategoriaCompra.SUPERMERCADO, null);
+        adicionarItemLista.adicionar(ana.getId(), familia.getId(), lista.getId(), "Arroz", BigDecimal.ONE, UnidadeMedida.UNIDADE, null, null);
+
+        String url = "/api/familias/" + familia.getId() + "/listas/" + lista.getId();
+        mockMvc.perform(get(url).header("Authorization", bearer(ana)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.contextoUsuario.podeExcluirLista").value(true));
+        mockMvc.perform(delete(url).header("Authorization", bearer(ana)))
+                .andExpect(status().isNoContent());
+
+        entityManager.flush();
+        assertThat(jdbcTemplate.queryForObject("select count(*) from lista_compra where id = ?", Integer.class, lista.getId())).isZero();
+        assertThat(jdbcTemplate.queryForObject("select count(*) from item_lista where lista_compra_id = ?", Integer.class, lista.getId())).isZero();
+        assertThat(jdbcTemplate.queryForObject("select count(*) from participante_lista where lista_compra_id = ?", Integer.class, lista.getId())).isZero();
+    }
+
+    @Test
+    void exclusaoDaListaExigeCriadorOuAdministradorAtivoENuncaAceitaHistoricoDeCompra() throws Exception {
+        Usuario criador = usuario("Criador");
+        Familia familia = criarFamilia.criar(criador.getId(), "Oliveira");
+        ListaCompra lista = criarListaCompra.criar(criador.getId(), familia.getId(), "Semana", CategoriaCompra.SUPERMERCADO, null);
+        Usuario bia = usuario("Bia");
+        entityManager.flush();
+        UUID membroBia = UUID.randomUUID();
+        jdbcTemplate.update("insert into membro_familia (id, familia_id, usuario_id, papel, status, criado_em, atualizado_em) values (?, ?, ?, 'MEMBRO', 'ATIVO', now(), now())", membroBia, familia.getId(), bia.getId());
+        String url = "/api/familias/" + familia.getId() + "/listas/" + lista.getId();
+
+        mockMvc.perform(get(url).header("Authorization", bearer(bia)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.contextoUsuario.podeExcluirLista").value(false));
+        mockMvc.perform(delete(url).header("Authorization", bearer(bia)))
+                .andExpect(status().isForbidden());
+
+        jdbcTemplate.update("update membro_familia set papel = 'ADMINISTRADOR' where id = ?", membroBia);
+        entityManager.clear();
+        mockMvc.perform(get(url).header("Authorization", bearer(bia)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.contextoUsuario.podeExcluirLista").value(true));
+
+        adicionarItemLista.adicionar(criador.getId(), familia.getId(), lista.getId(), "Arroz", BigDecimal.ONE, UnidadeMedida.UNIDADE, null, null);
+        mockMvc.perform(post(compraUrl(familia, lista)).header("Authorization", bearer(criador)))
+                .andExpect(status().isCreated());
+        jdbcTemplate.update("update lista_compra set status = 'EM_PREPARACAO' where id = ?", lista.getId());
+        entityManager.clear();
+        mockMvc.perform(get(url).header("Authorization", bearer(bia)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.contextoUsuario.podeExcluirLista").value(false));
+        mockMvc.perform(delete(url).header("Authorization", bearer(bia)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.mensagem").value("A lista não pode ser excluída porque já possui uma compra associada."));
+    }
+
+    @Test
     void permiteSaidaVoluntariaSomenteAoParticipanteAtivoNaoCriadorEmPreparacao() throws Exception {
         Usuario criador = usuario("Criador");
         Familia familia = criarFamilia.criar(criador.getId(), "Casa da equipe");

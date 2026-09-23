@@ -10,12 +10,14 @@ public record ListaCompraDetalheResponse(UUID id, String nome, CategoriaCompra c
         StatusListaCompra status, Instant criadaEm, Instant atualizadaEm, Criador criador, ContextoUsuario contextoUsuario) {
     public record Criador(UUID membroFamiliaId, UUID usuarioId, String nome) { }
     public record ContextoUsuario(UUID membroFamiliaId, PapelMembroFamilia papelFamilia, boolean participanteAtivo,
-            boolean podeGerenciarParticipantes, boolean podeAlterarItens, boolean podeEditarDadosBasicos, boolean podeSairDaLista) { }
-    static ListaCompraDetalheResponse from(ListaCompra lista, MembroFamilia membro, boolean participanteAtivo) {
+            boolean podeGerenciarParticipantes, boolean podeAlterarItens, boolean podeEditarDadosBasicos, boolean podeSairDaLista,
+            boolean podeExcluirLista) { }
+    static ListaCompraDetalheResponse from(ListaCompra lista, MembroFamilia membro, boolean participanteAtivo,
+            boolean podeExcluirLista) {
         MembroFamilia criador = lista.getCriadaPorMembroFamilia();
         boolean gerencia = criador.getId().equals(membro.getId()) || membro.getPapel() == PapelMembroFamilia.ADMINISTRADOR;
         return new ListaCompraDetalheResponse(lista.getId(), lista.getNome(), lista.getCategoria(), lista.getEstabelecimento(), lista.getStatus(), lista.getCriadaEm(), lista.getAtualizadaEm(),
                 new Criador(criador.getId(), criador.getUsuario().getId(), criador.getUsuario().getNome()),
-                new ContextoUsuario(membro.getId(), membro.getPapel(), participanteAtivo, gerencia, participanteAtivo && lista.getStatus() == StatusListaCompra.EM_PREPARACAO, gerencia && membro.getStatus() == com.mercadeira.api.familia.domain.StatusMembroFamilia.ATIVO && lista.getStatus() == StatusListaCompra.EM_PREPARACAO, participanteAtivo && !criador.getId().equals(membro.getId()) && lista.getStatus() == StatusListaCompra.EM_PREPARACAO));
+                new ContextoUsuario(membro.getId(), membro.getPapel(), participanteAtivo, gerencia, participanteAtivo && lista.getStatus() == StatusListaCompra.EM_PREPARACAO, gerencia && membro.getStatus() == com.mercadeira.api.familia.domain.StatusMembroFamilia.ATIVO && lista.getStatus() == StatusListaCompra.EM_PREPARACAO, participanteAtivo && !criador.getId().equals(membro.getId()) && lista.getStatus() == StatusListaCompra.EM_PREPARACAO, podeExcluirLista));
     }
 }

@@ -9,4 +9,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface ItemListaRepository extends JpaRepository<ItemLista, UUID> {
 
     List<ItemLista> findByListaCompra_IdAndRemovidoEmIsNullOrderByOrdemExibicaoAscIdAsc(UUID listaCompraId);
+
+    long deleteByListaCompra_Id(UUID listaCompraId);
 }

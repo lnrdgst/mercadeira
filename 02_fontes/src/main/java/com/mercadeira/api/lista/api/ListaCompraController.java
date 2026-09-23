@@ -11,6 +11,8 @@ import com.mercadeira.api.lista.application.CriarListaCompra;
 import com.mercadeira.api.lista.application.ReutilizarListaCompra;
 import com.mercadeira.api.lista.application.EditarItemLista;
 import com.mercadeira.api.lista.application.EditarDadosBasicosLista;
+import com.mercadeira.api.lista.application.ExcluirListaCompra;
+import com.mercadeira.api.compra.repository.CompraRepository;
 import com.mercadeira.api.lista.application.ListarItensLista;
 import com.mercadeira.api.lista.application.ListarListasFamilia;
 import com.mercadeira.api.lista.application.ListarParticipantesLista;
@@ -45,15 +47,18 @@ public class ListaCompraController {
     private final ListarItensLista itens; private final AdicionarItemLista adicionarItem;
     private final EditarItemLista editarItem; private final RemoverItemLista removerItem; private final ReordenarItensLista reordenar;
     private final ListaCompraRepository listaRepository; private final MembroFamiliaRepository membroRepository; private final ParticipanteListaRepository participanteRepository;
+    private final CompraRepository compraRepository; private final ExcluirListaCompra excluir;
 
     public ListaCompraController(ReutilizarListaCompra reutilizar, EditarDadosBasicosLista editarDados, UsuarioAutenticado usuario, CriarListaCompra criar, ListarListasFamilia listar,
             ConsultarListaCompra consultar, ListarParticipantesLista participantes, AdicionarParticipanteLista adicionarParticipante,
             RemoverParticipanteLista removerParticipante, ListarItensLista itens, AdicionarItemLista adicionarItem,
-            EditarItemLista editarItem, RemoverItemLista removerItem, ReordenarItensLista reordenar, ListaCompraRepository listaRepository, MembroFamiliaRepository membroRepository, ParticipanteListaRepository participanteRepository) {
+            EditarItemLista editarItem, RemoverItemLista removerItem, ReordenarItensLista reordenar, ListaCompraRepository listaRepository, MembroFamiliaRepository membroRepository, ParticipanteListaRepository participanteRepository,
+            CompraRepository compraRepository, ExcluirListaCompra excluir) {
         this.reutilizar = reutilizar; this.editarDados = editarDados; this.usuario = usuario; this.criar = criar; this.listar = listar; this.consultar = consultar;
         this.participantes = participantes; this.adicionarParticipante = adicionarParticipante; this.removerParticipante = removerParticipante;
         this.itens = itens; this.adicionarItem = adicionarItem; this.editarItem = editarItem; this.removerItem = removerItem; this.reordenar = reordenar;
         this.listaRepository = listaRepository; this.membroRepository = membroRepository; this.participanteRepository = participanteRepository;
+        this.compraRepository = compraRepository; this.excluir = excluir;
     }
 
     @GetMapping public List<ListaCompraResponse> listar(@PathVariable UUID familiaId) {
@@ -80,7 +85,14 @@ public class ListaCompraController {
         var lista = listaRepository.findDetalheById(listaId).orElseThrow();
         var membro = membroRepository.findByFamilia_IdAndUsuario_IdAndStatus(familiaId, usuario.getId(), StatusMembroFamilia.ATIVO).orElseThrow();
         boolean participanteAtivo = participanteRepository.findByListaCompra_IdAndMembroFamilia_Id(listaId, membro.getId()).map(p -> p.getSaiuEm() == null).orElse(false);
-        return ListaCompraDetalheResponse.from(lista, membro, participanteAtivo);
+        boolean podeExcluirLista = lista.getStatus() == com.mercadeira.api.lista.domain.StatusListaCompra.EM_PREPARACAO
+                && compraRepository.findByListaCompra_Id(listaId).isEmpty()
+                && (lista.getCriadaPorMembroFamilia().getId().equals(membro.getId())
+                        || membro.getPapel() == com.mercadeira.api.familia.domain.PapelMembroFamilia.ADMINISTRADOR);
+        return ListaCompraDetalheResponse.from(lista, membro, participanteAtivo, podeExcluirLista);
+    }
+    @DeleteMapping("/{listaId}") public ResponseEntity<Void> excluir(@PathVariable UUID familiaId, @PathVariable UUID listaId) {
+        excluir.excluir(usuario.getId(), familiaId, listaId); return ResponseEntity.noContent().build();
     }
     @GetMapping("/{listaId}/participantes") public List<ParticipanteListaResponse> participantes(@PathVariable UUID familiaId, @PathVariable UUID listaId) {
         return participantes.listar(usuario.getId(), familiaId, listaId).stream().map(ParticipanteListaResponse::from).toList();
