@@ -127,7 +127,7 @@ class ApplicationTests {
     @Test
     void aprovarReingressoReativaMesmoVinculoSemDuplicar() {
         Usuario admin = usuario("Admin");
-        Familia familia = criarFamilia.criar(admin.getId(), "Familia");
+        Familia familia = criarFamilia.criar(admin.getId(), "Oliveira");
         Usuario solicitante = usuario("Bia");
         UUID membroInativoId = UUID.randomUUID();
         entityManager.flush();

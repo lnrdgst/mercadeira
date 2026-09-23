@@ -11,10 +11,15 @@ public record FamiliaResponse(
         String nome,
         String codigoIngresso,
         StatusFamilia status,
-        PapelMembroFamilia papel) {
+        PapelMembroFamilia papel,
+        ContextoUsuario contextoUsuario) {
+
+    public record ContextoUsuario(boolean podeGerenciarIntegrantes) {
+    }
 
     static FamiliaResponse from(Familia familia, PapelMembroFamilia papel) {
         return new FamiliaResponse(
-                familia.getId(), familia.getNome(), familia.getCodigoIngresso(), familia.getStatus(), papel);
+                familia.getId(), familia.getNome(), familia.getCodigoIngresso(), familia.getStatus(), papel,
+                new ContextoUsuario(papel == PapelMembroFamilia.ADMINISTRADOR));
     }
 }

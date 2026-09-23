@@ -95,6 +95,7 @@ class ApiIntegrationTests {
                 .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(2))
                 .andExpect(jsonPath("$[0].nome").value("Alfa"))
                 .andExpect(jsonPath("$[0].papel").value("ADMINISTRADOR"))
+                .andExpect(jsonPath("$[0].contextoUsuario.podeGerenciarIntegrantes").value(true))
                 .andExpect(jsonPath("$[1].nome").value("Zeta"));
     }
 
@@ -192,7 +193,11 @@ class ApiIntegrationTests {
         mockMvc.perform(get("/api/familias/{id}/membros", familiaA.getId()).header("Authorization", bearer(ana)))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(2))
                 .andExpect(jsonPath("$[0].nome").value("Ana")).andExpect(jsonPath("$[0].membroFamiliaId").exists())
-                .andExpect(jsonPath("$[0].usuarioId").exists()).andExpect(jsonPath("$[0].email").exists()).andExpect(jsonPath("$[0].papel").exists());
+                .andExpect(jsonPath("$[0].usuarioId").exists()).andExpect(jsonPath("$[0].email").exists())
+                .andExpect(jsonPath("$[0].papel").value("ADMINISTRADOR")).andExpect(jsonPath("$[0].usuarioAtual").value(true))
+                .andExpect(jsonPath("$[1].papel").value("MEMBRO")).andExpect(jsonPath("$[1].usuarioAtual").value(false));
+        mockMvc.perform(get("/api/familias").header("Authorization", bearer(bia)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$[0].contextoUsuario.podeGerenciarIntegrantes").value(false));
         Familia familiaB = criarFamilia.criar(inativo.getId(), "B");
         mockMvc.perform(get("/api/familias/{id}/membros", familiaA.getId()).header("Authorization", bearer(inativo)))
                 .andExpect(status().isForbidden());
