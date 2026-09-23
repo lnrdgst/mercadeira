@@ -78,6 +78,16 @@ public class MembroFamilia {
         this.atualizadoEm = agora;
     }
 
+    public void promoverParaAdministrador(Instant agora) {
+        this.papel = PapelMembroFamilia.ADMINISTRADOR;
+        this.atualizadoEm = agora;
+    }
+
+    public void rebaixarParaMembro(Instant agora) {
+        this.papel = PapelMembroFamilia.MEMBRO;
+        this.atualizadoEm = agora;
+    }
+
     public UUID getId() {
         return id;
     }

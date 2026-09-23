@@ -65,6 +65,8 @@ O JWT identifica o usuário pelo UUID no claim `sub`. Família, papel e permiss�
 - Administrador pode aprovar ou rejeitar; aprovação cria vínculo de membro ativo. Criação de família e aprovação não alteram outras solicitações pendentes.
 - `PENDENTE` e `CANCELADA` não possuem autor/data de resolução; `APROVADA` e `REJEITADA` possuem ambos.
 - Decisões concorrentes usam lock pessimista na solicitação. Vínculos e papéis são validados na família do recurso; o índice parcial de membro ativo por usuário não é único.
+- A transferência de administração é atômica: o administrador atual passa a `MEMBRO` e o membro destino passa a `ADMINISTRADOR`. Somente o administrador ativo atual pode executá-la, com autorização validada no backend.
+- A transferência exige exatamente um administrador ativo. Famílias legadas com zero ou múltiplos administradores não permitem a operação; saneamento e constraint global permanecem uma demanda técnica posterior.
 
 ## Endpoints de usuário e família
 
@@ -78,6 +80,7 @@ Somente cadastro e login são públicos.
 | `GET` | `/api/familias` | Lista famílias ativas do usuário, possivelmente vazia. |
 | `POST` | `/api/familias` | Cria família. |
 | `GET` | `/api/familias/{familiaId}/membros` | Consulta membros da família. |
+| `POST` | `/api/familias/{familiaId}/membros/{membroId}/transferir-administracao` | Transfere administração para membro ativo elegível; retorna 204. |
 | `POST` | `/api/familias/solicitacoes` | Solicita entrada por código. |
 | `GET` | `/api/familias/solicitacoes/minhas-pendentes` | Consulta pendências do usuário: 200 com coleção ou 204 sem pendências. |
 | `GET` | `/api/familias/{familiaId}/solicitacoes` | Consulta pendências para administrador. |

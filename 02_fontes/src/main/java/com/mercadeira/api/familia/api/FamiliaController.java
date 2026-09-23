@@ -12,6 +12,7 @@ import com.mercadeira.api.familia.application.ListarSolicitacoesPendentes;
 import com.mercadeira.api.familia.application.MembroSemPermissaoException;
 import com.mercadeira.api.familia.application.RejeitarSolicitacaoEntradaFamilia;
 import com.mercadeira.api.familia.application.SolicitarEntradaFamiliaPorCodigo;
+import com.mercadeira.api.familia.application.TransferirAdministracaoFamilia;
 import com.mercadeira.api.familia.domain.Familia;
 import com.mercadeira.api.familia.domain.MembroFamilia;
 import com.mercadeira.api.familia.domain.PapelMembroFamilia;
@@ -40,6 +41,7 @@ public class FamiliaController {
     private final ListarSolicitacoesPendentes listarSolicitacoesPendentes;
     private final AprovarSolicitacaoEntradaFamilia aprovarSolicitacaoEntradaFamilia;
     private final RejeitarSolicitacaoEntradaFamilia rejeitarSolicitacaoEntradaFamilia;
+    private final TransferirAdministracaoFamilia transferirAdministracaoFamilia;
     private final MembroFamiliaRepository membroFamiliaRepository;
 
     public FamiliaController(UsuarioAutenticado usuarioAutenticado, CriarFamilia criarFamilia,
@@ -49,6 +51,7 @@ public class FamiliaController {
             ListarSolicitacoesPendentes listarSolicitacoesPendentes,
             AprovarSolicitacaoEntradaFamilia aprovarSolicitacaoEntradaFamilia,
             RejeitarSolicitacaoEntradaFamilia rejeitarSolicitacaoEntradaFamilia,
+            TransferirAdministracaoFamilia transferirAdministracaoFamilia,
             MembroFamiliaRepository membroFamiliaRepository) {
         this.usuarioAutenticado = usuarioAutenticado;
         this.criarFamilia = criarFamilia;
@@ -58,6 +61,7 @@ public class FamiliaController {
         this.listarSolicitacoesPendentes = listarSolicitacoesPendentes;
         this.aprovarSolicitacaoEntradaFamilia = aprovarSolicitacaoEntradaFamilia;
         this.rejeitarSolicitacaoEntradaFamilia = rejeitarSolicitacaoEntradaFamilia;
+        this.transferirAdministracaoFamilia = transferirAdministracaoFamilia;
         this.membroFamiliaRepository = membroFamiliaRepository;
     }
 
@@ -103,8 +107,18 @@ public class FamiliaController {
     @GetMapping("/{familiaId}/membros")
     public List<MembroFamiliaResponse> listarMembros(@PathVariable UUID familiaId) {
         membroAtivoNaFamilia(familiaId);
-        return membroFamiliaRepository.findByFamilia_IdAndStatusOrderByUsuario_NomeAscIdAsc(familiaId, StatusMembroFamilia.ATIVO)
-                .stream().map(membro -> MembroFamiliaResponse.from(membro, usuarioAutenticado.getId())).toList();
+        var membros = membroFamiliaRepository.findByFamilia_IdAndStatusOrderByUsuario_NomeAscIdAsc(familiaId, StatusMembroFamilia.ATIVO);
+        var administradores = membros.stream().filter(membro -> membro.getPapel() == PapelMembroFamilia.ADMINISTRADOR).toList();
+        boolean executorEhAdministradorUnico = administradores.size() == 1
+                && administradores.getFirst().getUsuario().getId().equals(usuarioAutenticado.getId());
+        return membros.stream().map(membro -> MembroFamiliaResponse.from(membro, usuarioAutenticado.getId(),
+                executorEhAdministradorUnico && membro.getPapel() == PapelMembroFamilia.MEMBRO)).toList();
+    }
+
+    @PostMapping("/{familiaId}/membros/{membroId}/transferir-administracao")
+    public ResponseEntity<Void> transferirAdministracao(@PathVariable UUID familiaId, @PathVariable UUID membroId) {
+        transferirAdministracaoFamilia.transferir(familiaId, usuarioAutenticado.getId(), membroId);
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/{familiaId}/solicitacoes/{solicitacaoId}/aprovar")

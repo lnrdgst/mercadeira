@@ -205,6 +205,63 @@ class ApiIntegrationTests {
     }
 
     @Test
+    void administradorTransfereAdministracaoEAsCapabilitiesSaoRecalculadas() throws Exception {
+        Usuario ana = usuario("Ana");
+        Familia familia = criarFamilia.criar(ana.getId(), "Oliveira");
+        Usuario bia = usuario("Bia");
+        entityManager.flush();
+        UUID membroBia = UUID.randomUUID();
+        jdbcTemplate.update("insert into membro_familia (id, familia_id, usuario_id, papel, status, criado_em, atualizado_em) values (?, ?, ?, 'MEMBRO', 'ATIVO', now(), now())", membroBia, familia.getId(), bia.getId());
+
+        mockMvc.perform(get("/api/familias/{id}/membros", familia.getId()).header("Authorization", bearer(ana)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[1].acoes.podeTransferirAdministracao").value(true));
+        mockMvc.perform(post("/api/familias/{familiaId}/membros/{membroId}/transferir-administracao", familia.getId(), membroBia)
+                        .header("Authorization", bearer(ana)))
+                .andExpect(status().isNoContent());
+
+        entityManager.flush();
+        assertThat(jdbcTemplate.queryForObject("select papel from membro_familia where usuario_id = ?", String.class, ana.getId())).isEqualTo("MEMBRO");
+        assertThat(jdbcTemplate.queryForObject("select papel from membro_familia where id = ?", String.class, membroBia)).isEqualTo("ADMINISTRADOR");
+        assertThat(jdbcTemplate.queryForObject("select count(*) from membro_familia where familia_id = ? and status = 'ATIVO' and papel = 'ADMINISTRADOR'", Integer.class, familia.getId())).isEqualTo(1);
+        mockMvc.perform(get("/api/familias").header("Authorization", bearer(ana)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$[0].contextoUsuario.podeGerenciarIntegrantes").value(false));
+        mockMvc.perform(get("/api/familias/{id}/membros", familia.getId()).header("Authorization", bearer(bia)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(2));
+    }
+
+    @Test
+    void transferenciaRejeitaExecutorNaoAdministradorDestinoInvalidoEFamiliaInconsistente() throws Exception {
+        Usuario ana = usuario("Ana");
+        Familia familia = criarFamilia.criar(ana.getId(), "Oliveira");
+        Usuario bia = usuario("Bia");
+        Usuario carla = usuario("Carla");
+        entityManager.flush();
+        UUID membroBia = UUID.randomUUID();
+        UUID membroCarla = UUID.randomUUID();
+        UUID membroAna = jdbcTemplate.queryForObject("select id from membro_familia where familia_id = ? and usuario_id = ?", UUID.class, familia.getId(), ana.getId());
+        jdbcTemplate.update("insert into membro_familia (id, familia_id, usuario_id, papel, status, criado_em, atualizado_em) values (?, ?, ?, 'MEMBRO', 'ATIVO', now(), now())", membroBia, familia.getId(), bia.getId());
+        jdbcTemplate.update("insert into membro_familia (id, familia_id, usuario_id, papel, status, criado_em, atualizado_em) values (?, ?, ?, 'MEMBRO', 'INATIVO', now(), now())", membroCarla, familia.getId(), carla.getId());
+
+        mockMvc.perform(post("/api/familias/{familiaId}/membros/{membroId}/transferir-administracao", familia.getId(), membroBia).header("Authorization", bearer(bia)))
+                .andExpect(status().isConflict());
+        mockMvc.perform(post("/api/familias/{familiaId}/membros/{membroId}/transferir-administracao", familia.getId(), membroCarla).header("Authorization", bearer(ana)))
+                .andExpect(status().isConflict());
+        mockMvc.perform(post("/api/familias/{familiaId}/membros/{membroId}/transferir-administracao", familia.getId(), membroAna).header("Authorization", bearer(ana)))
+                .andExpect(status().isConflict());
+        entityManager.flush();
+        assertThat(jdbcTemplate.queryForObject("select papel from membro_familia where id = ?", String.class, membroAna)).isEqualTo("ADMINISTRADOR");
+
+        jdbcTemplate.update("update membro_familia set papel = 'ADMINISTRADOR', status = 'ATIVO' where id = ?", membroBia);
+        mockMvc.perform(get("/api/familias/{id}/membros", familia.getId()).header("Authorization", bearer(ana)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$[0].acoes.podeTransferirAdministracao").value(false))
+                .andExpect(jsonPath("$[1].acoes.podeTransferirAdministracao").value(false));
+        mockMvc.perform(post("/api/familias/{familiaId}/membros/{membroId}/transferir-administracao", familia.getId(), membroCarla).header("Authorization", bearer(ana)))
+                .andExpect(status().isConflict());
+        assertThat(jdbcTemplate.queryForObject("select count(*) from membro_familia where familia_id = ? and status = 'ATIVO' and papel = 'ADMINISTRADOR'", Integer.class, familia.getId())).isEqualTo(2);
+    }
+
+    @Test
     void detalheDaListaExplicitaCriadorEContextoDoParticipante() throws Exception {
         Usuario ana = usuario("Ana"); Familia familia = criarFamilia.criar(ana.getId(), "A");
         ListaCompra lista = criarListaCompra.criar(ana.getId(), familia.getId(), "Lista", CategoriaCompra.OUTROS, null);

@@ -18,6 +18,7 @@ import com.mercadeira.api.familia.application.SolicitacaoNaoPendenteException;
 import com.mercadeira.api.familia.application.SolicitacaoPendenteJaExisteException;
 import com.mercadeira.api.familia.application.SolicitanteJaPossuiVinculoAtivoException;
 import com.mercadeira.api.familia.application.UsuarioNaoEncontradoException;
+import com.mercadeira.api.familia.application.TransferenciaAdministracaoInvalidaException;
 import com.mercadeira.api.usuario.application.DadosUsuarioInvalidosException;
 import com.mercadeira.api.usuario.application.EmailJaCadastradoException;
 import com.mercadeira.api.lista.application.ItemListaNaoEncontradoException;
@@ -100,7 +101,7 @@ public class ApiExceptionHandler {
             ItemListaJaRemovidoException.class, CriadorListaNaoPodeSerRemovidoException.class,
             ParticipanteListaNaoEncontradoException.class, ListaCompraSemItensException.class,
             ListaCompraSemParticipantesException.class, CompraListaInconsistenteException.class,
-            com.mercadeira.api.compra.application.PresencaOperacionalObrigatoriaException.class, RestauracaoItemCompraInvalidaException.class, FinalizacaoCompraInvalidaException.class, CompraComRemocaoPendenteException.class, CompraForaDeAndamentoException.class, TransicaoStatusItemCompraInvalidaException.class, ResponsavelRemocaoItemCompraInvalidoException.class, ConflitoPresencaException.class })
+            com.mercadeira.api.compra.application.PresencaOperacionalObrigatoriaException.class, RestauracaoItemCompraInvalidaException.class, FinalizacaoCompraInvalidaException.class, CompraComRemocaoPendenteException.class, CompraForaDeAndamentoException.class, TransicaoStatusItemCompraInvalidaException.class, ResponsavelRemocaoItemCompraInvalidoException.class, ConflitoPresencaException.class, TransferenciaAdministracaoInvalidaException.class })
     ResponseEntity<ErroApiResponse> tratarConflito(Exception exception, HttpServletRequest request) {
         return resposta(HttpStatus.CONFLICT, "CONFLITO_DE_ESTADO", exception.getMessage(), request, Map.of());
     }
