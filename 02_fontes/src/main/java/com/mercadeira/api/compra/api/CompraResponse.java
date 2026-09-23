@@ -108,6 +108,8 @@ public record CompraResponse(
                         .toList(),
                 new ContextoUsuarioCompraResponse(resultado.participanteCompra(), podeDeclararSaida, podeFinalizar,
                         compra.getStatus() == StatusCompra.FINALIZADA && compra.getListaCompra().getStatus() == StatusListaCompra.FINALIZADA && compra.getListaCompra().getFamilia().getStatus() == com.mercadeira.api.familia.domain.StatusFamilia.ATIVA && resultado.itens().stream().noneMatch(item -> item.getStatus() == StatusItemCompra.REMOCAO_SOLICITADA),
+                        compra.getStatus() == StatusCompra.FINALIZADA && compra.getListaCompra().getStatus() == StatusListaCompra.FINALIZADA && compra.getListaCompra().getFamilia().getStatus() == com.mercadeira.api.familia.domain.StatusFamilia.ATIVA
+                                && resultado.itens().stream().anyMatch(item -> item.getStatus() == StatusItemCompra.PENDENTE || item.getStatus() == StatusItemCompra.REMOVIDO),
                         podeSolicitarPresenca, podeCancelar, podeDeclararSaida, podeSolicitarResponsabilidade,
                         podeCancelarResponsabilidade, precisaEstarPresenteParaFinalizar));
     }
@@ -161,7 +163,7 @@ public record CompraResponse(
     public record AcoesSolicitacaoResponsabilidadeResponse(boolean podeDecidirResponsabilidade) {}
 
     public record ContextoUsuarioCompraResponse(boolean participanteCompra, boolean podeAlterarPresenca,
-            boolean podeFinalizarCompra, boolean podeReutilizarLista, boolean podeSolicitarPresenca,
+            boolean podeFinalizarCompra, boolean podeReutilizarLista, boolean podeCriarListaComItensQueFicaramDeFora, boolean podeSolicitarPresenca,
             boolean podeCancelarSolicitacaoPresenca, boolean podeDeclararSaida,
             boolean podeSolicitarResponsabilidade, boolean podeCancelarSolicitacaoResponsabilidade,
             boolean precisaEstarPresenteParaFinalizar) {

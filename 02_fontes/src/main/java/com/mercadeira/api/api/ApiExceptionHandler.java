@@ -32,6 +32,7 @@ import com.mercadeira.api.lista.application.ListaCompraJaUtilizadaException;
 import com.mercadeira.api.lista.application.CriadorListaNaoPodeSerRemovidoException;
 import com.mercadeira.api.lista.application.ParticipanteListaNaoEncontradoException;
 import com.mercadeira.api.lista.application.OrdemItensInvalidaException;
+import com.mercadeira.api.lista.application.ItensForaCompraInvalidosException;
 import com.mercadeira.api.compra.application.CompraListaInconsistenteException;
 import com.mercadeira.api.compra.application.CompraNaoEncontradaException;
 import com.mercadeira.api.compra.application.CompraForaDeAndamentoException;
@@ -104,7 +105,7 @@ public class ApiExceptionHandler {
             ParticipanteListaNaoEncontradoException.class, ListaCompraSemItensException.class,
             ListaCompraSemParticipantesException.class, CompraListaInconsistenteException.class,
             ListaCompraJaUtilizadaException.class,
-            com.mercadeira.api.compra.application.PresencaOperacionalObrigatoriaException.class, RestauracaoItemCompraInvalidaException.class, FinalizacaoCompraInvalidaException.class, CompraComRemocaoPendenteException.class, CompraForaDeAndamentoException.class, TransicaoStatusItemCompraInvalidaException.class, ResponsavelRemocaoItemCompraInvalidoException.class, ConflitoPresencaException.class, TransferenciaAdministracaoInvalidaException.class, RemocaoIntegranteInvalidaException.class })
+            com.mercadeira.api.compra.application.PresencaOperacionalObrigatoriaException.class, RestauracaoItemCompraInvalidaException.class, FinalizacaoCompraInvalidaException.class, CompraComRemocaoPendenteException.class, CompraForaDeAndamentoException.class, TransicaoStatusItemCompraInvalidaException.class, ResponsavelRemocaoItemCompraInvalidoException.class, ConflitoPresencaException.class, TransferenciaAdministracaoInvalidaException.class, RemocaoIntegranteInvalidaException.class, ItensForaCompraInvalidosException.class })
     ResponseEntity<ErroApiResponse> tratarConflito(Exception exception, HttpServletRequest request) {
         return resposta(HttpStatus.CONFLICT, "CONFLITO_DE_ESTADO", exception.getMessage(), request, Map.of());
     }

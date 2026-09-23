@@ -99,6 +99,7 @@ Prefixo das rotas: `/api/familias/{familiaId}/listas`.
 | `POST` | (raiz) | Cria lista; retorna 201. |
 | `DELETE` | `/{listaId}` | Exclui definitivamente lista em preparação nunca utilizada; retorna 204. |
 | `POST` | `/{listaId}/reutilizar` | Cria preparação independente de Compra finalizada; retorna 201 e Location. |
+| `POST` | `/{listaId}/reaproveitar-itens-fora` | Cria preparação com itens finais selecionados que ficaram de fora; retorna 201 e Location. |
 | `GET` | `/{listaId}` | Consulta detalhes e contexto do usuário. |
 | `GET` | `/{listaId}/participantes` | Consulta participantes ativos. |
 | `POST` | `/{listaId}/participantes` | Adiciona participante; retorna 201. |
@@ -193,6 +194,8 @@ Não versionar `.env`, `DB_PASSWORD` ou `JWT_SECRET`; não incluir família/pape
 ## Reutilização da Compra finalizada
 
 Capability contextoUsuario.podeReutilizarLista no resumo. POST sem body cria nova lista em preparação na mesma família, com executor como criador/único participante. Copia snapshots NO_CARRINHO e PENDENTE (inclusive inclusões durante compra) em novos ItemLista; exclui REMOVIDO e não transporta vínculos, estados ou auditorias operacionais. Origem intacta, transação atômica, preparação vazia permitida, sem retry automático. [Contrato e testes](docs/contrato-reutilizacao-lista.md).
+
+Para itens que ficaram de fora, `contextoUsuario.podeCriarListaComItensQueFicaramDeFora` indica a disponibilidade de `POST /api/familias/{familiaId}/listas/{listaId}/reaproveitar-itens-fora`. O body recebe `itemIds`; cada id precisa pertencer à Compra finalizada e estar em `PENDENTE` ou `REMOVIDO`. IDs de outros itens, duplicados ou em estados como `NO_CARRINHO` são rejeitados. A nova lista em preparação copia apenas os snapshots selecionados, na ordem enviada, sem estado operacional, auditorias ou vínculos antigos. A finalização da Compra permanece independente dessa criação.
 
 ## Presença operacional
 

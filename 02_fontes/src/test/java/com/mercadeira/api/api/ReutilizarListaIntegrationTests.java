@@ -170,6 +170,38 @@ class ReutilizarListaIntegrationTests {
         assertThat(a).isNotEqualTo(b);
         assertThat(jdbc.queryForObject("select count(*) from item_lista where lista_compra_id in (?,?)",Integer.class,a,b)).isZero();
     }
+    @Test void reaproveitaSomenteItensPendentesOuRemovidosSelecionadosComSnapshots() throws Exception {
+        adicionarItem.adicionar(criador.getId(),familiaId,listaId,"Removido",new BigDecimal("2.5"),UnidadeMedida.KG,"Marca","Nota");
+        String inicio = iniciarCompra();
+        java.util.List<String> ids = com.jayway.jsonpath.JsonPath.read(inicio,"$.itens[*].id");
+        for (String acao : new String[]{"colocar-no-carrinho","solicitar-remocao","aprovar-remocao"})
+            mvc.perform(post(url+"/compra/itens/"+ids.get(1)+"/"+acao).header("Authorization",token(criador))).andExpect(status().isOk());
+        finalizar();
+        mvc.perform(get(url+"/compra").header("Authorization",token(criador)))
+            .andExpect(jsonPath("$.contextoUsuario.podeCriarListaComItensQueFicaramDeFora").value(true));
+        var resposta = mvc.perform(post(url+"/reaproveitar-itens-fora").header("Authorization",token(criador))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"itemIds\":[\""+ids.get(1)+"\"]}"))
+            .andExpect(status().isCreated()).andReturn().getResponse();
+        UUID nova = UUID.fromString(com.jayway.jsonpath.JsonPath.read(resposta.getContentAsString(),"$.id"));
+        var copiados = jdbc.queryForList("select descricao,quantidade,unidade_medida,marca,observacoes,removido_em from item_lista where lista_compra_id=?",nova);
+        assertThat(copiados).hasSize(1);
+        assertThat(copiados.getFirst()).containsEntry("descricao","Removido").containsEntry("quantidade",new BigDecimal("2.500"))
+            .containsEntry("unidade_medida","KG").containsEntry("marca","Marca").containsEntry("observacoes","Nota").containsEntry("removido_em",null);
+    }
+    @Test void reaproveitarItensForaRejeitaIdDeOutroItemOuEstadoNaoElegivelSemCriarLista() throws Exception {
+        String inicio = iniciarCompra();
+        String id = com.jayway.jsonpath.JsonPath.read(inicio,"$.itens[0].id");
+        mvc.perform(post(url+"/compra/itens/"+id+"/colocar-no-carrinho").header("Authorization",token(criador))).andExpect(status().isOk());
+        finalizar();
+        int antes = jdbc.queryForObject("select count(*) from lista_compra where familia_id=?",Integer.class,familiaId);
+        mvc.perform(post(url+"/reaproveitar-itens-fora").header("Authorization",token(criador)).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"itemIds\":[\""+id+"\"]}"))
+            .andExpect(status().isConflict());
+        mvc.perform(post(url+"/reaproveitar-itens-fora").header("Authorization",token(criador)).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"itemIds\":[\""+UUID.randomUUID()+"\"]}"))
+            .andExpect(status().isConflict());
+        assertThat(jdbc.queryForObject("select count(*) from lista_compra where familia_id=?",Integer.class,familiaId)).isEqualTo(antes);
+    }
     @Test void falhaAoCopiarItemReverteCriacaoDaListaEParticipante() throws Exception {
         iniciarCompra(); finalizar();
         jdbc.execute("""
