@@ -242,6 +242,54 @@ class ApiIntegrationTests {
     }
 
     @Test
+    void permiteSaidaVoluntariaSomenteAoParticipanteAtivoNaoCriadorEmPreparacao() throws Exception {
+        Usuario criador = usuario("Criador");
+        Familia familia = criarFamilia.criar(criador.getId(), "Casa da equipe");
+        ListaCompra lista = criarListaCompra.criar(criador.getId(), familia.getId(), "Lista", CategoriaCompra.OUTROS, null);
+        Usuario participante = usuario("Participante");
+        Usuario terceiro = usuario("Terceiro");
+        UUID participanteId = UUID.randomUUID();
+        UUID terceiroId = UUID.randomUUID();
+        entityManager.flush();
+        jdbcTemplate.update("insert into membro_familia (id, familia_id, usuario_id, papel, status, criado_em, atualizado_em) values (?, ?, ?, 'MEMBRO', 'ATIVO', now(), now())", participanteId, familia.getId(), participante.getId());
+        jdbcTemplate.update("insert into membro_familia (id, familia_id, usuario_id, papel, status, criado_em, atualizado_em) values (?, ?, ?, 'MEMBRO', 'ATIVO', now(), now())", terceiroId, familia.getId(), terceiro.getId());
+        String url = "/api/familias/" + familia.getId() + "/listas/" + lista.getId();
+
+        mockMvc.perform(post(url + "/participantes").header("Authorization", bearer(criador)).contentType(MediaType.APPLICATION_JSON).content("{\"membroFamiliaId\":\"" + participanteId + "\"}"))
+                .andExpect(status().isCreated());
+        mockMvc.perform(post(url + "/participantes").header("Authorization", bearer(criador)).contentType(MediaType.APPLICATION_JSON).content("{\"membroFamiliaId\":\"" + terceiroId + "\"}"))
+                .andExpect(status().isCreated());
+        mockMvc.perform(get(url).header("Authorization", bearer(criador)))
+                .andExpect(jsonPath("$.contextoUsuario.podeSairDaLista").value(false));
+        mockMvc.perform(get(url).header("Authorization", bearer(participante)))
+                .andExpect(jsonPath("$.contextoUsuario.participanteAtivo").value(true))
+                .andExpect(jsonPath("$.contextoUsuario.podeSairDaLista").value(true));
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete(url + "/participantes/" + terceiroId).header("Authorization", bearer(participante)))
+                .andExpect(status().is4xxClientError());
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete(url + "/participantes/" + participanteId).header("Authorization", bearer(participante)))
+                .andExpect(status().isNoContent());
+        mockMvc.perform(get(url).header("Authorization", bearer(participante)))
+                .andExpect(jsonPath("$.contextoUsuario.participanteAtivo").value(false))
+                .andExpect(jsonPath("$.contextoUsuario.podeSairDaLista").value(false));
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete(url + "/participantes/" + participanteId).header("Authorization", bearer(participante)))
+                .andExpect(status().is4xxClientError());
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete(url + "/participantes/" + lista.getCriadaPorMembroFamilia().getId()).header("Authorization", bearer(criador)))
+                .andExpect(status().is4xxClientError());
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete(url + "/participantes/" + terceiroId).header("Authorization", bearer(criador)))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(post(url + "/participantes").header("Authorization", bearer(criador)).contentType(MediaType.APPLICATION_JSON).content("{\"membroFamiliaId\":\"" + participanteId + "\"}"))
+                .andExpect(status().isCreated());
+        jdbcTemplate.update("update lista_compra set status = 'EM_COMPRA' where id = ?", lista.getId());
+        entityManager.clear();
+        mockMvc.perform(get(url).header("Authorization", bearer(participante)))
+                .andExpect(jsonPath("$.contextoUsuario.podeSairDaLista").value(false));
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete(url + "/participantes/" + participanteId).header("Authorization", bearer(participante)))
+                .andExpect(status().is4xxClientError());
+    }
+
+    @Test
     void iniciaCompraRetornaSnapshotsEReplayIdempotente() throws Exception {
         Usuario ana = usuario("Ana");
         Familia familia = criarFamilia.criar(ana.getId(), "Familia Compra");

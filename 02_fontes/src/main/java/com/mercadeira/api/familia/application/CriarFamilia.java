@@ -34,17 +34,45 @@ public class CriarFamilia {
         this.clock = clock;
     }
 
+    private String normalizarNome(String nome) {
+        if (nome == null || nome.isBlank()) {
+            throw new IllegalArgumentException("O nome da família é obrigatório.");
+        }
+
+        String nomeNormalizado = nome
+                .trim()
+                .replaceFirst("(?iu)^fam[ií]lia(?:\\s+|$)", "")
+                .replaceAll("\\s+", " ")
+                .trim();
+
+        if (nomeNormalizado.isBlank()) {
+            throw new IllegalArgumentException("O nome da família é obrigatório.");
+        }
+
+        return nomeNormalizado;
+    }
+
     @Transactional
     public Familia criar(UUID usuarioId, String nome) {
-        if (nome == null || nome.isBlank()) {
-            throw new IllegalArgumentException("O nome da familia e obrigatorio.");
-        }
+        String nomeNormalizado = normalizarNome(nome);
+
         Usuario usuario = usuarioRepository.findById(usuarioId)
                 .orElseThrow(() -> new UsuarioNaoEncontradoException(usuarioId));
 
-        Familia familia = Familia.criar(nome, geradorCodigoIngresso.gerar(), usuario, clock.instant());
+        Familia familia = Familia.criar(
+                nomeNormalizado,
+                geradorCodigoIngresso.gerar(),
+                usuario,
+                clock.instant());
+
         familiaRepository.save(familia);
-        membroFamiliaRepository.save(MembroFamilia.criarAdministrador(familia, usuario, clock.instant()));
+
+        membroFamiliaRepository.save(
+                MembroFamilia.criarAdministrador(
+                        familia,
+                        usuario,
+                        clock.instant()));
+
         return familia;
     }
 }
