@@ -138,9 +138,13 @@ class FinalizarCompraIntegrationTests {
     @Test
     void remocaoPendenteBloqueiaSemAlterarCompraListaOuItens() throws Exception {
         var c=contexto(); colocar(c); acao(c,"solicitar",c.outro(),200);
+        var administrador = observador(c, true);
         var antes=consultar(c,c.responsavel());
         var listaAntes=jdbc.queryForMap("select * from lista_compra where id=?",c.listaId());
         assertThat(objeto(antes,"contextoUsuario")).containsEntry("podeFinalizarCompra",false);
+        assertThat(objeto(consultar(c, administrador), "contextoUsuario"))
+                .containsEntry("podeEncerrarCompraAdministrativamente", false);
+        assertThat(finalizarAdministrativamente(c, administrador, 409)).containsEntry("erro", "CONFLITO_DE_ESTADO");
         assertThat(finalizar(c,c.responsavel(),409)).containsEntry("erro","CONFLITO_DE_ESTADO");
         assertThat(consultar(c,c.responsavel())).isEqualTo(antes);
         assertThat(jdbc.queryForMap("select * from lista_compra where id=?",c.listaId())).isEqualTo(listaAntes);
@@ -150,14 +154,70 @@ class FinalizarCompraIntegrationTests {
         finalizar(c,c.responsavel(),200);
     }
 
-    @ParameterizedTest
-    @ValueSource(booleans={false,true})
-    void observadorMesmoAdministradorNaoFinalizaNemFazReplay(boolean admin) throws Exception {
-        var c=contexto(); var token=observador(c,admin);
-        assertThat(objeto(consultar(c,token),"contextoUsuario")).containsEntry("podeFinalizarCompra",false);
-        finalizar(c,token,403);
-        finalizar(c,c.outro(),200);
-        finalizar(c,token,403);
+    @Test
+    void administradorParticipantePodeEncerrarAdministrativamente() throws Exception {
+        var c = contexto();
+        var antes = consultar(c, c.responsavel());
+        assertThat(objeto(antes, "contextoUsuario"))
+                .containsEntry("podeEncerrarCompraAdministrativamente", true);
+
+        var fim = finalizarAdministrativamente(c, c.responsavel(), 200);
+
+        assertThat(fim).containsEntry("status", "FINALIZADA");
+        assertThat(listaStatus(c)).isEqualTo("FINALIZADA");
+    }
+
+    @Test
+    void administradorNaoParticipantePodeEncerrarSemAlterarParticipacaoPresencaResponsabilidadeOuItens() throws Exception {
+        var c = contexto();
+        var administrador = observador(c, true);
+        var antes = consultar(c, administrador);
+        assertThat(objeto(antes, "contextoUsuario"))
+                .containsEntry("participanteCompra", false)
+                .containsEntry("podeFinalizarCompra", false)
+                .containsEntry("podeEncerrarCompraAdministrativamente", true);
+
+        colocar(c);
+        acao(c, "solicitar", c.responsavel(), 200);
+        var removido = getItem(c, c.responsavel());
+        var novo = json(mvc.perform(post(c.url()+"/itens").header("Authorization",c.outro())
+                .contentType(MediaType.APPLICATION_JSON).content("{\"descricao\":\"Feijao\"}"))
+                .andExpect(status().isCreated()).andReturn());
+        mvc.perform(post(c.url()+"/itens/"+novo.get("id")+"/colocar-no-carrinho").header("Authorization",c.outro()))
+                .andExpect(status().isOk());
+        var pendente = json(mvc.perform(post(c.url()+"/itens").header("Authorization",c.outro())
+                .contentType(MediaType.APPLICATION_JSON).content("{\"descricao\":\"Cafe\"}"))
+                .andExpect(status().isCreated()).andReturn());
+        var antesFinalizar = consultar(c, administrador);
+
+        var fim = finalizarAdministrativamente(c, administrador, 200);
+
+        assertThat(fim).containsEntry("status", "FINALIZADA");
+        assertThat(listaStatus(c)).isEqualTo("FINALIZADA");
+        assertThat(fim.get("participantes")).isEqualTo(antesFinalizar.get("participantes"));
+        assertThat(fim.get("responsabilidadeOperacional")).isEqualTo(antesFinalizar.get("responsabilidadeOperacional"));
+        assertThat(((List<Map<String,Object>>) fim.get("itens")).stream()
+                .collect(java.util.stream.Collectors.toMap(item -> item.get("id"), item -> item.get("status"))))
+                .containsEntry(c.itemId(), removido.get("status"))
+                .containsEntry(novo.get("id"), "NO_CARRINHO")
+                .containsEntry(pendente.get("id"), "PENDENTE");
+        assertThat(removido.get("status")).isEqualTo("REMOVIDO");
+    }
+
+    @Test
+    void membroComumNaoPodeEncerrarAdministrativamente() throws Exception {
+        var c = contexto();
+        var membro = observador(c, false);
+        assertThat(objeto(consultar(c, membro), "contextoUsuario"))
+                .containsEntry("podeEncerrarCompraAdministrativamente", false);
+        finalizarAdministrativamente(c, membro, 403);
+    }
+
+    @Test
+    void compraJaFinalizadaNaoPodeSerEncerradaAdministrativamenteOutraVez() throws Exception {
+        var c = contexto();
+        finalizarAdministrativamente(c, c.responsavel(), 200);
+        finalizarAdministrativamente(c, c.responsavel(), 409);
     }
 
     @Test
@@ -331,6 +391,9 @@ class FinalizarCompraIntegrationTests {
     }
     private Map<String,Object> finalizar(Contexto c,String token,int esperado) throws Exception {
         return json(mvc.perform(post(c.url()+"/finalizar").header("Authorization",token)).andExpect(status().is(esperado)).andReturn());
+    }
+    private Map<String,Object> finalizarAdministrativamente(Contexto c,String token,int esperado) throws Exception {
+        return json(mvc.perform(post(c.url()+"/finalizar-administrativamente").header("Authorization",token)).andExpect(status().is(esperado)).andReturn());
     }
 
     private Map<String,Object> acao(Contexto c,String acao,String token,int esperado) throws Exception {

@@ -145,6 +145,12 @@ public class CompraController {
         return CompraResponse.from(consultarCompra.consultar(usuario.getId(), familiaId, listaId), usuario.getId());
     }
 
+    @PostMapping("/finalizar-administrativamente")
+    public CompraResponse finalizarAdministrativamente(@PathVariable UUID familiaId, @PathVariable UUID listaId) {
+        finalizarCompra.executarAdministrativamente(usuario.getId(), familiaId, listaId);
+        return CompraResponse.from(consultarCompra.consultar(usuario.getId(), familiaId, listaId), usuario.getId());
+    }
+
     @GetMapping
     public CompraResponse consultar(@PathVariable UUID familiaId, @PathVariable UUID listaId) {
         return CompraResponse.from(consultarCompra.consultar(usuario.getId(), familiaId, listaId), usuario.getId());

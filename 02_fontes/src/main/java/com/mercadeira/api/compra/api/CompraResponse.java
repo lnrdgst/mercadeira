@@ -52,6 +52,11 @@ public record CompraResponse(
                 && compra.getListaCompra().getStatus() == StatusListaCompra.EM_COMPRA
                 && !resultado.itens().isEmpty()
                 && resultado.itens().stream().noneMatch(item -> item.getStatus() == StatusItemCompra.REMOCAO_SOLICITADA);
+        boolean podeEncerrarAdministrativamente = resultado.administradorAtivo()
+                && compra.getStatus() == StatusCompra.EM_ANDAMENTO
+                && compra.getListaCompra().getStatus() == StatusListaCompra.EM_COMPRA
+                && !resultado.itens().isEmpty()
+                && resultado.itens().stream().noneMatch(item -> item.getStatus() == StatusItemCompra.REMOCAO_SOLICITADA);
         boolean precisaEstarPresenteParaFinalizar = resultado.participanteCompra() && emAndamento
                 && participanteAtual != null && !participanteAtual.estaPresente()
                 && compra.getListaCompra().getStatus() == StatusListaCompra.EM_COMPRA
@@ -111,7 +116,7 @@ public record CompraResponse(
                         compra.getStatus() == StatusCompra.FINALIZADA && compra.getListaCompra().getStatus() == StatusListaCompra.FINALIZADA && compra.getListaCompra().getFamilia().getStatus() == com.mercadeira.api.familia.domain.StatusFamilia.ATIVA
                                 && resultado.itens().stream().anyMatch(item -> item.getStatus() == StatusItemCompra.PENDENTE || item.getStatus() == StatusItemCompra.REMOVIDO),
                         podeSolicitarPresenca, podeCancelar, podeDeclararSaida, podeSolicitarResponsabilidade,
-                        podeCancelarResponsabilidade, precisaEstarPresenteParaFinalizar));
+                        podeCancelarResponsabilidade, precisaEstarPresenteParaFinalizar, podeEncerrarAdministrativamente));
     }
 
     public record ParticipanteCompraResponse(
@@ -166,6 +171,6 @@ public record CompraResponse(
             boolean podeFinalizarCompra, boolean podeReutilizarLista, boolean podeCriarListaComItensQueFicaramDeFora, boolean podeSolicitarPresenca,
             boolean podeCancelarSolicitacaoPresenca, boolean podeDeclararSaida,
             boolean podeSolicitarResponsabilidade, boolean podeCancelarSolicitacaoResponsabilidade,
-            boolean precisaEstarPresenteParaFinalizar) {
+            boolean precisaEstarPresenteParaFinalizar, boolean podeEncerrarCompraAdministrativamente) {
     }
 }

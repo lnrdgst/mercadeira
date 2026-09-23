@@ -14,6 +14,7 @@ import com.mercadeira.api.compra.repository.SolicitacaoResponsabilidadeOperacion
 import com.mercadeira.api.compra.domain.EstadoSolicitacaoPresenca;
 import com.mercadeira.api.compra.domain.EstadoSolicitacaoResponsabilidade;
 import com.mercadeira.api.familia.domain.MembroFamilia;
+import com.mercadeira.api.familia.domain.PapelMembroFamilia;
 import com.mercadeira.api.familia.domain.StatusMembroFamilia;
 import com.mercadeira.api.familia.repository.MembroFamiliaRepository;
 import com.mercadeira.api.lista.application.ListaCompraNaoEncontradaException;
@@ -69,7 +70,8 @@ public class ConsultarCompraDaLista {
         var minhaResponsabilidade = participanteAtual.flatMap(p -> solicitacaoResponsabilidadeRepository
                 .findFirstByCompraIdAndSolicitanteIdOrderBySolicitadaEmDescIdDesc(compra.getId(), p.getId())).orElse(null);
         var pendentesResponsabilidade = solicitacaoResponsabilidadeRepository.findByCompraIdAndEstadoOrderBySolicitadaEmAscIdAsc(compra.getId(), EstadoSolicitacaoResponsabilidade.PENDENTE);
-        return new ResultadoConsultaCompra(compra, participantes, itens, participanteCompra, minhaSolicitacao, pendentes,
+        return new ResultadoConsultaCompra(compra, participantes, itens, participanteCompra,
+                membro.getPapel() == PapelMembroFamilia.ADMINISTRADOR, minhaSolicitacao, pendentes,
                 minhaResponsabilidade, pendentesResponsabilidade);
     }
 }

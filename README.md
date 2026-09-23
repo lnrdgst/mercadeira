@@ -136,6 +136,7 @@ Prefixo das rotas: `/api/familias/{familiaId}/listas/{listaId}/compra`.
 | `POST` | `/itens/{itemCompraId}/rejeitar-remocao` | Rejeita remoção. |
 | `POST` | `/itens/{itemCompraId}/restaurar-no-carrinho` | Restaura item removido no carrinho. |
 | `POST` | `/finalizar` | Finaliza Compra e lista; retorna 200 e Compra completa, inclusive em replay autorizado. |
+| `POST` | `/finalizar-administrativamente` | Administrador ativo encerra Compra em andamento; retorna 200 e Compra completa. |
 
 As cinco ações sobre `itens/{itemCompraId}` não recebem body e retornam 200 com ItemCompra completo. Finalização também não recebe body. Autor e datas vêm do servidor.
 
@@ -152,6 +153,8 @@ Contratos: [Compra 2E — remoção](docs/contratos-compra-2e.md) e [Compra 4 �
 ### Revisão e finalização
 
 Revisão é uma etapa da interface, sem novo estado persistido. Usar `contextoUsuario.podeFinalizarCompra`. Qualquer participante da Compra com vínculo familiar ativo pode finalizar quando as condições de domínio permitem.
+
+`contextoUsuario.podeEncerrarCompraAdministrativamente` indica o encerramento administrativo. Somente administrador ativo da família recebe a capability enquanto a Compra está em andamento e pode ser finalizada com segurança. Ele não precisa ser participante, estar presente ou ser responsável operacional, e não ganha poderes operacionais: a operação não cria participação, não altera presença nem responsabilidade e preserva os estados e histórico dos itens. O endpoint administrativo revalida tudo em transação; não há encerramento automático ou regra temporal.
 
 - `PENDENTE` não bloqueia: continua pendente, representando item não comprado.
 - `NO_CARRINHO` e `REMOVIDO` são preservados, com suas auditorias.

@@ -132,6 +132,14 @@ public class Compra {
     }
 
     public boolean finalizar(ParticipanteCompra executor, Instant instante) {
+        return finalizar(executor, instante, true);
+    }
+
+    public boolean finalizarAdministrativamente(ParticipanteCompra executor, Instant instante) {
+        return finalizar(executor, instante, false);
+    }
+
+    private boolean finalizar(ParticipanteCompra executor, Instant instante, boolean encerrarCicloOperacional) {
         if (executor == null || instante == null || id == null
                 || !id.equals(executor.getCompra().getId())) {
             throw new FinalizacaoCompraInvalidaException("Autor da finalizacao deve pertencer a mesma compra.");
@@ -150,7 +158,7 @@ public class Compra {
             throw new FinalizacaoCompraInvalidaException("A compra em andamento possui finalizacao anterior.");
         }
         status = StatusCompra.FINALIZADA;
-        cicloOperacionalAtivo = false;
+        if (encerrarCicloOperacional) cicloOperacionalAtivo = false;
         finalizadaPorParticipanteCompra = executor;
         finalizadaEm = instante;
         return true;

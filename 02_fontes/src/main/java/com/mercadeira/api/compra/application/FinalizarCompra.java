@@ -11,6 +11,7 @@ import com.mercadeira.api.compra.repository.CompraRepository;
 import com.mercadeira.api.compra.repository.ItemCompraRepository;
 import com.mercadeira.api.compra.repository.ParticipanteCompraRepository;
 import com.mercadeira.api.familia.domain.StatusMembroFamilia;
+import com.mercadeira.api.familia.domain.PapelMembroFamilia;
 import com.mercadeira.api.familia.repository.MembroFamiliaRepository;
 import com.mercadeira.api.lista.application.ListaCompraNaoEncontradaException;
 import com.mercadeira.api.lista.application.MembroFamiliaInvalidoException;
@@ -78,6 +79,47 @@ public class FinalizarCompra {
 
         var instante = clock.instant().truncatedTo(java.time.temporal.ChronoUnit.MICROS);
         boolean finalizadaAgora = compra.finalizar(participante, instante);
+        if (finalizadaAgora) {
+            fluxoPresenca.cancelarPendentesAoFinalizar(compra, instante);
+            lista.finalizarCompra(instante);
+        }
+        return new ResultadoFinalizacaoCompra(compra, finalizadaAgora);
+    }
+
+    @Transactional
+    public ResultadoFinalizacaoCompra executarAdministrativamente(UUID usuarioId, UUID familiaId, UUID listaId) {
+        // Ordem global: ListaCompra -> Compra. A autorizacao e o estado sao revalidados sob lock.
+        var lista = listas.findByIdForUpdate(listaId)
+                .orElseThrow(() -> new ListaCompraNaoEncontradaException(listaId));
+        if (!lista.getFamilia().getId().equals(familiaId)) {
+            throw new ListaCompraNaoEncontradaException(listaId);
+        }
+        var compra = compras.findByListaCompra_IdForUpdate(listaId)
+                .orElseThrow(() -> new CompraNaoEncontradaException(listaId));
+        if (!compra.getListaCompra().getId().equals(listaId)) {
+            throw new ListaCompraNaoEncontradaException(listaId);
+        }
+        var administrador = membros.findByFamilia_IdAndUsuario_IdAndStatus(familiaId, usuarioId, StatusMembroFamilia.ATIVO)
+                .filter(membro -> membro.getPapel() == PapelMembroFamilia.ADMINISTRADOR)
+                .orElseThrow(MembroFamiliaInvalidoException::new);
+
+        boolean emAndamento = compra.getStatus() == StatusCompra.EM_ANDAMENTO
+                && lista.getStatus() == StatusListaCompra.EM_COMPRA;
+        if (!emAndamento) {
+            throw new CompraListaInconsistenteException();
+        }
+        var itensCompra = itens.findByCompra_IdOrderByOrdemExibicaoAscIdAsc(compra.getId());
+        if (itensCompra.isEmpty()) {
+            throw new FinalizacaoCompraInvalidaException("A compra sem itens nao pode ser finalizada.");
+        }
+        if (itensCompra.stream().anyMatch(item -> item.getStatus() == StatusItemCompra.REMOCAO_SOLICITADA)) {
+            throw new CompraComRemocaoPendenteException();
+        }
+        var participanteHistorico = participantes.findByCompra_IdAndMembroFamilia_Id(compra.getId(), administrador.getId())
+                .orElseGet(() -> participantes.findByCompra_IdOrderByGeradoEmAscIdAsc(compra.getId()).stream().findFirst()
+                        .orElseThrow(() -> new FinalizacaoCompraInvalidaException("A compra sem participantes nao pode ser finalizada.")));
+        var instante = clock.instant().truncatedTo(java.time.temporal.ChronoUnit.MICROS);
+        boolean finalizadaAgora = compra.finalizarAdministrativamente(participanteHistorico, instante);
         if (finalizadaAgora) {
             fluxoPresenca.cancelarPendentesAoFinalizar(compra, instante);
             lista.finalizarCompra(instante);

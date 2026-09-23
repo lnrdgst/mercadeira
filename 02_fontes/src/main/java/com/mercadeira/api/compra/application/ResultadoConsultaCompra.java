@@ -13,6 +13,7 @@ public record ResultadoConsultaCompra(
         List<ParticipanteCompra> participantes,
         List<ItemCompra> itens,
         boolean participanteCompra,
+        boolean administradorAtivo,
         SolicitacaoPresencaCompra minhaSolicitacao,
         List<SolicitacaoPresencaCompra> solicitacoesPendentes,
         SolicitacaoResponsabilidadeOperacional minhaSolicitacaoResponsabilidade,
