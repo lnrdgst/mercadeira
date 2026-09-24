@@ -32,6 +32,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.transaction.annotation.Transactional;
 
 @RestController
 @RequestMapping("/api/familias")
@@ -107,6 +108,7 @@ public class FamiliaController {
     }
 
     @GetMapping("/{familiaId}/solicitacoes")
+    @Transactional(readOnly = true)
     public List<SolicitacaoEntradaFamiliaResponse> listarSolicitacoes(@PathVariable UUID familiaId) {
         MembroFamilia executor = membroAtivoNaFamilia(familiaId);
         return listarSolicitacoesPendentes.listar(familiaId, executor.getId()).stream()
@@ -115,6 +117,7 @@ public class FamiliaController {
     }
 
     @GetMapping("/{familiaId}/membros")
+    @Transactional(readOnly = true)
     public List<MembroFamiliaResponse> listarMembros(@PathVariable UUID familiaId) {
         membroAtivoNaFamilia(familiaId);
         var membros = membroFamiliaRepository.findByFamilia_IdAndStatusOrderByUsuario_NomeAscIdAsc(familiaId, StatusMembroFamilia.ATIVO);

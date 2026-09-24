@@ -8,9 +8,9 @@ import com.mercadeira.api.lista.domain.ListaCompra;
 import com.mercadeira.api.lista.domain.StatusListaCompra;
 
 public record ListaCompraResponse(UUID id, String nome, CategoriaCompra categoria, String estabelecimento,
-        StatusListaCompra status, Instant criadaEm, Instant atualizadaEm) {
+        StatusListaCompra status, Instant criadaEm, Instant atualizadaEm, UUID criadaPorUsuarioId) {
     static ListaCompraResponse from(ListaCompra lista) {
         return new ListaCompraResponse(lista.getId(), lista.getNome(), lista.getCategoria(), lista.getEstabelecimento(),
-                lista.getStatus(), lista.getCriadaEm(), lista.getAtualizadaEm());
+                lista.getStatus(), lista.getCriadaEm(), lista.getAtualizadaEm(), lista.getCriadaPorMembroFamilia().getUsuario().getId());
     }
 }

@@ -28,7 +28,8 @@ public interface CompraRepository extends JpaRepository<Compra, UUID> {
             UUID familiaId,
             StatusCompra status);
 
-    @EntityGraph(attributePaths = "listaCompra")
+    @EntityGraph(attributePaths = { "listaCompra", "listaCompra.criadaPorMembroFamilia",
+            "listaCompra.criadaPorMembroFamilia.usuario" })
     @Query("select compra from Compra compra where compra.listaCompra.familia.id = :familiaId and compra.status = com.mercadeira.api.compra.domain.StatusCompra.FINALIZADA and compra.finalizadaEm < :limite order by compra.finalizadaEm desc")
     Page<Compra> findHistoricoAnterior(@Param("familiaId") UUID familiaId, @Param("limite") Instant limite, Pageable pageable);
 

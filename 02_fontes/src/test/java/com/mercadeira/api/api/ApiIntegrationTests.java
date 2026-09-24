@@ -206,6 +206,42 @@ class ApiIntegrationTests {
     }
 
     @Test
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
+    void consultasDeMembrosESolicitacoesFuncionamRepetidamenteSemSessaoExterna() throws Exception {
+        Usuario administradora = usuario("Administradora");
+        Familia familia = criarFamilia.criar(administradora.getId(), "Oliveira");
+        Usuario solicitante = usuario("Solicitante");
+        solicitarEntrada.solicitar(solicitante.getId(), familia.getCodigoIngresso());
+
+        String token = bearer(administradora);
+        String membrosUrl = "/api/familias/" + familia.getId() + "/membros";
+        String solicitacoesUrl = "/api/familias/" + familia.getId() + "/solicitacoes";
+        for (int consulta = 0; consulta < 2; consulta++) {
+            mockMvc.perform(get(membrosUrl).header("Authorization", token))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$[0].nome").value("Administradora"))
+                    .andExpect(jsonPath("$[0].email").value(administradora.getEmail()));
+            mockMvc.perform(get(solicitacoesUrl).header("Authorization", token))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$[0].solicitante.nome").value("Solicitante"))
+                    .andExpect(jsonPath("$[0].solicitante.email").value(solicitante.getEmail()));
+        }
+    }
+
+    @Test
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
+    void listaIncluiCriadorSemDependerDeSessaoExterna() throws Exception {
+        Usuario criadora = usuario("Criadora");
+        Familia familia = criarFamilia.criar(criadora.getId(), "Oliveira");
+        criarListaCompra.criar(criadora.getId(), familia.getId(), "Compra", CategoriaCompra.OUTROS, null);
+
+        mockMvc.perform(get("/api/familias/{familiaId}/listas", familia.getId())
+                        .header("Authorization", bearer(criadora)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].criadaPorUsuarioId").value(criadora.getId().toString()));
+    }
+
+    @Test
     void administradorTransfereAdministracaoEAsCapabilitiesSaoRecalculadas() throws Exception {
         Usuario ana = usuario("Ana");
         Familia familia = criarFamilia.criar(ana.getId(), "Oliveira");
