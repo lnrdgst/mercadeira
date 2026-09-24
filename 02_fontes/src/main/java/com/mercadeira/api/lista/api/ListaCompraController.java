@@ -34,6 +34,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -63,8 +64,14 @@ public class ListaCompraController {
         this.compraRepository = compraRepository; this.excluir = excluir;
     }
 
-    @GetMapping public List<ListaCompraResponse> listar(@PathVariable UUID familiaId) {
-        return listar.listar(usuario.getId(), familiaId).stream().map(ListaCompraResponse::from).toList();
+    @GetMapping public ResponseEntity<List<ListaCompraResponse>> listar(@PathVariable UUID familiaId) {
+        return ResponseEntity.ok().header("X-Total-Compras-Anteriores", String.valueOf(listar.totalHistorico(usuario.getId(), familiaId)))
+                .body(listar.listar(usuario.getId(), familiaId).stream().map(ListaCompraResponse::from).toList());
+    }
+    @GetMapping("/historico")
+    public HistoricoListaCompraResponse historico(@PathVariable UUID familiaId,
+            @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size) {
+        return HistoricoListaCompraResponse.from(listar.historico(usuario.getId(), familiaId, page, size));
     }
     @PostMapping public ResponseEntity<ListaCompraResponse> criar(@PathVariable UUID familiaId, @Valid @RequestBody ListaCompraRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(ListaCompraResponse.from(

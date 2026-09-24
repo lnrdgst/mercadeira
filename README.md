@@ -95,7 +95,8 @@ Prefixo das rotas: `/api/familias/{familiaId}/listas`.
 
 | Método | Sufixo | Descrição |
 | --- | --- | --- |
-| `GET` | (raiz) | Lista listas da família, incluindo finalizadas. |
+| `GET` | (raiz) | Lista ativas e finalizadas recentes; `X-Total-Compras-Anteriores` informa o total histórico. |
+| `GET` | `/historico?page=0&size=20` | Histórico paginado de compras finalizadas há mais de 14 dias. |
 | `POST` | (raiz) | Cria lista; retorna 201. |
 | `DELETE` | `/{listaId}` | Exclui definitivamente lista em preparação nunca utilizada; retorna 204. |
 | `POST` | `/{listaId}/reutilizar` | Cria preparação independente de Compra finalizada; retorna 201 e Location. |
@@ -189,6 +190,8 @@ Relatórios: `02_fontes/target/surefire-reports/`. A evidência registrada no co
 Ainda sem histórico dedicado/agregado, reabertura, cancelamento operacional ou atualização em tempo real por WebSocket.
 
 Não há histórico completo de ciclos de remoção/restauração, versionamento de comandos ou idempotency-key. Replay de restauração considera o estado vigente; não permite reconstruir ciclos anteriores.
+
+Compras finalizadas até 14 dias inclusive permanecem na listagem principal. As mais antigas são apenas uma classificação de consulta: continuam preservadas, são recuperadas sob demanda em páginas de até 50 registros (20 por padrão) e permanecem disponíveis para o resumo e reutilização; não há exclusão automática, scheduler ou novo estado.
 
 No piloto reduzido da V1, resumos das compras finalizadas acessíveis pelo frontend em Minhas Listas são suficientes. Histórico dedicado permanece no backlog; sua ausência não impede consultar Compra finalizada.
 
