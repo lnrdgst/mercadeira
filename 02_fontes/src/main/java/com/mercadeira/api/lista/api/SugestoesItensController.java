@@ -5,6 +5,7 @@ import java.util.UUID;
 import com.mercadeira.api.autenticacao.security.UsuarioAutenticado;
 import com.mercadeira.api.lista.application.SugerirItensFamilia;
 import com.mercadeira.api.lista.repository.SugestoesItensRepository.Sugestao;
+import com.mercadeira.api.lista.domain.CategoriaCompra;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -16,7 +17,8 @@ public class SugestoesItensController {
         this.usuario = usuario; this.sugestoes = sugestoes;
     }
     @GetMapping
-    public List<Sugestao> buscar(@PathVariable UUID familiaId, @RequestParam(defaultValue = "") String termo) {
-        return sugestoes.buscar(usuario.getId(), familiaId, termo);
+    public List<Sugestao> buscar(@PathVariable UUID familiaId, @RequestParam UUID listaId,
+            @RequestParam CategoriaCompra categoria, @RequestParam(defaultValue = "") String termo) {
+        return sugestoes.buscar(usuario.getId(), familiaId, listaId, categoria, termo);
     }
 }

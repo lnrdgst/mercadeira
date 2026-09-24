@@ -19,6 +19,7 @@ import org.springframework.boot.testcontainers.service.connection.ServiceConnect
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.*;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 import org.testcontainers.containers.PostgreSQLContainer;
@@ -57,11 +58,15 @@ class SugestoesItensIntegrationTests {
     UUID item(String descricao, UnidadeMedida unidade) {
         return itens.adicionar(usuario.getId(), familia, lista, descricao, null, unidade, "Marca privada", "Observacao privada").getId();
     }
+    MockHttpServletRequestBuilder sugestoes(String termo) {
+        return get(url).param("listaId", lista.toString()).param("categoria", "SUPERMERCADO")
+                .param("termo", termo).header("Authorization", auth);
+    }
     @Test void deduplicaCaixaEspacosEUsaUnidadeMaisRecenteComBuscaParcial() throws Exception {
         item("Arroz integral", UnidadeMedida.UNIDADE);
         item("  ARROZ   integral  ", UnidadeMedida.KG);
         item("Feijao", null);
-        mvc.perform(get(url).param("termo"," arrOZ  int ").header("Authorization",auth))
+        mvc.perform(sugestoes(" arrOZ  int "))
             .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(1))
             .andExpect(jsonPath("$[0].descricao").value("ARROZ integral"))
             .andExpect(jsonPath("$[0].unidadeMedida").value("KG"))
@@ -73,18 +78,18 @@ class SugestoesItensIntegrationTests {
             UUID id = item("Item "+n, null);
             jdbc.update("update item_lista set atualizado_em = timestamptz '2026-01-01 00:00:00+00' + ? * interval '1 minute' where id=?", n, id);
         }
-        mvc.perform(get(url).header("Authorization",auth)).andExpect(status().isOk())
+        mvc.perform(sugestoes("")).andExpect(status().isOk())
             .andExpect(jsonPath("$.length()").value(10)).andExpect(jsonPath("$[0].descricao").value("Item 11"))
             .andExpect(jsonPath("$[9].descricao").value("Item 2"));
-        mvc.perform(get(url).param("termo","inexistente").header("Authorization",auth)).andExpect(jsonPath("$").isEmpty());
+        mvc.perform(sugestoes("inexistente")).andExpect(jsonPath("$").isEmpty());
     }
     @Test void excluiRemovidosDaPreparacaoEListasCanceladas() throws Exception {
         UUID removido = item("Removido", null);
         jdbc.update("update item_lista set removido_em=now() where id=?", removido);
-        mvc.perform(get(url).header("Authorization",auth)).andExpect(jsonPath("$").isEmpty());
+        mvc.perform(sugestoes("")).andExpect(jsonPath("$").isEmpty());
         item("Cancelado", null);
         jdbc.update("update lista_compra set status='CANCELADA' where id=?", lista);
-        mvc.perform(get(url).header("Authorization",auth)).andExpect(jsonPath("$").isEmpty());
+        mvc.perform(sugestoes("")).andExpect(jsonPath("$").isEmpty());
     }
     @Test void recuperaSnapshotsFinalizadosEItensIncluidosDuranteCompra() throws Exception {
         item("Arroz", UnidadeMedida.KG);
@@ -95,10 +100,10 @@ class SugestoesItensIntegrationTests {
                 unidade_medida_snapshot,status,ordem_exibicao,adicionado_por_participante_compra_id,adicionado_em)
             values (?,?,true,'Cafe','PACOTE','PENDENTE',2,?,now())
             """, UUID.randomUUID(), compra, participante);
-        mvc.perform(get(url).header("Authorization",auth)).andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(2));
+        mvc.perform(sugestoes("")).andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(2));
         jdbc.update("update compra set status='FINALIZADA',finalizada_em=now(),finalizada_por_participante_compra_id=? where id=?", participante, compra);
         jdbc.update("update lista_compra set status='FINALIZADA' where id=?", lista);
-        mvc.perform(get(url).param("termo","cafe").header("Authorization",auth))
+        mvc.perform(sugestoes("cafe"))
             .andExpect(jsonPath("$[0].descricao").value("Cafe")).andExpect(jsonPath("$[0].unidadeMedida").value("PACOTE"));
         UUID membro = jdbc.queryForObject("select id from membro_familia where usuario_id=?", UUID.class, usuario.getId());
         jdbc.update("""
@@ -107,27 +112,46 @@ class SugestoesItensIntegrationTests {
             remocao_resolvida_por_membro_familia_id=?,remocao_resolvida_em=now(),decisao_remocao='APROVADA'
             where compra_id=? and descricao_snapshot='Cafe'
             """, membro,membro,membro,compra);
-        mvc.perform(get(url).param("termo","cafe").header("Authorization",auth)).andExpect(jsonPath("$").isEmpty());
+        mvc.perform(sugestoes("cafe")).andExpect(jsonPath("$").isEmpty());
     }
     @Test void exigeVinculoAtivoMasNaoAutoriaOuParticipacaoEIsolaFamilias() throws Exception {
         item("Arroz", null);
         Usuario outro = novoUsuario();
         UUID outraFamilia = familias.criar(outro.getId(),"Outra").getId();
-        mvc.perform(get(url)).andExpect(status().isUnauthorized());
-        mvc.perform(get(url).header("Authorization",token(outro))).andExpect(status().isForbidden());
-        mvc.perform(get("/api/familias/"+outraFamilia+"/itens/sugestoes").header("Authorization",token(outro)))
+        UUID outraLista = listas.criar(outro.getId(), outraFamilia, "Lista", CategoriaCompra.SUPERMERCADO, null).getId();
+        mvc.perform(get(url).param("listaId", lista.toString()).param("categoria", "SUPERMERCADO")).andExpect(status().isUnauthorized());
+        mvc.perform(get(url).param("listaId", lista.toString()).param("categoria", "SUPERMERCADO").header("Authorization",token(outro))).andExpect(status().isForbidden());
+        mvc.perform(get("/api/familias/"+outraFamilia+"/itens/sugestoes").param("listaId", outraLista.toString())
+                .param("categoria", "SUPERMERCADO").header("Authorization",token(outro)))
             .andExpect(status().isOk()).andExpect(jsonPath("$").isEmpty());
         UUID membro = UUID.randomUUID();
         jdbc.update("insert into membro_familia(id,familia_id,usuario_id,papel,status,criado_em,atualizado_em) values (?,?,?,'MEMBRO','ATIVO',now(),now())", membro, familia, outro.getId());
-        mvc.perform(get(url).header("Authorization",token(outro))).andExpect(status().isOk()).andExpect(jsonPath("$[0].descricao").value("Arroz"));
+        mvc.perform(get(url).param("listaId", lista.toString()).param("categoria", "SUPERMERCADO").header("Authorization",token(outro))).andExpect(status().isOk()).andExpect(jsonPath("$[0].descricao").value("Arroz"));
         jdbc.update("update membro_familia set status='INATIVO' where id=?", membro);
-        mvc.perform(get(url).header("Authorization",token(outro))).andExpect(status().isForbidden());
+        mvc.perform(get(url).param("listaId", lista.toString()).param("categoria", "SUPERMERCADO").header("Authorization",token(outro))).andExpect(status().isForbidden());
+    }
+    @Test void filtraHistoricoPelaCategoriaDaListaAtualESemFallback() throws Exception {
+        item("Carne", UnidadeMedida.KG);
+        item("Cafe", UnidadeMedida.PACOTE);
+        UUID farmacia = listas.criar(usuario.getId(), familia, "Farmacia", CategoriaCompra.FARMACIA, null).getId();
+        itens.adicionar(usuario.getId(), familia, farmacia, "Dipirona", null, UnidadeMedida.CAIXA, null, null);
+        itens.adicionar(usuario.getId(), familia, farmacia, "Algodao", null, UnidadeMedida.PACOTE, null, null);
+
+        mvc.perform(get(url).param("listaId", farmacia.toString()).param("categoria", "FARMACIA").param("termo", "di").header("Authorization", auth))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].descricao").value("Dipirona"));
+        mvc.perform(get(url).param("listaId", farmacia.toString()).param("categoria", "FARMACIA").param("termo", "ca").header("Authorization", auth))
+                .andExpect(status().isOk()).andExpect(jsonPath("$").isEmpty());
+        mvc.perform(sugestoes("ca")).andExpect(status().isOk()).andExpect(jsonPath("$[0].descricao").value("Cafe"));
+        mvc.perform(sugestoes("di")).andExpect(status().isOk()).andExpect(jsonPath("$").isEmpty());
+        mvc.perform(get(url).param("listaId", farmacia.toString()).param("categoria", "SUPERMERCADO").header("Authorization", auth))
+                .andExpect(status().isBadRequest());
     }
     @Test void limitaTermoETrataCaracteresComoTextoLiteral() throws Exception {
         item("Leite 100%", null);
         item("Leite integral", null);
-        mvc.perform(get(url).param("termo","%").header("Authorization",auth)).andExpect(jsonPath("$.length()").value(1));
-        mvc.perform(get(url).param("termo","' OR 1=1 --").header("Authorization",auth)).andExpect(jsonPath("$").isEmpty());
-        mvc.perform(get(url).param("termo","x".repeat(201)).header("Authorization",auth)).andExpect(status().isBadRequest());
+        mvc.perform(sugestoes("%")).andExpect(jsonPath("$.length()").value(1));
+        mvc.perform(sugestoes("' OR 1=1 --")).andExpect(jsonPath("$").isEmpty());
+        mvc.perform(sugestoes("x".repeat(201))).andExpect(status().isBadRequest());
     }
 }

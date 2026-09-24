@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.UUID;
 import com.mercadeira.api.lista.repository.SugestoesItensRepository;
 import com.mercadeira.api.lista.repository.SugestoesItensRepository.Sugestao;
+import com.mercadeira.api.lista.domain.CategoriaCompra;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,9 +16,12 @@ public class SugerirItensFamilia {
         this.acesso = acesso; this.repository = repository;
     }
     @Transactional(readOnly = true)
-    public List<Sugestao> buscar(UUID usuarioId, UUID familiaId, String termo) {
+    public List<Sugestao> buscar(UUID usuarioId, UUID familiaId, UUID listaId, CategoriaCompra categoria, String termo) {
         acesso.membroAtivoNaFamilia(usuarioId, familiaId);
         if (termo == null || termo.length() > 200) throw new IllegalArgumentException("Busca limitada a 200 caracteres.");
-        return repository.buscar(familiaId, termo);
+        if (acesso.lista(familiaId, listaId).getCategoria() != categoria) {
+            throw new IllegalArgumentException("Categoria incompatível com a lista.");
+        }
+        return repository.buscar(familiaId, categoria, termo);
     }
 }
