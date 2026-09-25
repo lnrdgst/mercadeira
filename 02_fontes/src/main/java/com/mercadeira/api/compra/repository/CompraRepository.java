@@ -18,6 +18,8 @@ import jakarta.persistence.LockModeType;
 
 public interface CompraRepository extends JpaRepository<Compra, UUID> {
 
+    boolean existsByListaCompra_Familia_Id(UUID familiaId);
+
     Optional<Compra> findByListaCompra_Id(UUID listaCompraId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)

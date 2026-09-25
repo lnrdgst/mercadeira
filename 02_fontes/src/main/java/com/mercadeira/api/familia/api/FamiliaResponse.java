@@ -14,15 +14,15 @@ public record FamiliaResponse(
         PapelMembroFamilia papel,
         ContextoUsuario contextoUsuario) {
 
-    public record ContextoUsuario(boolean podeGerenciarIntegrantes, boolean podeSairDaFamilia,
+    public record ContextoUsuario(boolean podeGerenciarIntegrantes, boolean podeExcluirFamilia, boolean podeSairDaFamilia,
             MotivoSaidaFamiliaIndisponivel motivoSaidaFamiliaIndisponivel) {
     }
 
-    static FamiliaResponse from(Familia familia, PapelMembroFamilia papel, boolean podeSairDaFamilia,
+    static FamiliaResponse from(Familia familia, PapelMembroFamilia papel, boolean podeExcluirFamilia, boolean podeSairDaFamilia,
             MotivoSaidaFamiliaIndisponivel motivoSaidaFamiliaIndisponivel) {
         return new FamiliaResponse(
                 familia.getId(), familia.getNome(), familia.getCodigoIngresso(), familia.getStatus(), papel,
-                new ContextoUsuario(papel == PapelMembroFamilia.ADMINISTRADOR, podeSairDaFamilia,
+                new ContextoUsuario(papel == PapelMembroFamilia.ADMINISTRADOR, podeExcluirFamilia, podeSairDaFamilia,
                         motivoSaidaFamiliaIndisponivel));
     }
 }

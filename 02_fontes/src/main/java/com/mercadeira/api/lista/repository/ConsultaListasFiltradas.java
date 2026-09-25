@@ -36,7 +36,13 @@ public class ConsultaListasFiltradas {
         if (f.inicio() != null) { partes.add(lista + ".criadaEm >= ?" + (valores.size()+1)); valores.add(f.inicio()); }
         if (f.fimExclusivo() != null) { partes.add(lista + ".criadaEm < ?" + (valores.size()+1)); valores.add(f.fimExclusivo()); }
         if (f.criadaPorUsuarioId() != null) { partes.add(lista + ".criadaPorMembroFamilia.usuario.id = ?" + (valores.size()+1)); valores.add(f.criadaPorUsuarioId()); }
-        if (f.participanteMembroFamiliaId() != null) { partes.add("exists (select participante from ParticipanteCompra participante where participante.compra" + (compra ? " = compra" : ".listaCompra = lista") + " and participante.membroFamilia.id = ?" + (valores.size()+1) + ")"); valores.add(f.participanteMembroFamiliaId()); }
+        if (f.participanteMembroFamiliaId() != null) {
+            var parametro = "?" + (valores.size()+1);
+            var participanteCompra = "exists (select participante from ParticipanteCompra participante where participante.compra" + (compra ? " = compra" : ".listaCompra = lista") + " and participante.membroFamilia.id = " + parametro + ")";
+            var participanteLista = "exists (select participante from ParticipanteLista participante where participante.listaCompra = lista and participante.saiuEm is null and participante.membroFamilia.id = " + parametro + ")";
+            partes.add(compra ? participanteCompra : "((lista.status = com.mercadeira.api.lista.domain.StatusListaCompra.EM_PREPARACAO and " + participanteLista + ") or (lista.status <> com.mercadeira.api.lista.domain.StatusListaCompra.EM_PREPARACAO and " + participanteCompra + "))");
+            valores.add(f.participanteMembroFamiliaId());
+        }
         return new Predicados(partes.isEmpty() ? "1 = 1" : String.join(" and ", partes), valores);
     }
     private record Predicados(String sql, List<Object> valores) { void aplicar(jakarta.persistence.Query q) { for (int i=0;i<valores.size();i++) q.setParameter(i+1,valores.get(i)); } }

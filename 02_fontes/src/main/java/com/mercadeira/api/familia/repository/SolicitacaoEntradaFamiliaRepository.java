@@ -13,6 +13,8 @@ import jakarta.persistence.LockModeType;
 
 public interface SolicitacaoEntradaFamiliaRepository extends JpaRepository<SolicitacaoEntradaFamilia, UUID> {
 
+    long deleteByFamilia_Id(UUID familiaId);
+
     @EntityGraph(attributePaths = "solicitanteUsuario")
     List<SolicitacaoEntradaFamilia> findByFamilia_IdAndStatusOrderBySolicitadaEmAsc(
             UUID familiaId,

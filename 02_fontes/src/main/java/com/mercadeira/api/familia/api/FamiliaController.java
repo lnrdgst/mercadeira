@@ -15,6 +15,8 @@ import com.mercadeira.api.familia.application.MembroSemPermissaoException;
 import com.mercadeira.api.familia.application.RejeitarSolicitacaoEntradaFamilia;
 import com.mercadeira.api.familia.application.RemoverIntegranteFamilia;
 import com.mercadeira.api.familia.application.SairDaFamilia;
+import com.mercadeira.api.familia.application.ExcluirFamiliaNuncaUtilizada;
+import com.mercadeira.api.compra.repository.CompraRepository;
 import com.mercadeira.api.familia.application.SolicitarEntradaFamiliaPorCodigo;
 import com.mercadeira.api.familia.application.TransferirAdministracaoFamilia;
 import com.mercadeira.api.familia.domain.Familia;
@@ -50,6 +52,8 @@ public class FamiliaController {
     private final TransferirAdministracaoFamilia transferirAdministracaoFamilia;
     private final RemoverIntegranteFamilia removerIntegranteFamilia;
     private final SairDaFamilia sairDaFamilia;
+    private final ExcluirFamiliaNuncaUtilizada excluirFamiliaNuncaUtilizada;
+    private final CompraRepository compraRepository;
     private final MembroFamiliaRepository membroFamiliaRepository;
     private final ParticipanteCompraRepository participanteCompraRepository;
 
@@ -63,6 +67,7 @@ public class FamiliaController {
             TransferirAdministracaoFamilia transferirAdministracaoFamilia,
             RemoverIntegranteFamilia removerIntegranteFamilia,
             SairDaFamilia sairDaFamilia,
+            ExcluirFamiliaNuncaUtilizada excluirFamiliaNuncaUtilizada, CompraRepository compraRepository,
             MembroFamiliaRepository membroFamiliaRepository,
             ParticipanteCompraRepository participanteCompraRepository) {
         this.usuarioAutenticado = usuarioAutenticado;
@@ -76,6 +81,7 @@ public class FamiliaController {
         this.transferirAdministracaoFamilia = transferirAdministracaoFamilia;
         this.removerIntegranteFamilia = removerIntegranteFamilia;
         this.sairDaFamilia = sairDaFamilia;
+        this.excluirFamiliaNuncaUtilizada = excluirFamiliaNuncaUtilizada; this.compraRepository = compraRepository;
         this.membroFamiliaRepository = membroFamiliaRepository;
         this.participanteCompraRepository = participanteCompraRepository;
     }
@@ -91,7 +97,7 @@ public class FamiliaController {
     public ResponseEntity<FamiliaResponse> criar(@Valid @RequestBody CriarFamiliaRequest request) {
         Familia familia = criarFamilia.criar(usuarioAutenticado.getId(), request.nome());
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(FamiliaResponse.from(familia, PapelMembroFamilia.ADMINISTRADOR, false,
+                .body(FamiliaResponse.from(familia, PapelMembroFamilia.ADMINISTRADOR, false, false,
                         MotivoSaidaFamiliaIndisponivel.ADMINISTRADOR_UNICO));
     }
 
@@ -155,6 +161,7 @@ public class FamiliaController {
         sairDaFamilia.sair(familiaId, usuarioAutenticado.getId());
         return ResponseEntity.noContent().build();
     }
+    @DeleteMapping("/{familiaId}") public ResponseEntity<Void> excluir(@PathVariable UUID familiaId) { excluirFamiliaNuncaUtilizada.excluir(familiaId, usuarioAutenticado.getId()); return ResponseEntity.noContent().build(); }
 
     @PostMapping("/{familiaId}/solicitacoes/{solicitacaoId}/aprovar")
     public SolicitacaoEntradaFamiliaResponse aprovar(@PathVariable UUID familiaId, @PathVariable UUID solicitacaoId) {
@@ -180,7 +187,8 @@ public class FamiliaController {
                 membro.getFamilia().getId(), StatusCompra.EM_ANDAMENTO, membro.getId())) {
             motivo = MotivoSaidaFamiliaIndisponivel.COMPRA_EM_ANDAMENTO;
         }
-        return FamiliaResponse.from(membro.getFamilia(), membro.getPapel(), motivo == null, motivo);
+        boolean podeExcluir = administradores.size() == 1 && administradores.getFirst().getUsuario().getId().equals(usuarioAutenticado.getId()) && !compraRepository.existsByListaCompra_Familia_Id(membro.getFamilia().getId());
+        return FamiliaResponse.from(membro.getFamilia(), membro.getPapel(), podeExcluir, motivo == null, motivo);
     }
 
     private MembroFamilia membroAtivoNaFamilia(UUID familiaId) {

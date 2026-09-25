@@ -16,6 +16,8 @@ import org.springframework.data.repository.query.Param;
 import jakarta.persistence.LockModeType;
 public interface MembroFamiliaRepository extends JpaRepository<MembroFamilia, UUID> {
 
+    long deleteByFamilia_Id(UUID familiaId);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select membro from MembroFamilia membro where membro.id = :id")
     Optional<MembroFamilia> findByIdForUpdate(@Param("id") UUID id);

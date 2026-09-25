@@ -16,7 +16,13 @@ import java.time.Instant;
 
 public interface ListaCompraRepository extends JpaRepository<ListaCompra, UUID> {
 
+    long deleteByFamilia_Id(UUID familiaId);
+
     List<ListaCompra> findByFamilia_IdOrderByAtualizadaEmDesc(UUID familiaId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select lista from ListaCompra lista where lista.familia.id = :familiaId order by lista.atualizadaEm desc")
+    List<ListaCompra> findByFamiliaIdForUpdate(@Param("familiaId") UUID familiaId);
 
     List<ListaCompra> findByFamilia_IdAndStatusOrderByAtualizadaEmDesc(UUID familiaId, StatusListaCompra status);
 

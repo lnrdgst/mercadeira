@@ -15,6 +15,7 @@ import com.mercadeira.api.compra.repository.ParticipanteCompraRepository;
 import com.mercadeira.api.familia.domain.MembroFamilia;
 import com.mercadeira.api.familia.domain.StatusMembroFamilia;
 import com.mercadeira.api.familia.repository.MembroFamiliaRepository;
+import com.mercadeira.api.familia.repository.FamiliaRepository;
 import com.mercadeira.api.lista.application.ListaCompraForaDePreparacaoException;
 import com.mercadeira.api.lista.application.ListaCompraNaoEncontradaException;
 import com.mercadeira.api.lista.application.MembroFamiliaInvalidoException;
@@ -35,6 +36,7 @@ public class IniciarCompra {
     private final ListaCompraRepository listaRepository;
     private final CompraRepository compraRepository;
     private final MembroFamiliaRepository membroRepository;
+    private final FamiliaRepository familiaRepository;
     private final ParticipanteListaRepository participanteListaRepository;
     private final ItemListaRepository itemListaRepository;
     private final ParticipanteCompraRepository participanteCompraRepository;
@@ -45,6 +47,7 @@ public class IniciarCompra {
             ListaCompraRepository listaRepository,
             CompraRepository compraRepository,
             MembroFamiliaRepository membroRepository,
+            FamiliaRepository familiaRepository,
             ParticipanteListaRepository participanteListaRepository,
             ItemListaRepository itemListaRepository,
             ParticipanteCompraRepository participanteCompraRepository,
@@ -53,6 +56,7 @@ public class IniciarCompra {
         this.listaRepository = listaRepository;
         this.compraRepository = compraRepository;
         this.membroRepository = membroRepository;
+        this.familiaRepository = familiaRepository;
         this.participanteListaRepository = participanteListaRepository;
         this.itemListaRepository = itemListaRepository;
         this.participanteCompraRepository = participanteCompraRepository;
@@ -62,6 +66,8 @@ public class IniciarCompra {
 
     @Transactional
     public ResultadoInicioCompra iniciar(UUID usuarioId, UUID familiaId, UUID listaId) {
+        familiaRepository.findByIdForUpdate(familiaId)
+                .orElseThrow(() -> new ListaCompraNaoEncontradaException(listaId));
         ListaCompra lista = listaRepository.findByIdForUpdate(listaId)
                 .orElseThrow(() -> new ListaCompraNaoEncontradaException(listaId));
         if (!lista.getFamilia().getId().equals(familiaId)) {
