@@ -2,6 +2,7 @@ package com.mercadeira.api.lista.api;
 
 import java.util.List;
 import java.util.UUID;
+import java.time.LocalDate;
 
 import com.mercadeira.api.autenticacao.security.UsuarioAutenticado;
 import com.mercadeira.api.lista.application.AdicionarItemLista;
@@ -16,6 +17,7 @@ import com.mercadeira.api.lista.application.ExcluirListaCompra;
 import com.mercadeira.api.compra.repository.CompraRepository;
 import com.mercadeira.api.lista.application.ListarItensLista;
 import com.mercadeira.api.lista.application.ListarListasFamilia;
+import com.mercadeira.api.lista.application.FiltrosListas;
 import com.mercadeira.api.lista.application.ListarParticipantesLista;
 import com.mercadeira.api.lista.application.RemoverItemLista;
 import com.mercadeira.api.lista.application.RemoverParticipanteLista;
@@ -64,14 +66,19 @@ public class ListaCompraController {
         this.compraRepository = compraRepository; this.excluir = excluir;
     }
 
-    @GetMapping public ResponseEntity<List<ListaCompraResponse>> listar(@PathVariable UUID familiaId) {
-        return ResponseEntity.ok().header("X-Total-Compras-Anteriores", String.valueOf(listar.totalHistorico(usuario.getId(), familiaId)))
-                .body(listar.listar(usuario.getId(), familiaId).stream().map(ListaCompraResponse::from).toList());
+    @GetMapping public ResponseEntity<List<ListaCompraResponse>> listar(@PathVariable UUID familiaId,
+            @RequestParam(required = false) LocalDate criadaDe, @RequestParam(required = false) LocalDate criadaAte,
+            @RequestParam(required = false) UUID criadaPorUsuarioId, @RequestParam(required = false) UUID participanteMembroFamiliaId) {
+        var filtros = new FiltrosListas(criadaDe, criadaAte, criadaPorUsuarioId, participanteMembroFamiliaId);
+        return ResponseEntity.ok().header("X-Total-Compras-Anteriores", String.valueOf(listar.totalHistorico(usuario.getId(), familiaId, filtros)))
+                .body(listar.listar(usuario.getId(), familiaId, filtros).stream().map(ListaCompraResponse::from).toList());
     }
     @GetMapping("/historico")
     public HistoricoListaCompraResponse historico(@PathVariable UUID familiaId,
-            @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size) {
-        return HistoricoListaCompraResponse.from(listar.historico(usuario.getId(), familiaId, page, size));
+            @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) LocalDate criadaDe, @RequestParam(required = false) LocalDate criadaAte,
+            @RequestParam(required = false) UUID criadaPorUsuarioId, @RequestParam(required = false) UUID participanteMembroFamiliaId) {
+        return HistoricoListaCompraResponse.from(listar.historico(usuario.getId(), familiaId, page, size, new FiltrosListas(criadaDe, criadaAte, criadaPorUsuarioId, participanteMembroFamiliaId)));
     }
     @PostMapping public ResponseEntity<ListaCompraResponse> criar(@PathVariable UUID familiaId, @Valid @RequestBody ListaCompraRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(ListaCompraResponse.from(

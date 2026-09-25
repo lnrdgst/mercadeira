@@ -124,13 +124,13 @@ public class FamiliaController {
         var administradores = membros.stream().filter(membro -> membro.getPapel() == PapelMembroFamilia.ADMINISTRADOR).toList();
         boolean executorEhAdministradorUnico = administradores.size() == 1
                 && administradores.getFirst().getUsuario().getId().equals(usuarioAutenticado.getId());
-        return membros.stream().map(membro -> MembroFamiliaResponse.from(membro, usuarioAutenticado.getId(),
+        return membros.stream().map(membro -> {
+            boolean elegivel = executorEhAdministradorUnico && membro.getPapel() == PapelMembroFamilia.MEMBRO && !membro.getUsuario().getId().equals(usuarioAutenticado.getId());
+            boolean bloqueadoPorCompra = elegivel && participanteCompraRepository.existsByCompra_ListaCompra_Familia_IdAndCompra_StatusAndMembroFamilia_Id(familiaId, StatusCompra.EM_ANDAMENTO, membro.getId());
+            return MembroFamiliaResponse.from(membro, usuarioAutenticado.getId(),
                 executorEhAdministradorUnico && membro.getPapel() == PapelMembroFamilia.MEMBRO,
-                executorEhAdministradorUnico
-                        && membro.getPapel() == PapelMembroFamilia.MEMBRO
-                        && !membro.getUsuario().getId().equals(usuarioAutenticado.getId())
-                        && !participanteCompraRepository.existsByCompra_ListaCompra_Familia_IdAndCompra_StatusAndMembroFamilia_Id(
-                                familiaId, StatusCompra.EM_ANDAMENTO, membro.getId()))).toList();
+                elegivel && !bloqueadoPorCompra, bloqueadoPorCompra ? MotivoRemocaoIndisponivel.COMPRA_EM_ANDAMENTO : null);
+        }).toList();
     }
 
     @PostMapping("/{familiaId}/membros/{membroId}/transferir-administracao")

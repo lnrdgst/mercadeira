@@ -7,13 +7,13 @@ import com.mercadeira.api.familia.domain.PapelMembroFamilia;
 public record MembroFamiliaResponse(UUID membroFamiliaId, UUID usuarioId, String nome, String email,
         PapelMembroFamilia papel, boolean usuarioAtual, Acoes acoes) {
 
-    public record Acoes(boolean podeTransferirAdministracao, boolean podeRemoverIntegrante) {
+    public record Acoes(boolean podeTransferirAdministracao, boolean podeRemoverIntegrante, MotivoRemocaoIndisponivel motivoRemocaoIndisponivel) {
     }
 
     static MembroFamiliaResponse from(MembroFamilia membro, UUID usuarioAtualId, boolean podeTransferirAdministracao,
-            boolean podeRemoverIntegrante) {
+            boolean podeRemoverIntegrante, MotivoRemocaoIndisponivel motivoRemocaoIndisponivel) {
         return new MembroFamiliaResponse(membro.getId(), membro.getUsuario().getId(), membro.getUsuario().getNome(),
                 membro.getUsuario().getEmail(), membro.getPapel(), membro.getUsuario().getId().equals(usuarioAtualId),
-                new Acoes(podeTransferirAdministracao, podeRemoverIntegrante));
+                new Acoes(podeTransferirAdministracao, podeRemoverIntegrante, motivoRemocaoIndisponivel));
     }
 }

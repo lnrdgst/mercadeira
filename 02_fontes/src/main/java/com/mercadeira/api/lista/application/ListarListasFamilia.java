@@ -14,6 +14,7 @@ import com.mercadeira.api.compra.repository.CompraRepository;
 import com.mercadeira.api.familia.domain.MembroFamilia;
 import com.mercadeira.api.lista.domain.ListaCompra;
 import com.mercadeira.api.lista.repository.ListaCompraRepository;
+import com.mercadeira.api.lista.repository.ConsultaListasFiltradas;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,26 +23,36 @@ public class ListarListasFamilia {
     private final ValidadorAcessoListaCompra acesso;
     private final ListaCompraRepository listaRepository;
     private final CompraRepository compraRepository;
+    private final ConsultaListasFiltradas consulta;
     private final Clock clock;
-    public ListarListasFamilia(ValidadorAcessoListaCompra acesso, ListaCompraRepository listaRepository, CompraRepository compraRepository, Clock clock) {
-        this.acesso = acesso; this.listaRepository = listaRepository; this.compraRepository = compraRepository; this.clock = clock;
+    public ListarListasFamilia(ValidadorAcessoListaCompra acesso, ListaCompraRepository listaRepository, CompraRepository compraRepository, ConsultaListasFiltradas consulta, Clock clock) {
+        this.acesso = acesso; this.listaRepository = listaRepository; this.compraRepository = compraRepository; this.consulta = consulta; this.clock = clock;
     }
     @Transactional(readOnly = true)
-    public List<ListaCompra> listar(UUID usuarioId, UUID familiaId) {
+    public List<ListaCompra> listar(UUID usuarioId, UUID familiaId) { return listar(usuarioId, familiaId, new FiltrosListas(null, null, null, null)); }
+
+    @Transactional(readOnly = true)
+    public List<ListaCompra> listar(UUID usuarioId, UUID familiaId, FiltrosListas filtros) {
         acesso.membroAtivoNaFamilia(usuarioId, familiaId);
-        return listaRepository.findPrincipaisByFamiliaId(familiaId, limiteHistorico());
+        return consulta.principais(familiaId, limiteHistorico(), filtros);
     }
 
     @Transactional(readOnly = true)
-    public Page<Compra> historico(UUID usuarioId, UUID familiaId, int page, int size) {
+    public Page<Compra> historico(UUID usuarioId, UUID familiaId, int page, int size) { return historico(usuarioId, familiaId, page, size, new FiltrosListas(null, null, null, null)); }
+
+    @Transactional(readOnly = true)
+    public Page<Compra> historico(UUID usuarioId, UUID familiaId, int page, int size, FiltrosListas filtros) {
         acesso.membroAtivoNaFamilia(usuarioId, familiaId);
-        return compraRepository.findHistoricoAnterior(familiaId, limiteHistorico(), PageRequest.of(Math.max(0, page), Math.min(Math.max(1, size), 50)));
+        return consulta.historico(familiaId, limiteHistorico(), PageRequest.of(Math.max(0, page), Math.min(Math.max(1, size), 50)), filtros);
     }
 
     @Transactional(readOnly = true)
-    public long totalHistorico(UUID usuarioId, UUID familiaId) {
+    public long totalHistorico(UUID usuarioId, UUID familiaId) { return totalHistorico(usuarioId, familiaId, new FiltrosListas(null, null, null, null)); }
+
+    @Transactional(readOnly = true)
+    public long totalHistorico(UUID usuarioId, UUID familiaId, FiltrosListas filtros) {
         acesso.membroAtivoNaFamilia(usuarioId, familiaId);
-        return compraRepository.countByListaCompra_Familia_IdAndStatusAndFinalizadaEmBefore(familiaId, StatusCompra.FINALIZADA, limiteHistorico());
+        return consulta.totalHistorico(familiaId, limiteHistorico(), filtros);
     }
 
     private Instant limiteHistorico() { return Instant.now(clock).minus(14, ChronoUnit.DAYS); }
