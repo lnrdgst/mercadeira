@@ -32,7 +32,7 @@ public class RemoverIntegranteFamilia {
     public void remover(UUID familiaId, UUID executorId, UUID membroId) {
         familias.findByIdForUpdate(familiaId).orElseThrow(RemocaoIntegranteInvalidaException::new);
 
-        var administradores = membros.findByFamilia_IdAndStatusAndPapel(
+        var administradores = membros.findByFamilia_IdAndStatusAndPapelForUpdate(
                 familiaId, StatusMembroFamilia.ATIVO, PapelMembroFamilia.ADMINISTRADOR);
         if (administradores.size() != 1 || !administradores.getFirst().getUsuario().getId().equals(executorId)) {
             throw new RemocaoIntegranteInvalidaException();

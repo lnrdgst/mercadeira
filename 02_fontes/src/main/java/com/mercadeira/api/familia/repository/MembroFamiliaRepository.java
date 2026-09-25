@@ -35,6 +35,12 @@ public interface MembroFamiliaRepository extends JpaRepository<MembroFamilia, UU
     List<MembroFamilia> findByFamilia_IdAndStatusOrderByUsuario_NomeAscIdAsc(UUID familiaId, StatusMembroFamilia status);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select membro from MembroFamilia membro where membro.familia.id = :familiaId "
+            + "and membro.status = :status and membro.papel = :papel")
+    List<MembroFamilia> findByFamilia_IdAndStatusAndPapelForUpdate(
+            @Param("familiaId") UUID familiaId, @Param("status") StatusMembroFamilia status,
+            @Param("papel") PapelMembroFamilia papel);
+
     List<MembroFamilia> findByFamilia_IdAndStatusAndPapel(
             UUID familiaId, StatusMembroFamilia status, PapelMembroFamilia papel);
 }

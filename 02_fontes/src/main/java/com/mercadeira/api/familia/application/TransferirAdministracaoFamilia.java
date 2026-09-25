@@ -27,7 +27,7 @@ public class TransferirAdministracaoFamilia {
     public void transferir(UUID familiaId, UUID executorId, UUID membroDestinoId) {
         familias.findByIdForUpdate(familiaId).orElseThrow(TransferenciaAdministracaoInvalidaException::new);
 
-        var administradores = membros.findByFamilia_IdAndStatusAndPapel(
+        var administradores = membros.findByFamilia_IdAndStatusAndPapelForUpdate(
                 familiaId, StatusMembroFamilia.ATIVO, PapelMembroFamilia.ADMINISTRADOR);
         if (administradores.size() != 1) {
             throw new TransferenciaAdministracaoInvalidaException();

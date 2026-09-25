@@ -14,6 +14,7 @@ import com.mercadeira.api.familia.application.ListarSolicitacoesPendentes;
 import com.mercadeira.api.familia.application.MembroSemPermissaoException;
 import com.mercadeira.api.familia.application.RejeitarSolicitacaoEntradaFamilia;
 import com.mercadeira.api.familia.application.RemoverIntegranteFamilia;
+import com.mercadeira.api.familia.application.SairDaFamilia;
 import com.mercadeira.api.familia.application.SolicitarEntradaFamiliaPorCodigo;
 import com.mercadeira.api.familia.application.TransferirAdministracaoFamilia;
 import com.mercadeira.api.familia.domain.Familia;
@@ -48,6 +49,7 @@ public class FamiliaController {
     private final RejeitarSolicitacaoEntradaFamilia rejeitarSolicitacaoEntradaFamilia;
     private final TransferirAdministracaoFamilia transferirAdministracaoFamilia;
     private final RemoverIntegranteFamilia removerIntegranteFamilia;
+    private final SairDaFamilia sairDaFamilia;
     private final MembroFamiliaRepository membroFamiliaRepository;
     private final ParticipanteCompraRepository participanteCompraRepository;
 
@@ -60,6 +62,7 @@ public class FamiliaController {
             RejeitarSolicitacaoEntradaFamilia rejeitarSolicitacaoEntradaFamilia,
             TransferirAdministracaoFamilia transferirAdministracaoFamilia,
             RemoverIntegranteFamilia removerIntegranteFamilia,
+            SairDaFamilia sairDaFamilia,
             MembroFamiliaRepository membroFamiliaRepository,
             ParticipanteCompraRepository participanteCompraRepository) {
         this.usuarioAutenticado = usuarioAutenticado;
@@ -72,6 +75,7 @@ public class FamiliaController {
         this.rejeitarSolicitacaoEntradaFamilia = rejeitarSolicitacaoEntradaFamilia;
         this.transferirAdministracaoFamilia = transferirAdministracaoFamilia;
         this.removerIntegranteFamilia = removerIntegranteFamilia;
+        this.sairDaFamilia = sairDaFamilia;
         this.membroFamiliaRepository = membroFamiliaRepository;
         this.participanteCompraRepository = participanteCompraRepository;
     }
@@ -87,7 +91,8 @@ public class FamiliaController {
     public ResponseEntity<FamiliaResponse> criar(@Valid @RequestBody CriarFamiliaRequest request) {
         Familia familia = criarFamilia.criar(usuarioAutenticado.getId(), request.nome());
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(FamiliaResponse.from(familia, PapelMembroFamilia.ADMINISTRADOR));
+                .body(FamiliaResponse.from(familia, PapelMembroFamilia.ADMINISTRADOR, false,
+                        MotivoSaidaFamiliaIndisponivel.ADMINISTRADOR_UNICO));
     }
 
     @PostMapping("/solicitacoes")
@@ -145,6 +150,12 @@ public class FamiliaController {
         return ResponseEntity.noContent().build();
     }
 
+    @DeleteMapping("/{familiaId}/membros/me")
+    public ResponseEntity<Void> sair(@PathVariable UUID familiaId) {
+        sairDaFamilia.sair(familiaId, usuarioAutenticado.getId());
+        return ResponseEntity.noContent().build();
+    }
+
     @PostMapping("/{familiaId}/solicitacoes/{solicitacaoId}/aprovar")
     public SolicitacaoEntradaFamiliaResponse aprovar(@PathVariable UUID familiaId, @PathVariable UUID solicitacaoId) {
         SolicitacaoEntradaFamilia solicitacao = aprovarSolicitacaoEntradaFamilia.aprovar(
@@ -160,7 +171,16 @@ public class FamiliaController {
     }
 
     private FamiliaResponse familiaResponse(MembroFamilia membro) {
-        return FamiliaResponse.from(membro.getFamilia(), membro.getPapel());
+        var administradores = membroFamiliaRepository.findByFamilia_IdAndStatusAndPapel(
+                membro.getFamilia().getId(), StatusMembroFamilia.ATIVO, PapelMembroFamilia.ADMINISTRADOR);
+        MotivoSaidaFamiliaIndisponivel motivo = null;
+        if (membro.getPapel() == PapelMembroFamilia.ADMINISTRADOR && administradores.size() == 1) {
+            motivo = MotivoSaidaFamiliaIndisponivel.ADMINISTRADOR_UNICO;
+        } else if (participanteCompraRepository.existsByCompra_ListaCompra_Familia_IdAndCompra_StatusAndMembroFamilia_Id(
+                membro.getFamilia().getId(), StatusCompra.EM_ANDAMENTO, membro.getId())) {
+            motivo = MotivoSaidaFamiliaIndisponivel.COMPRA_EM_ANDAMENTO;
+        }
+        return FamiliaResponse.from(membro.getFamilia(), membro.getPapel(), motivo == null, motivo);
     }
 
     private MembroFamilia membroAtivoNaFamilia(UUID familiaId) {

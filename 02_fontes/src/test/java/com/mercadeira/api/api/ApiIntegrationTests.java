@@ -230,6 +230,55 @@ class ApiIntegrationTests {
 
     @Test
     @Transactional(propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
+    void consultaDeFamiliasCalculaCapabilityDeSaidaRepetidamenteSemTransacaoExterna() throws Exception {
+        Usuario administradora = usuario("Administradora");
+        criarFamilia.criar(administradora.getId(), "Oliveira");
+
+        for (int consulta = 0; consulta < 2; consulta++) {
+            mockMvc.perform(get("/api/familias").header("Authorization", bearer(administradora)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$[0].contextoUsuario.podeSairDaFamilia").value(false))
+                    .andExpect(jsonPath("$[0].contextoUsuario.motivoSaidaFamiliaIndisponivel")
+                            .value("ADMINISTRADOR_UNICO"));
+        }
+    }
+
+    @Test
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
+    void saidaRevalidaParticipacaoEmCompraEmAndamentoDepoisDaCapability() throws Exception {
+        Usuario administradora = usuario("Administradora");
+        Familia familia = criarFamilia.criar(administradora.getId(), "Oliveira");
+        Usuario membro = usuario("Membro");
+        UUID membroId = UUID.randomUUID();
+        jdbcTemplate.update("insert into membro_familia (id, familia_id, usuario_id, papel, status, criado_em, atualizado_em) values (?, ?, ?, 'MEMBRO', 'ATIVO', now(), now())",
+                membroId, familia.getId(), membro.getId());
+
+        mockMvc.perform(get("/api/familias").header("Authorization", bearer(membro)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].contextoUsuario.podeSairDaFamilia").value(true));
+
+        ListaCompra lista = listaComItens(administradora, familia, "Compra semanal");
+        mockMvc.perform(post(compraUrl(familia, lista)).header("Authorization", bearer(administradora)))
+                .andExpect(status().isCreated());
+        UUID compraId = jdbcTemplate.queryForObject("select id from compra where lista_compra_id = ?", UUID.class,
+                lista.getId());
+        jdbcTemplate.update("insert into participante_compra (id, compra_id, participante_lista_origem_id, membro_familia_id, nome_snapshot, papel_snapshot, gerado_em) values (?, ?, null, ?, ?, 'MEMBRO', now())",
+                UUID.randomUUID(), compraId, membroId, membro.getNome());
+
+        mockMvc.perform(get("/api/familias").header("Authorization", bearer(membro)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].contextoUsuario.podeSairDaFamilia").value(false))
+                .andExpect(jsonPath("$[0].contextoUsuario.motivoSaidaFamiliaIndisponivel")
+                        .value("COMPRA_EM_ANDAMENTO"));
+        mockMvc.perform(delete("/api/familias/{familiaId}/membros/me", familia.getId())
+                        .header("Authorization", bearer(membro)))
+                .andExpect(status().isConflict());
+        assertThat(jdbcTemplate.queryForObject("select status from membro_familia where id = ?", String.class, membroId))
+                .isEqualTo("ATIVO");
+    }
+
+    @Test
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
     void listaIncluiCriadorSemDependerDeSessaoExterna() throws Exception {
         Usuario criadora = usuario("Criadora");
         Familia familia = criarFamilia.criar(criadora.getId(), "Oliveira");
