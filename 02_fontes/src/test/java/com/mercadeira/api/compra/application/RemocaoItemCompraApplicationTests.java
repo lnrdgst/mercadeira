@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.Set;
 import java.util.UUID;
 
 import com.mercadeira.api.compra.domain.DecisaoRemocao;
@@ -369,8 +370,9 @@ class RemocaoItemCompraApplicationTests {
     private Usuario participanteAdicional(Contexto c) {
         Usuario usuario = observador(c, false);
         MembroFamilia membro = membroRepository.findByFamilia_IdAndUsuario_Id(c.familia().getId(), usuario.getId()).orElseThrow();
-        participanteCompraRepository.saveAndFlush(com.mercadeira.api.compra.domain.ParticipanteCompra.criarDireto(
+        var participante = participanteCompraRepository.saveAndFlush(com.mercadeira.api.compra.domain.ParticipanteCompra.criarDireto(
                 compraRepository.findById(c.compraId()).orElseThrow(), membro, agora()));
+        participante.alterarPresenca(com.mercadeira.api.compra.domain.PresencaOperacional.PRESENTE, agora());
         return usuario;
     }
 
@@ -427,7 +429,10 @@ class RemocaoItemCompraApplicationTests {
             participanteListaRepository.saveAndFlush(ParticipanteLista.criar(lista, membroSolicitante, agora()));
         }
         itemListaRepository.saveAndFlush(ItemLista.criar(lista, "Arroz", BigDecimal.ONE, UnidadeMedida.UNIDADE, null, null, 1, membroResponsavel, agora()));
-        UUID compraId = iniciarCompra.iniciar(responsavel.getId(), familia.getId(), lista.getId()).compra().getId();
+        Set<UUID> presentes = incluirSegundoParticipante
+                ? Set.of(membroResponsavel.getId(), membroSolicitante.getId())
+                : Set.of(membroResponsavel.getId());
+        UUID compraId = iniciarCompra.iniciar(responsavel.getId(), familia.getId(), lista.getId(), presentes).compra().getId();
         UUID itemId = itemCompraRepository.findByCompra_IdOrderByOrdemExibicaoAscIdAsc(compraId).getFirst().getId();
         return new Contexto(responsavel, solicitante, familia, membroResponsavel, membroSolicitante, lista, compraId, itemId);
     }

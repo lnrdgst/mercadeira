@@ -56,16 +56,25 @@ class ContextoRemocaoItemCompra {
         if (!item.getCompra().getId().equals(compra.getId())) {
             throw new ItemCompraNaoEncontradoException(itemCompraId);
         }
+        if (participante.getPresencaOperacional() == com.mercadeira.api.compra.domain.PresencaOperacional.NAO_INFORMADA)
+            throw new PresencaOperacionalObrigatoriaException();
         return new Contexto(compra, item, membro, participante);
     }
 
     void validarDecisor(Contexto contexto) {
-        MembroFamilia responsavel = contexto.item().getMarcadoPorMembroFamilia();
-        if (responsavel == null || !participanteRepository.existsByCompra_IdAndMembroFamilia_Id(
-                contexto.compra().getId(), responsavel.getId())) {
+        MembroFamilia responsavelOriginal = contexto.item().getMarcadoPorMembroFamilia();
+        if (responsavelOriginal == null || !participanteRepository.existsByCompra_IdAndMembroFamilia_Id(
+                contexto.compra().getId(), responsavelOriginal.getId())) {
             throw new ResponsavelRemocaoItemCompraInvalidoException();
         }
-        if (!responsavel.getId().equals(contexto.membro().getId())) {
+        var participanteOriginal = participanteRepository.findByCompra_IdAndMembroFamilia_Id(contexto.compra().getId(), responsavelOriginal.getId())
+                .orElseThrow(ResponsavelRemocaoItemCompraInvalidoException::new);
+        boolean originalPresente = participanteOriginal.estaPresente();
+        boolean decisorPrincipal = originalPresente && responsavelOriginal.getId().equals(contexto.membro().getId());
+        boolean fallbackResponsavel = !originalPresente && contexto.compra().getResponsavelOperacionalId() != null
+                && contexto.compra().getResponsavelOperacionalId().equals(contexto.participante().getId())
+                && contexto.participante().estaPresente();
+        if (!decisorPrincipal && !fallbackResponsavel) {
             throw new UsuarioNaoPodeDecidirRemocaoItemCompraException();
         }
     }

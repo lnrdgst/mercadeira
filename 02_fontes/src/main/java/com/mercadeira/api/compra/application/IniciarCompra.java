@@ -3,6 +3,7 @@ package com.mercadeira.api.compra.application;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import com.mercadeira.api.compra.domain.Compra;
@@ -66,6 +67,12 @@ public class IniciarCompra {
 
     @Transactional
     public ResultadoInicioCompra iniciar(UUID usuarioId, UUID familiaId, UUID listaId) {
+        return iniciar(usuarioId, familiaId, listaId, Set.of());
+    }
+
+    @Transactional
+    public ResultadoInicioCompra iniciar(UUID usuarioId, UUID familiaId, UUID listaId, Set<UUID> participantesPresentesIds) {
+        final Set<UUID> presentesSelecionados = participantesPresentesIds == null ? Set.of() : Set.copyOf(participantesPresentesIds);
         familiaRepository.findByIdForUpdate(familiaId)
                 .orElseThrow(() -> new ListaCompraNaoEncontradaException(listaId));
         ListaCompra lista = listaRepository.findByIdForUpdate(listaId)
@@ -101,6 +108,10 @@ public class IniciarCompra {
         if (participantes.stream().noneMatch(participante -> participante.getMembroFamilia().getId().equals(iniciador.getId()))) {
             throw new UsuarioNaoParticipaDaListaException();
         }
+        var participantesAtivosIds = participantes.stream().map(p -> p.getMembroFamilia().getId()).collect(java.util.stream.Collectors.toSet());
+        if (!participantesAtivosIds.containsAll(presentesSelecionados)) {
+            throw new UsuarioNaoParticipaDaListaException();
+        }
         List<ItemLista> itens = itemListaRepository
                 .findByListaCompra_IdAndRemovidoEmIsNullOrderByOrdemExibicaoAscIdAsc(listaId);
         if (itens.isEmpty()) {
@@ -112,7 +123,8 @@ public class IniciarCompra {
         var snapshots = participanteCompraRepository.saveAll(participantes.stream()
                 .map(participante -> {
                     var snapshot = ParticipanteCompra.criarDaPreparacao(compra, participante, agora);
-                    if (participante.getMembroFamilia().getId().equals(iniciador.getId())) {
+                    if (participante.getMembroFamilia().getId().equals(iniciador.getId())
+                            || presentesSelecionados.contains(participante.getMembroFamilia().getId())) {
                         snapshot.alterarPresenca(com.mercadeira.api.compra.domain.PresencaOperacional.PRESENTE, agora);
                     }
                     return snapshot;

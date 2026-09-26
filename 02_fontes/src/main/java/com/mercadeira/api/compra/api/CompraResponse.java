@@ -66,7 +66,10 @@ public record CompraResponse(
                 && resultado.minhaSolicitacao().getEstado() == EstadoSolicitacaoPresenca.REJEITADA
                 && resultado.minhaSolicitacao().getCicloOperacional() == compra.getCicloOperacional();
         boolean podeSolicitarPresenca = participanteAtual != null && emAndamento && !participanteAtual.estaPresente() && !rejeitadaNoCiclo;
-        boolean podeDeclararSaida = participanteAtual != null && emAndamento && participanteAtual.estaPresente();
+        boolean podeDeclararSaida = participanteAtual != null && emAndamento
+                && participanteAtual.getPresencaOperacional() != com.mercadeira.api.compra.domain.PresencaOperacional.NAO_PRESENTE;
+        boolean podeAdicionarItem = participanteAtual != null && emAndamento
+                && participanteAtual.getPresencaOperacional() != com.mercadeira.api.compra.domain.PresencaOperacional.NAO_INFORMADA;
         boolean podeCancelar = resultado.minhaSolicitacao() != null
                 && resultado.minhaSolicitacao().getEstado() == EstadoSolicitacaoPresenca.PENDENTE;
         boolean podeSolicitarResponsabilidade = emAndamento && participanteAtual != null && participanteAtual.estaPresente()
@@ -76,6 +79,9 @@ public record CompraResponse(
                     || resultado.minhaSolicitacaoResponsabilidade().getEstado() != EstadoSolicitacaoResponsabilidade.PENDENTE);
         boolean podeCancelarResponsabilidade = resultado.minhaSolicitacaoResponsabilidade() != null
                 && resultado.minhaSolicitacaoResponsabilidade().getEstado() == EstadoSolicitacaoResponsabilidade.PENDENTE;
+        boolean podeTransferirResponsabilidade = emAndamento && responsavel != null && participanteAtual != null
+                && responsavel.getId().equals(participanteAtual.getId()) && participanteAtual.estaPresente()
+                && resultado.participantes().stream().anyMatch(p -> !p.getId().equals(participanteAtual.getId()) && p.estaPresente());
         var responsabilidade = new ResponsabilidadeOperacionalResponse(
                 responsavel == null ? null : ParticipanteCompraReferenciaResponse.from(responsavel),
                 compra.getCicloOperacional(), compra.isCicloOperacionalAtivo(), compra.getResponsabilidadeRevisao(),
@@ -116,7 +122,8 @@ public record CompraResponse(
                         compra.getStatus() == StatusCompra.FINALIZADA && compra.getListaCompra().getStatus() == StatusListaCompra.FINALIZADA && compra.getListaCompra().getFamilia().getStatus() == com.mercadeira.api.familia.domain.StatusFamilia.ATIVA
                                 && resultado.itens().stream().anyMatch(item -> item.getStatus() == StatusItemCompra.PENDENTE || item.getStatus() == StatusItemCompra.REMOVIDO),
                         podeSolicitarPresenca, podeCancelar, podeDeclararSaida, podeSolicitarResponsabilidade,
-                        podeCancelarResponsabilidade, precisaEstarPresenteParaFinalizar, podeEncerrarAdministrativamente));
+                        podeCancelarResponsabilidade, precisaEstarPresenteParaFinalizar, podeEncerrarAdministrativamente,
+                        podeAdicionarItem, podeTransferirResponsabilidade));
     }
 
     public record ParticipanteCompraResponse(
@@ -171,6 +178,7 @@ public record CompraResponse(
             boolean podeFinalizarCompra, boolean podeReutilizarLista, boolean podeCriarListaComItensQueFicaramDeFora, boolean podeSolicitarPresenca,
             boolean podeCancelarSolicitacaoPresenca, boolean podeDeclararSaida,
             boolean podeSolicitarResponsabilidade, boolean podeCancelarSolicitacaoResponsabilidade,
-            boolean precisaEstarPresenteParaFinalizar, boolean podeEncerrarCompraAdministrativamente) {
+            boolean precisaEstarPresenteParaFinalizar, boolean podeEncerrarCompraAdministrativamente,
+            boolean podeAdicionarItemDuranteCompra, boolean podeTransferirResponsabilidade) {
     }
 }

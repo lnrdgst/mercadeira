@@ -120,20 +120,36 @@ public class FluxoPresencaCompra {
         var compra = contexto.compra();
         var participante = contexto.participante();
         var agora = agora();
-        participante.alterarPresenca(PresencaOperacional.NAO_PRESENTE, agora);
-        if (!participante.getId().equals(compra.getResponsavelOperacionalId())) return;
+        if (!participante.getId().equals(compra.getResponsavelOperacionalId())) {
+            participante.alterarPresenca(PresencaOperacional.NAO_PRESENTE, agora);
+            return;
+        }
         var sucessor = participantesDaCompra(compra).stream()
                 .filter(p -> !p.getId().equals(participante.getId()))
                 .filter(ParticipanteCompra::estaPresente).filter(this::elegivel)
                 .min(Comparator.comparing(ParticipanteCompra::getPresencaAlteradaEm)
                         .thenComparing(p -> p.getId().toString())).orElse(null);
         if (sucessor != null) {
-            compra.mudarResponsabilidade(sucessor, participante, MotivoResponsabilidade.SUCESSAO, agora);
-            return;
+            throw new ConflitoPresencaException("Transfira a responsabilidade operacional antes de declarar saída.");
         }
+        participante.alterarPresenca(PresencaOperacional.NAO_PRESENTE, agora);
         compra.mudarResponsabilidade(null, participante, MotivoResponsabilidade.SEM_PRESENTES, agora);
         cancelarPendentes(compra, MotivoCancelamentoPresenca.SEM_PRESENTES, agora);
         cancelarPendentesResponsabilidade(compra, agora);
+    }
+
+    @Transactional
+    public void transferirDiretamente(UUID usuarioId, UUID familiaId, UUID listaId, UUID destinoId) {
+        var contexto = carregar(usuarioId, familiaId, listaId);
+        var compra = contexto.compra();
+        var executor = contexto.participante();
+        if (!executor.getId().equals(compra.getResponsavelOperacionalId()) || !executor.estaPresente())
+            throw new AutoridadePresencaException();
+        var destino = participantesDaCompra(compra).stream().filter(p -> p.getId().equals(destinoId)).findFirst()
+                .orElseThrow(AutoridadePresencaException::new);
+        if (destino.getId().equals(executor.getId()) || !elegivel(destino) || !destino.estaPresente())
+            throw new AutoridadePresencaException();
+        compra.mudarResponsabilidade(destino, executor, MotivoResponsabilidade.TRANSFERENCIA_DIRETA, agora());
     }
 
     @Transactional

@@ -67,6 +67,8 @@ public class AdicionarItemDuranteCompra {
         }
         var participante = participanteRepository.findByCompra_IdAndMembroFamilia_Id(compra.getId(), membro.getId())
                 .orElseThrow(UsuarioNaoParticipaDaCompraException::new);
+        if (participante.getPresencaOperacional() == com.mercadeira.api.compra.domain.PresencaOperacional.NAO_INFORMADA)
+            throw new PresencaOperacionalObrigatoriaException();
 
         int proximaOrdem = itemRepository.findMaiorOrdemExibicaoByCompra_Id(compra.getId()) + 1;
         ItemCompra item = ItemCompra.criarDuranteCompra(

@@ -66,8 +66,10 @@ public class CompraController {
     }
 
     @PostMapping
-    public ResponseEntity<CompraResponse> iniciar(@PathVariable UUID familiaId, @PathVariable UUID listaId) {
-        var resultado = iniciarCompra.iniciar(usuario.getId(), familiaId, listaId);
+    public ResponseEntity<CompraResponse> iniciar(@PathVariable UUID familiaId, @PathVariable UUID listaId,
+            @org.springframework.web.bind.annotation.RequestBody(required = false) IniciarCompraRequest request) {
+        var resultado = iniciarCompra.iniciar(usuario.getId(), familiaId, listaId,
+                request == null || request.participantesPresentesIds() == null ? java.util.Set.of() : new java.util.HashSet<>(request.participantesPresentesIds()));
         var response = CompraResponse.from(consultarCompra.consultar(usuario.getId(), familiaId, listaId), usuario.getId());
         if (!resultado.criada()) {
             return ResponseEntity.ok(response);
@@ -142,6 +144,13 @@ public class CompraController {
     @PostMapping("/finalizar")
     public CompraResponse finalizar(@PathVariable UUID familiaId, @PathVariable UUID listaId) {
         finalizarCompra.executar(usuario.getId(), familiaId, listaId);
+        return CompraResponse.from(consultarCompra.consultar(usuario.getId(), familiaId, listaId), usuario.getId());
+    }
+
+    @PostMapping("/responsabilidade-operacional/transferir")
+    public CompraResponse transferirResponsabilidade(@PathVariable UUID familiaId, @PathVariable UUID listaId,
+            @Valid @RequestBody TransferirResponsabilidadeRequest request) {
+        fluxoPresenca.transferirDiretamente(usuario.getId(), familiaId, listaId, request.participanteCompraId());
         return CompraResponse.from(consultarCompra.consultar(usuario.getId(), familiaId, listaId), usuario.getId());
     }
 

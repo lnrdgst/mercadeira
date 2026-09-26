@@ -24,7 +24,7 @@ public class SolicitarRemocaoItemCompra {
         Instant instante = clock.instant();
         boolean solicitacaoCriada = contexto.item().solicitarRemocao(contexto.membro(), instante);
         boolean removidoAutomaticamente = false;
-        if (solicitacaoCriada && contexto.item().getMarcadoPorMembroFamilia() != null
+        if (solicitacaoCriada && contexto.participante().estaPresente() && contexto.item().getMarcadoPorMembroFamilia() != null
                 && contexto.item().getMarcadoPorMembroFamilia().getId().equals(contexto.membro().getId())) {
             contextoRemocao.validarDecisor(contexto);
             contexto.item().aprovarRemocao(contexto.membro(), instante);

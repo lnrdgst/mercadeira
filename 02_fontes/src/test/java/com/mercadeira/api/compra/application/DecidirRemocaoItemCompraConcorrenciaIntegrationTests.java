@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
+import java.util.Set;
 import java.util.function.Supplier;
 import java.time.Clock;
 import com.mercadeira.api.compra.domain.TransicaoStatusItemCompraInvalidaException;
@@ -147,7 +148,8 @@ class DecidirRemocaoItemCompraConcorrenciaIntegrationTests {
         MembroFamilia membroSolicitante = membroRepository.saveAndFlush(MembroFamilia.criarMembro(familia, solicitante, agora));
         participanteListaRepository.saveAndFlush(ParticipanteLista.criar(lista, membroSolicitante, agora));
         itemListaRepository.saveAndFlush(ItemLista.criar(lista, "Arroz", BigDecimal.ONE, UnidadeMedida.UNIDADE, null, null, 1, membroResponsavel, agora));
-        UUID compraId = iniciarCompra.iniciar(responsavel.getId(), familia.getId(), lista.getId()).compra().getId();
+        UUID compraId = iniciarCompra.iniciar(responsavel.getId(), familia.getId(), lista.getId(),
+                Set.of(membroResponsavel.getId(), membroSolicitante.getId())).compra().getId();
         UUID itemId = itemCompraRepository.findByCompra_IdOrderByOrdemExibicaoAscIdAsc(compraId).getFirst().getId();
         colocar.executar(responsavel.getId(), familia.getId(), lista.getId(), itemId);
         solicitar.executar(solicitante.getId(), familia.getId(), lista.getId(), itemId);

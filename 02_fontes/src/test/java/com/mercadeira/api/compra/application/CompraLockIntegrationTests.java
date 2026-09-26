@@ -236,7 +236,8 @@ class CompraLockIntegrationTests {
         itemListaRepository.saveAndFlush(ItemLista.criar(
                 lista, "Arroz", BigDecimal.ONE, UnidadeMedida.UNIDADE, null, null, 1, primeiroMembro, agora));
 
-        UUID compraId = iniciarCompra.iniciar(primeiroUsuario.getId(), familia.getId(), lista.getId()).compra().getId();
+        UUID compraId = iniciarCompra.iniciar(primeiroUsuario.getId(), familia.getId(), lista.getId(),
+                java.util.Set.of(primeiroMembro.getId(), segundoMembro.getId())).compra().getId();
         UUID itemCompraId = itemCompraRepository.findByCompra_IdOrderByOrdemExibicaoAscIdAsc(compraId).getFirst().getId();
 
         return new Contexto(

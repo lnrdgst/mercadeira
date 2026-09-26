@@ -7,6 +7,7 @@ import java.lang.reflect.Field;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import com.mercadeira.api.compra.domain.Compra;
@@ -249,6 +250,29 @@ class IniciarCompraApplicationTests {
                 contexto.criador().getUsuario().getId(), contexto.familia().getId(), contexto.lista().getId(),
                 "Novo item", BigDecimal.ONE, UnidadeMedida.UNIDADE, null, null))
                 .isInstanceOf(ListaCompraForaDePreparacaoException.class);
+    }
+
+    @Test
+    void iniciaComParticipantesSelecionadosPresentesESemPromoverOsDemais() {
+        Contexto contexto = criarContexto(true);
+        MembroFamilia bia = criarMembro(contexto.familia(), "Bia", PapelMembroFamilia.MEMBRO);
+        MembroFamilia carla = criarMembro(contexto.familia(), "Carla", PapelMembroFamilia.MEMBRO);
+        participanteListaRepository.saveAndFlush(ParticipanteLista.criar(contexto.lista(), bia, agora()));
+        participanteListaRepository.saveAndFlush(ParticipanteLista.criar(contexto.lista(), carla, agora()));
+
+        ResultadoInicioCompra resultado = iniciarCompra.iniciar(contexto.criador().getUsuario().getId(),
+                contexto.familia().getId(), contexto.lista().getId(), Set.of(bia.getId()));
+
+        var participantes = participanteCompraRepository.findByCompra_IdOrderByGeradoEmAscIdAsc(id(resultado.compra()));
+        assertThat(participantes).allSatisfy(participante -> {
+            if (participante.getMembroFamilia().getId().equals(carla.getId())) {
+                assertThat(participante.getPresencaOperacional()).isEqualTo(
+                        com.mercadeira.api.compra.domain.PresencaOperacional.NAO_INFORMADA);
+            } else {
+                assertThat(participante.getPresencaOperacional()).isEqualTo(
+                        com.mercadeira.api.compra.domain.PresencaOperacional.PRESENTE);
+            }
+        });
     }
 
     private Contexto criarContexto(boolean comItem) {

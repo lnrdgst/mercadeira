@@ -117,6 +117,14 @@ class PresencaOperacionalIntegrationTests {
     void postItem(C c, UUID u, String acao, int esperado) throws Exception {
         mvc.perform(post(itemUrl(c,acao)).with(jwt().jwt(j -> j.subject(u.toString())))).andExpect(status().is(esperado));
     }
+    void transferirResponsabilidade(C c, UUID de, UUID para) throws Exception {
+        UUID participanteDestino = (UUID) registro(c, para).get("id");
+        mvc.perform(post(c.url()+"/responsabilidade-operacional/transferir")
+                .with(jwt().jwt(j -> j.subject(de.toString())))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"participanteCompraId\":\""+participanteDestino+"\"}"))
+                .andExpect(status().isOk());
+    }
 
     @Test void inicioPropriedadeReplayGetECapabilities() throws Exception {
         var c=contexto(true);
@@ -133,6 +141,7 @@ class PresencaOperacionalIntegrationTests {
         var antesBia=registro(c,c.bia());
         declarar(c,c.bia(),"PRESENTE");
         assertThat(registro(c,c.bia())).isEqualTo(antesBia);
+        transferirResponsabilidade(c, c.ana(), c.bia());
         declarar(c,c.ana(),"NAO_PRESENTE");
         var saiu=registro(c,c.ana());
         mvc.perform(post(c.url()).with(jwt().jwt(j -> j.subject(c.ana().toString())))).andExpect(status().isOk());
@@ -184,9 +193,12 @@ class PresencaOperacionalIntegrationTests {
         declarar(c,c.ana(),"NAO_PRESENTE");
         postItem(c,c.ana(),"colocar-no-carrinho",409);
         assertThat(jdbc.queryForMap("select * from item_compra where id=?",c.item())).isEqualTo(carrinho);
+        declarar(c,c.bia(),"NAO_PRESENTE");
         postItem(c,c.bia(),"solicitar-remocao",200);
+        postItem(c,c.ana(),"rejeitar-remocao",403);
+        declarar(c,c.ana(),"PRESENTE");
         postItem(c,c.ana(),"rejeitar-remocao",200);
-        postItem(c,c.ana(),"solicitar-remocao",200); // Autoaprovacao remota preservada.
+        postItem(c,c.ana(),"solicitar-remocao",200);
         assertThat(jdbc.queryForObject("select status from item_compra where id=?",String.class,c.item())).isEqualTo("REMOVIDO");
         postItem(c,c.bia(),"restaurar-no-carrinho",409);
         declarar(c,c.bia(),"PRESENTE");
@@ -209,6 +221,7 @@ class PresencaOperacionalIntegrationTests {
         iniciar.iniciar(c.ana(),c.familia(),c.lista());
         assertThat(registro(c,c.ana())).containsEntry("presenca_operacional","NAO_INFORMADA");
         postItem(c,c.ana(),"colocar-no-carrinho",409);
+        declarar(c,c.bia(),"NAO_PRESENTE");
         mvc.perform(post(c.url()+"/itens").with(jwt().jwt(j -> j.subject(c.bia().toString()))).contentType(MediaType.APPLICATION_JSON).content("{\"descricao\":\"Leite\"}"))
             .andExpect(status().isCreated());
         mvc.perform(post(c.url()+"/finalizar").with(jwt().jwt(j -> j.subject(c.bia().toString())))).andExpect(status().isConflict());
@@ -236,6 +249,7 @@ class PresencaOperacionalIntegrationTests {
         mvc.perform(post(c.url()+"/solicitacoes-presenca/"+pedidoId+"/aprovar")
                 .with(jwt().jwt(j -> j.subject(c.ana().toString())))).andExpect(status().isOk());
         assertThat(registro(c,c.bia())).containsEntry("presenca_operacional", "PRESENTE");
+        transferirResponsabilidade(c, c.ana(), c.bia());
         declarar(c,c.ana(),"NAO_PRESENTE");
         assertThat(jdbc.queryForObject("select responsavel_operacional_id from compra where id=?", UUID.class,c.compra()))
                 .isEqualTo(registro(c,c.bia()).get("id"));
@@ -268,6 +282,7 @@ class PresencaOperacionalIntegrationTests {
         mvc.perform(post(c.url()+"/solicitacoes-responsabilidade/"+transferenciaId+"/aprovar")
                 .with(jwt().jwt(j -> j.subject(c.ana().toString())))).andExpect(status().isOk());
         assertThat(jdbc.queryForObject("select responsabilidade_revisao from compra where id=?", Long.class,c.compra())).isEqualTo(2L);
+        transferirResponsabilidade(c, c.bia(), c.ana());
         declarar(c,c.bia(),"NAO_PRESENTE");
         var pendente = json(mvc.perform(post(c.url()+"/minha-presenca/solicitacoes")
                 .with(jwt().jwt(j -> j.subject(c.bia().toString())))).andExpect(status().isOk()).andReturn());
