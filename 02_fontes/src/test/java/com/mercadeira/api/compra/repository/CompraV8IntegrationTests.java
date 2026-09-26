@@ -71,9 +71,16 @@ class CompraV8IntegrationTests {
     void flywayAplicaV1AteV9EHibernateValidaSchema() {
         assertThat(jdbc.queryForList(
                 "select version from flyway_schema_history where success and version is not null order by installed_rank",
-                String.class)).containsExactly("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13");
+                String.class)).containsExactly("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14");
         assertThat(environment.getProperty("spring.jpa.hibernate.ddl-auto")).isEqualTo("validate");
         assertThat(environment.getProperty("spring.jpa.open-in-view")).isEqualTo("false");
+    }
+
+    @Test
+    void v13CriaIndiceDoHistoricoFinalizadoPorStatusEData() {
+        assertThat(jdbc.queryForObject(
+                "select indexdef from pg_indexes where schemaname = current_schema() and tablename = 'compra' and indexname = 'idx_compra_status_finalizada_em'",
+                String.class)).contains("(status, finalizada_em DESC)");
     }
 
     @ParameterizedTest
