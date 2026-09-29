@@ -91,8 +91,10 @@ class RestauracaoItemCompraHttpIntegrationTests {
         assertThat(restaurado.get("remocao")).isEqualTo(removido.get("remocao"));
         acoesRestauracao(restaurado, true, false, false);
         assertThat(getItem(c, autor)).isEqualTo(restaurado);
-        assertThat(restaurar(c, c.outro(), 200)).isEqualTo(restaurado);
-        assertThat(getItem(c, c.outro())).isEqualTo(restaurado);
+        var replayPorOutro = restaurar(c, c.outro(), 200);
+        assertThat(semAcoes(replayPorOutro)).isEqualTo(semAcoes(restaurado));
+        acoesRestauracao(replayPorOutro, true, false, false);
+        assertThat(getItem(c, c.outro())).isEqualTo(replayPorOutro);
         if (!administrador) {
             Files.writeString(Path.of("target/compra-4-restauracao.json"),
                     mvc.perform(get(c.url()).header("Authorization", autor))
@@ -141,7 +143,9 @@ class RestauracaoItemCompraHttpIntegrationTests {
         assertThat(segunda.get("colocadoNoCarrinhoEm")).isEqualTo(objeto(segunda, "restauracao").get("restauradoEm"));
         assertThat(segunda.get("remocao")).isEqualTo(aprovado.get("remocao"));
         assertThat(getItem(c, c.outro())).isEqualTo(segunda);
-        assertThat(restaurar(c, c.terceiro(), 200)).isEqualTo(segunda);
+        var replayPorTerceiro = restaurar(c, c.terceiro(), 200);
+        assertThat(semAcoes(replayPorTerceiro)).isEqualTo(semAcoes(segunda));
+        acoesRestauracao(replayPorTerceiro, true, false, false);
     }
 
     @Test
@@ -325,6 +329,11 @@ class RestauracaoItemCompraHttpIntegrationTests {
     private Map<String,Object> objeto(Map<String,Object> objeto,String campo) { return (Map<String,Object>)objeto.get(campo); }
     private void acoes(Map<String,Object> item,boolean solicitar,boolean decidir) {
         assertThat(objeto(item,"acoes")).containsEntry("podeSolicitarRemocao",solicitar).containsEntry("podeDecidirRemocao",decidir);
+    }
+    private Map<String,Object> semAcoes(Map<String,Object> item) {
+        var copia = new java.util.HashMap<>(item);
+        copia.remove("acoes");
+        return copia;
     }
     private void assertAutor(Map<String,Object> autor,UUID membro,UUID usuario,String nome) {
         assertThat(autor).containsEntry("membroFamiliaId",membro.toString()).containsEntry("usuarioId",usuario.toString()).containsEntry("nome",nome);

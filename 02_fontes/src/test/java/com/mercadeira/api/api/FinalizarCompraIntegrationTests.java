@@ -130,7 +130,7 @@ class FinalizarCompraIntegrationTests {
         assertThat(objeto(removido, "acoes")).containsEntry("podeRestaurarNoCarrinho", true);
         var esperado = new java.util.HashMap<>(removido);
         esperado.put("acoes", Map.of("podeColocarNoCarrinho", false, "podeSolicitarRemocao", false,
-                "podeDecidirRemocao", false, "podeRestaurarNoCarrinho", false));
+                "podeRemoverDiretamente", false, "podeDecidirRemocao", false, "podeRestaurarNoCarrinho", false));
         assertThat(getItem(c,c.outro())).isEqualTo(esperado);
         assertThat(consultar(c,c.outro())).isEqualTo(fim);
     }

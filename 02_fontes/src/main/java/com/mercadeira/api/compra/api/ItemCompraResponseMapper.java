@@ -56,6 +56,9 @@ final class ItemCompraResponseMapper {
         boolean naoInformada = membroAtual != null && Boolean.TRUE.equals(naoInformadaPorMembro.get(membroAtual));
         boolean podeOperar = participanteAtivo && !naoInformada;
         boolean originalPresente = marcador != null && presente(marcador);
+        boolean podeRemoverDiretamente = participanteAtivo && presente
+                && item.getStatus() == StatusItemCompra.NO_CARRINHO
+                && membroAtual.equals(marcador);
         boolean fallback = !originalPresente && presenteAtual() && responsavelOperacionalId != null
                 && membroAtual != null && responsavelOperacionalId.equals(porMembro.get(membroAtual).participanteCompraId());
         return new ItemCompraResponse(
@@ -69,6 +72,7 @@ final class ItemCompraResponseMapper {
                 new AcoesItemCompraResponse(
                         participanteAtivo && presente && item.getStatus() == StatusItemCompra.PENDENTE,
                         podeOperar && item.getStatus() == StatusItemCompra.NO_CARRINHO,
+                        podeRemoverDiretamente,
                         participanteAtivo && presente && item.getStatus() == StatusItemCompra.REMOCAO_SOLICITADA
                                 && (membroAtual.equals(marcador) && originalPresente || fallback),
                         participanteAtivo && presente && remocaoAprovadaCoerente(item)));
