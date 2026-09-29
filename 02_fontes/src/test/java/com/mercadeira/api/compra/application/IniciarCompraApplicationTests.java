@@ -149,6 +149,29 @@ class IniciarCompraApplicationTests {
         assertThatThrownBy(() -> iniciarCompra.iniciar(
                 contexto.criador().getUsuario().getId(), contexto.familia().getId(), contexto.lista().getId()))
                 .isInstanceOf(ListaCompraSemItensException.class);
+        assertThat(compraRepository.count()).isZero();
+        assertThat(itemCompraRepository.count()).isZero();
+        assertThat(participanteCompraRepository.count()).isZero();
+        assertThat(listaCompraRepository.findById(contexto.lista().getId()).orElseThrow().getStatus())
+                .isEqualTo(StatusListaCompra.EM_PREPARACAO);
+    }
+
+    @Test
+    void revalidaItensAtivosQuandoOUltimoItemFoiRemovidoAntesDoInicio() {
+        Contexto contexto = criarContexto(true);
+        ItemLista unicoItem = itemListaRepository
+                .findByListaCompra_IdAndRemovidoEmIsNullOrderByOrdemExibicaoAscIdAsc(contexto.lista().getId())
+                .getFirst();
+        unicoItem.remover(agora());
+        itemListaRepository.saveAndFlush(unicoItem);
+
+        assertThatThrownBy(() -> iniciarCompra.iniciar(
+                contexto.criador().getUsuario().getId(), contexto.familia().getId(), contexto.lista().getId()))
+                .isInstanceOf(ListaCompraSemItensException.class);
+        assertThat(compraRepository.count()).isZero();
+        assertThat(itemCompraRepository.count()).isZero();
+        assertThat(listaCompraRepository.findById(contexto.lista().getId()).orElseThrow().getStatus())
+                .isEqualTo(StatusListaCompra.EM_PREPARACAO);
     }
 
     @Test
