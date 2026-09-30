@@ -87,9 +87,11 @@ public class ApiExceptionHandler {
     }
 
     @ExceptionHandler({ MembroSemPermissaoException.class, MembroFamiliaInvalidoException.class,
-            UsuarioNaoParticipaDaListaException.class, UsuarioNaoParticipaDaCompraException.class, UsuarioNaoPodeDecidirRemocaoItemCompraException.class, AutoridadePresencaException.class })
+            UsuarioNaoParticipaDaListaException.class, UsuarioNaoParticipaDaCompraException.class, UsuarioNaoPodeDecidirRemocaoItemCompraException.class, AutoridadePresencaException.class, com.mercadeira.api.compra.application.PermissaoIniciarCompraNegadaException.class })
     ResponseEntity<ErroApiResponse> tratarSemPermissao(Exception exception, HttpServletRequest request) {
-        return resposta(HttpStatus.FORBIDDEN, "ACESSO_NEGADO", "Acesso negado.", request, Map.of());
+        String mensagem = exception instanceof com.mercadeira.api.compra.application.PermissaoIniciarCompraNegadaException ? exception.getMessage() : "Acesso negado.";
+        String erro = exception instanceof com.mercadeira.api.compra.application.PermissaoIniciarCompraNegadaException ? "SEM_PERMISSAO_INICIAR_COMPRA" : "ACESSO_NEGADO";
+        return resposta(HttpStatus.FORBIDDEN, erro, mensagem, request, Map.of());
     }
 
     @ExceptionHandler({ UsuarioNaoEncontradoException.class, SolicitacaoNaoEncontradaException.class,

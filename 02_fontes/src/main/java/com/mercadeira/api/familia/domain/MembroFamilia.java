@@ -44,6 +44,9 @@ public class MembroFamilia {
     @Column(name = "apelido", length = 120)
     private String apelido;
 
+    @Column(name = "pode_iniciar_compra", nullable = false)
+    private boolean podeIniciarCompra = true;
+
     @Column(name = "criado_em", nullable = false)
     private Instant criadoEm;
 
@@ -67,6 +70,7 @@ public class MembroFamilia {
         membro.usuario = usuario;
         membro.papel = papel;
         membro.status = StatusMembroFamilia.ATIVO;
+        membro.podeIniciarCompra = true;
         membro.criadoEm = agora;
         membro.atualizadoEm = agora;
         return membro;
@@ -111,5 +115,12 @@ public class MembroFamilia {
 
     public Usuario getUsuario() {
         return usuario;
+    }
+
+    public boolean isPodeIniciarCompra() { return podeIniciarCompra; }
+
+    public void alterarPodeIniciarCompra(boolean podeIniciarCompra, Instant agora) {
+        this.podeIniciarCompra = podeIniciarCompra;
+        this.atualizadoEm = agora;
     }
 }

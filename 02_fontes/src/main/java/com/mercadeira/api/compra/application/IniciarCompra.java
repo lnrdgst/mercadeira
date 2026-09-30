@@ -84,7 +84,6 @@ public class IniciarCompra {
         MembroFamilia iniciador = membroRepository.findByFamilia_IdAndUsuario_IdAndStatus(
                 familiaId, usuarioId, StatusMembroFamilia.ATIVO)
                 .orElseThrow(MembroFamiliaInvalidoException::new);
-
         Compra compraExistente = compraRepository.findByListaCompra_Id(listaId).orElse(null);
         if (lista.getStatus() == StatusListaCompra.EM_COMPRA) {
             validarParticipacaoAtiva(lista, iniciador);
@@ -98,6 +97,9 @@ public class IniciarCompra {
         }
         if (compraExistente != null) {
             throw new CompraListaInconsistenteException();
+        }
+        if (!iniciador.isPodeIniciarCompra()) {
+            throw new PermissaoIniciarCompraNegadaException();
         }
 
         List<ParticipanteLista> participantes = participanteListaRepository

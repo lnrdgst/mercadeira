@@ -19,6 +19,7 @@ import com.mercadeira.api.familia.application.ExcluirFamiliaNuncaUtilizada;
 import com.mercadeira.api.compra.repository.CompraRepository;
 import com.mercadeira.api.familia.application.SolicitarEntradaFamiliaPorCodigo;
 import com.mercadeira.api.familia.application.TransferirAdministracaoFamilia;
+import com.mercadeira.api.familia.application.AlterarPermissaoIniciarCompra;
 import com.mercadeira.api.familia.domain.Familia;
 import com.mercadeira.api.familia.domain.MembroFamilia;
 import com.mercadeira.api.familia.domain.PapelMembroFamilia;
@@ -32,6 +33,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -53,6 +55,7 @@ public class FamiliaController {
     private final RemoverIntegranteFamilia removerIntegranteFamilia;
     private final SairDaFamilia sairDaFamilia;
     private final ExcluirFamiliaNuncaUtilizada excluirFamiliaNuncaUtilizada;
+    private final AlterarPermissaoIniciarCompra alterarPermissaoIniciarCompra;
     private final CompraRepository compraRepository;
     private final MembroFamiliaRepository membroFamiliaRepository;
     private final ParticipanteCompraRepository participanteCompraRepository;
@@ -67,7 +70,7 @@ public class FamiliaController {
             TransferirAdministracaoFamilia transferirAdministracaoFamilia,
             RemoverIntegranteFamilia removerIntegranteFamilia,
             SairDaFamilia sairDaFamilia,
-            ExcluirFamiliaNuncaUtilizada excluirFamiliaNuncaUtilizada, CompraRepository compraRepository,
+            ExcluirFamiliaNuncaUtilizada excluirFamiliaNuncaUtilizada, AlterarPermissaoIniciarCompra alterarPermissaoIniciarCompra, CompraRepository compraRepository,
             MembroFamiliaRepository membroFamiliaRepository,
             ParticipanteCompraRepository participanteCompraRepository) {
         this.usuarioAutenticado = usuarioAutenticado;
@@ -82,6 +85,7 @@ public class FamiliaController {
         this.removerIntegranteFamilia = removerIntegranteFamilia;
         this.sairDaFamilia = sairDaFamilia;
         this.excluirFamiliaNuncaUtilizada = excluirFamiliaNuncaUtilizada; this.compraRepository = compraRepository;
+        this.alterarPermissaoIniciarCompra = alterarPermissaoIniciarCompra;
         this.membroFamiliaRepository = membroFamiliaRepository;
         this.participanteCompraRepository = participanteCompraRepository;
     }
@@ -147,6 +151,13 @@ public class FamiliaController {
     @PostMapping("/{familiaId}/membros/{membroId}/transferir-administracao")
     public ResponseEntity<Void> transferirAdministracao(@PathVariable UUID familiaId, @PathVariable UUID membroId) {
         transferirAdministracaoFamilia.transferir(familiaId, usuarioAutenticado.getId(), membroId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/{familiaId}/membros/{membroId}/permissao-iniciar-compra")
+    public ResponseEntity<Void> alterarPermissaoIniciarCompra(@PathVariable UUID familiaId, @PathVariable UUID membroId,
+            @Valid @RequestBody PermissaoIniciarCompraRequest request) {
+        alterarPermissaoIniciarCompra.alterar(familiaId, usuarioAutenticado.getId(), membroId, request.podeIniciarCompra());
         return ResponseEntity.noContent().build();
     }
 
