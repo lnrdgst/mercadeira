@@ -1,6 +1,7 @@
 package com.mercadeira.api.usuario.api;
 
 import com.mercadeira.api.usuario.application.CadastrarUsuario;
+import com.mercadeira.api.usuario.application.AtualizarMinhaConta;
 import com.mercadeira.api.usuario.domain.Usuario;
 import com.mercadeira.api.usuario.repository.UsuarioRepository;
 import com.mercadeira.api.autenticacao.security.UsuarioAutenticado;
@@ -9,6 +10,8 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -20,11 +23,13 @@ public class UsuarioController {
     private final CadastrarUsuario cadastrarUsuario;
     private final UsuarioAutenticado usuarioAutenticado;
     private final UsuarioRepository usuarioRepository;
+    private final AtualizarMinhaConta atualizarMinhaConta;
 
-    public UsuarioController(CadastrarUsuario cadastrarUsuario, UsuarioAutenticado usuarioAutenticado, UsuarioRepository usuarioRepository) {
+    public UsuarioController(CadastrarUsuario cadastrarUsuario, UsuarioAutenticado usuarioAutenticado, UsuarioRepository usuarioRepository, AtualizarMinhaConta atualizarMinhaConta) {
         this.cadastrarUsuario = cadastrarUsuario;
         this.usuarioAutenticado = usuarioAutenticado;
         this.usuarioRepository = usuarioRepository;
+        this.atualizarMinhaConta = atualizarMinhaConta;
     }
 
     @PostMapping
@@ -36,5 +41,16 @@ public class UsuarioController {
     @GetMapping("/me")
     public UsuarioResponse me() {
         return UsuarioResponse.from(usuarioRepository.findById(usuarioAutenticado.getId()).orElseThrow());
+    }
+
+    @PatchMapping("/me")
+    public UsuarioResponse atualizarMe(@Valid @RequestBody AtualizarMinhaContaRequest request) {
+        return UsuarioResponse.from(atualizarMinhaConta.dados(usuarioAutenticado.getId(), request.nome(), request.email(), request.senhaAtual()));
+    }
+
+    @PutMapping("/me/senha")
+    public ResponseEntity<Void> alterarSenha(@Valid @RequestBody AlterarSenhaRequest request) {
+        atualizarMinhaConta.senha(usuarioAutenticado.getId(), request.senhaAtual(), request.novaSenha());
+        return ResponseEntity.noContent().build();
     }
 }

@@ -23,8 +23,8 @@ public class CadastrarUsuario {
 
     @Transactional
     public Usuario cadastrar(String nome, String email, String senha) {
-        validarObrigatorio(nome, "nome");
-        validarObrigatorio(email, "email");
+        nome = normalizarNome(nome);
+        email = normalizarEmail(email);
         validarObrigatorio(senha, "senha");
 
         if (usuarioRepository.existsByEmail(email)) {
@@ -35,7 +35,17 @@ public class CadastrarUsuario {
         return usuarioRepository.save(usuario);
     }
 
-    private void validarObrigatorio(String valor, String campo) {
+    public static String normalizarNome(String valor) {
+        validarObrigatorio(valor, "nome");
+        return valor.trim();
+    }
+
+    public static String normalizarEmail(String valor) {
+        validarObrigatorio(valor, "email");
+        return valor.trim().toLowerCase(java.util.Locale.ROOT);
+    }
+
+    public static void validarObrigatorio(String valor, String campo) {
         if (valor == null || valor.isBlank()) {
             throw new DadosUsuarioInvalidosException(campo);
         }

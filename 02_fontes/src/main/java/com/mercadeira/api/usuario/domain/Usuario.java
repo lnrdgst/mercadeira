@@ -62,4 +62,15 @@ public class Usuario {
     public String getSenhaHash() {
         return senhaHash;
     }
+
+    public void alterarDadosPessoais(String nome, String email, Instant agora) {
+        this.nome = nome;
+        this.email = email;
+        this.atualizadoEm = agora;
+    }
+
+    public void alterarSenha(String senhaHash, Instant agora) {
+        this.senhaHash = senhaHash;
+        this.atualizadoEm = agora;
+    }
 }
