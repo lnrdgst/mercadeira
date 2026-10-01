@@ -9,6 +9,7 @@ import com.mercadeira.api.compra.application.CompraComRemocaoPendenteException;
 import com.mercadeira.api.compra.application.UsuarioNaoPodeDecidirRemocaoItemCompraException;
 import com.mercadeira.api.compra.application.ResponsavelRemocaoItemCompraInvalidoException;
 import com.mercadeira.api.autenticacao.application.CredenciaisInvalidasException;
+import com.mercadeira.api.autenticacao.application.TokenRedefinicaoInvalidoException;
 import com.mercadeira.api.autenticacao.security.UsuarioNaoAutenticadoException;
 import com.mercadeira.api.familia.application.CodigoFamiliaInvalidoException;
 import com.mercadeira.api.familia.application.FamiliaInativaException;
@@ -86,6 +87,13 @@ public class ApiExceptionHandler {
     ResponseEntity<ErroApiResponse> tratarNaoAutenticado(Exception exception, HttpServletRequest request) {
         String mensagem = exception instanceof SenhaAtualIncorretaException ? exception.getMessage() : "Credenciais invalidas.";
         return resposta(HttpStatus.UNAUTHORIZED, "NAO_AUTENTICADO", mensagem, request, Map.of());
+    }
+
+    @ExceptionHandler(TokenRedefinicaoInvalidoException.class)
+    ResponseEntity<ErroApiResponse> tratarTokenRedefinicaoInvalido(TokenRedefinicaoInvalidoException exception,
+            HttpServletRequest request) {
+        return resposta(HttpStatus.BAD_REQUEST, "TOKEN_REDEFINICAO_INVALIDO",
+                "Este link de redefinicao e invalido ou expirou.", request, Map.of());
     }
 
     @ExceptionHandler({ MembroSemPermissaoException.class, MembroFamiliaInvalidoException.class,

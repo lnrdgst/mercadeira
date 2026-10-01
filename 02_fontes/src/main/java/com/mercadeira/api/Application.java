@@ -5,8 +5,11 @@ import java.time.Clock;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import com.mercadeira.api.autenticacao.application.PasswordResetProperties;
 
 @SpringBootApplication
+@EnableConfigurationProperties(PasswordResetProperties.class)
 public class Application {
 
 	@Bean
