@@ -2,11 +2,11 @@ package com.mercadeira.api.autenticacao.api;
 
 import java.time.Instant;
 
-import com.mercadeira.api.autenticacao.application.TokenAutenticacao;
+import com.mercadeira.api.autenticacao.application.SessaoAutenticada;
 
-public record LoginResponse(String token, Instant expiracao) {
+public record LoginResponse(String token, Instant expiracao, String refreshToken) {
 
-    static LoginResponse from(TokenAutenticacao token) {
-        return new LoginResponse(token.token(), token.expiraEm());
+    static LoginResponse from(SessaoAutenticada sessao) {
+        return new LoginResponse(sessao.accessToken().token(), sessao.accessToken().expiraEm(), sessao.refreshToken());
     }
 }

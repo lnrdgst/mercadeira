@@ -30,13 +30,14 @@ class RecuperarSenhaTest {
     private final TokenRedefinicaoSenhaRepository tokens = mock(TokenRedefinicaoSenhaRepository.class);
     private final EmailService email = mock(EmailService.class);
     private final PasswordEncoder encoder = mock(PasswordEncoder.class);
+    private final GerenciarSessoesPersistentes sessoes = mock(GerenciarSessoesPersistentes.class);
     private final Instant agora = Instant.parse("2026-10-01T12:00:00Z");
     private RecuperarSenha service;
 
     @BeforeEach void configurar() {
         PasswordResetProperties properties = new PasswordResetProperties();
         properties.setFrontendUrl("https://app.example.test/"); properties.setExpirationMinutes(30); properties.setCooldownSeconds(60);
-        service = new RecuperarSenha(usuarios, tokens, email, encoder, properties, Clock.fixed(agora, ZoneOffset.UTC));
+        service = new RecuperarSenha(usuarios, tokens, email, encoder, properties, sessoes, Clock.fixed(agora, ZoneOffset.UTC));
     }
 
     @Test void solicitaNormalizaEmailPersisteSomenteHashEEnviaLink() {
@@ -68,5 +69,19 @@ class RecuperarSenhaTest {
         when(token.podeSerUsadoEm(agora)).thenReturn(false);
         assertThatThrownBy(() -> service.redefinir("token", "nova-senha")).isInstanceOf(TokenRedefinicaoInvalidoException.class);
         verify(encoder, org.mockito.Mockito.never()).encode(any());
+    }
+
+    @Test void redefinicaoDeSenhaRevogaTodasAsSessoesPersistentes() {
+        TokenRedefinicaoSenha token = mock(TokenRedefinicaoSenha.class);
+        Usuario usuario = mock(Usuario.class);
+        UUID usuarioId = UUID.randomUUID();
+        when(tokens.findByTokenHash(any())).thenReturn(Optional.of(token));
+        when(token.podeSerUsadoEm(agora)).thenReturn(true);
+        when(token.getUsuario()).thenReturn(usuario);
+        when(usuario.getId()).thenReturn(usuarioId);
+
+        service.redefinir("token", "nova-senha");
+
+        verify(sessoes).revogarTodasDoUsuario(usuarioId);
     }
 }

@@ -2,6 +2,7 @@ package com.mercadeira.api.usuario.application;
 
 import java.time.Clock;
 import java.util.UUID;
+import com.mercadeira.api.autenticacao.application.GerenciarSessoesPersistentes;
 import com.mercadeira.api.usuario.domain.Usuario;
 import com.mercadeira.api.usuario.repository.UsuarioRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -10,8 +11,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class AtualizarMinhaConta {
-    private final UsuarioRepository usuarios; private final PasswordEncoder passwordEncoder; private final Clock clock;
-    public AtualizarMinhaConta(UsuarioRepository usuarios, PasswordEncoder passwordEncoder, Clock clock) { this.usuarios = usuarios; this.passwordEncoder = passwordEncoder; this.clock = clock; }
+    private final UsuarioRepository usuarios; private final PasswordEncoder passwordEncoder; private final GerenciarSessoesPersistentes sessoes; private final Clock clock;
+    public AtualizarMinhaConta(UsuarioRepository usuarios, PasswordEncoder passwordEncoder, GerenciarSessoesPersistentes sessoes, Clock clock) { this.usuarios = usuarios; this.passwordEncoder = passwordEncoder; this.sessoes = sessoes; this.clock = clock; }
     @Transactional
     public Usuario dados(UUID usuarioId, String nome, String email, String senhaAtual) {
         Usuario usuario = usuarios.findById(usuarioId).orElseThrow();
@@ -29,5 +30,6 @@ public class AtualizarMinhaConta {
         Usuario usuario = usuarios.findById(usuarioId).orElseThrow();
         if (!passwordEncoder.matches(senhaAtual, usuario.getSenhaHash())) throw new SenhaAtualIncorretaException();
         usuario.alterarSenha(passwordEncoder.encode(novaSenha), clock.instant());
+        sessoes.revogarTodasDoUsuario(usuarioId);
     }
 }

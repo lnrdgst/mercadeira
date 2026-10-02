@@ -8,10 +8,11 @@ import org.springframework.boot.mail.autoconfigure.MailSenderAutoConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import com.mercadeira.api.autenticacao.application.PasswordResetProperties;
+import com.mercadeira.api.autenticacao.application.SessionProperties;
 import com.mercadeira.api.autenticacao.email.ResendProperties;
 
 @SpringBootApplication(exclude = MailSenderAutoConfiguration.class)
-@EnableConfigurationProperties({ PasswordResetProperties.class, ResendProperties.class })
+@EnableConfigurationProperties({ PasswordResetProperties.class, ResendProperties.class, SessionProperties.class })
 public class Application {
 
 	@Bean

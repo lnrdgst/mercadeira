@@ -1,7 +1,8 @@
 package com.mercadeira.api.autenticacao.api;
 
 import com.mercadeira.api.autenticacao.application.AutenticarUsuario;
-import com.mercadeira.api.autenticacao.application.TokenAutenticacao;
+import com.mercadeira.api.autenticacao.application.GerenciarSessoesPersistentes;
+import com.mercadeira.api.autenticacao.application.SessaoAutenticada;
 import com.mercadeira.api.autenticacao.application.RecuperarSenha;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -16,16 +17,30 @@ public class AutenticacaoController {
 
     private final AutenticarUsuario autenticarUsuario;
     private final RecuperarSenha recuperarSenha;
+    private final GerenciarSessoesPersistentes sessoes;
 
-    public AutenticacaoController(AutenticarUsuario autenticarUsuario, RecuperarSenha recuperarSenha) {
+    public AutenticacaoController(AutenticarUsuario autenticarUsuario, RecuperarSenha recuperarSenha,
+            GerenciarSessoesPersistentes sessoes) {
         this.autenticarUsuario = autenticarUsuario;
         this.recuperarSenha = recuperarSenha;
+        this.sessoes = sessoes;
     }
 
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
-        TokenAutenticacao token = autenticarUsuario.autenticar(request.email(), request.senha());
-        return ResponseEntity.ok(LoginResponse.from(token));
+        SessaoAutenticada sessao = autenticarUsuario.autenticarComSessao(request.email(), request.senha());
+        return ResponseEntity.ok(LoginResponse.from(sessao));
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<LoginResponse> refresh(@Valid @RequestBody RefreshTokenRequest request) {
+        return ResponseEntity.ok(LoginResponse.from(sessoes.renovar(request.refreshToken())));
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(@RequestBody(required = false) RefreshTokenRequest request) {
+        sessoes.revogar(request == null ? null : request.refreshToken());
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/esqueci-senha")

@@ -27,12 +27,14 @@ public class RecuperarSenha {
     private final EmailService emailService;
     private final PasswordEncoder passwordEncoder;
     private final PasswordResetProperties properties;
+    private final GerenciarSessoesPersistentes sessoes;
     private final Clock clock;
 
     public RecuperarSenha(UsuarioRepository usuarios, TokenRedefinicaoSenhaRepository tokens, EmailService emailService,
-            PasswordEncoder passwordEncoder, PasswordResetProperties properties, Clock clock) {
+            PasswordEncoder passwordEncoder, PasswordResetProperties properties, GerenciarSessoesPersistentes sessoes,
+            Clock clock) {
         this.usuarios = usuarios; this.tokens = tokens; this.emailService = emailService;
-        this.passwordEncoder = passwordEncoder; this.properties = properties; this.clock = clock;
+        this.passwordEncoder = passwordEncoder; this.properties = properties; this.sessoes = sessoes; this.clock = clock;
     }
 
     @Transactional
@@ -63,6 +65,7 @@ public class RecuperarSenha {
         usuario.alterarSenha(passwordEncoder.encode(novaSenha), agora);
         token.marcarComoUsado(agora);
         tokens.invalidarAtivosDoUsuario(usuario.getId(), agora);
+        sessoes.revogarTodasDoUsuario(usuario.getId());
     }
 
     static String hash(String token) {

@@ -10,6 +10,7 @@ import com.mercadeira.api.compra.application.UsuarioNaoPodeDecidirRemocaoItemCom
 import com.mercadeira.api.compra.application.ResponsavelRemocaoItemCompraInvalidoException;
 import com.mercadeira.api.autenticacao.application.CredenciaisInvalidasException;
 import com.mercadeira.api.autenticacao.application.TokenRedefinicaoInvalidoException;
+import com.mercadeira.api.autenticacao.application.SessaoInvalidaException;
 import com.mercadeira.api.autenticacao.security.UsuarioNaoAutenticadoException;
 import com.mercadeira.api.familia.application.CodigoFamiliaInvalidoException;
 import com.mercadeira.api.familia.application.FamiliaInativaException;
@@ -83,7 +84,7 @@ public class ApiExceptionHandler {
         return resposta(HttpStatus.BAD_REQUEST, "REQUISICAO_INVALIDA", "Requisicao invalida.", request, Map.of());
     }
 
-    @ExceptionHandler({ CredenciaisInvalidasException.class, UsuarioNaoAutenticadoException.class, SenhaAtualIncorretaException.class })
+    @ExceptionHandler({ CredenciaisInvalidasException.class, SessaoInvalidaException.class, UsuarioNaoAutenticadoException.class, SenhaAtualIncorretaException.class })
     ResponseEntity<ErroApiResponse> tratarNaoAutenticado(Exception exception, HttpServletRequest request) {
         String mensagem = exception instanceof SenhaAtualIncorretaException ? exception.getMessage() : "Credenciais invalidas.";
         return resposta(HttpStatus.UNAUTHORIZED, "NAO_AUTENTICADO", mensagem, request, Map.of());
