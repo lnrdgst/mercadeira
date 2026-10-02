@@ -3,6 +3,8 @@ package com.mercadeira.api.autenticacao.email;
 import java.time.Duration;
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -12,10 +14,17 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestClientResponseException;
+import org.springframework.web.client.ResourceAccessException;
+
+import tools.jackson.databind.ObjectMapper;
 
 @Service
 @ConditionalOnProperty(name = "mercadeira.email.provider", havingValue = "resend")
 public class ResendEmailService implements EmailService {
+    private static final Logger logger = LoggerFactory.getLogger(ResendEmailService.class);
+    private static final ObjectMapper objectMapper = new ObjectMapper();
+
     private final RestClient restClient;
     private final ResendProperties properties;
     private final String remetente;
@@ -40,7 +49,18 @@ public class ResendEmailService implements EmailService {
                             "Redefini\u00e7\u00e3o de senha \u2014 Mercadeira", corpo(link, validade)))
                     .retrieve()
                     .body(ResendResponse.class);
+        } catch (RestClientResponseException exception) {
+            ResendErrorResponse erro = extrairErro(exception.getResponseBodyAsString());
+            logger.warn("Falha HTTP ao enviar e-mail pela Resend: status={}, name={}, type={}, message={}",
+                    exception.getStatusCode().value(), erro.name(), erro.type(), erro.message());
+            throw new MailSendException("Nao foi possivel enviar o e-mail de redefinicao de senha.", exception);
+        } catch (ResourceAccessException exception) {
+            logger.warn("Falha de conexao ou timeout ao enviar e-mail pela Resend: exceptionType={}",
+                    exception.getClass().getSimpleName(), exception);
+            throw new MailSendException("Nao foi possivel enviar o e-mail de redefinicao de senha.", exception);
         } catch (RestClientException exception) {
+            logger.warn("Falha de cliente ao enviar e-mail pela Resend: exceptionType={}",
+                    exception.getClass().getSimpleName(), exception);
             throw new MailSendException("Nao foi possivel enviar o e-mail de redefinicao de senha.", exception);
         }
         if (resposta == null || !StringUtils.hasText(resposta.id())) {
@@ -62,6 +82,16 @@ public class ResendEmailService implements EmailService {
                 + " minutos e pode ser usado uma unica vez. Se voce nao fez esta solicitacao, ignore este e-mail.";
     }
 
+    private ResendErrorResponse extrairErro(String corpoResposta) {
+        if (!StringUtils.hasText(corpoResposta)) return new ResendErrorResponse(null, null, null);
+        try {
+            return objectMapper.readValue(corpoResposta, ResendErrorResponse.class);
+        } catch (Exception exception) {
+            return new ResendErrorResponse(null, null, null);
+        }
+    }
+
     private record ResendRequest(String from, List<String> to, String subject, String text) { }
     private record ResendResponse(String id) { }
+    private record ResendErrorResponse(String name, String type, String message) { }
 }

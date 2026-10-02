@@ -1,19 +1,26 @@
 package com.mercadeira.api.autenticacao.email;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.client.ExpectedCount.once;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.content;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
-import static org.springframework.test.web.client.response.MockRestResponseCreators.withServerError;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import java.time.Duration;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.mail.MailSendException;
 import org.springframework.test.web.client.MockRestServiceServer;
@@ -22,6 +29,8 @@ import org.springframework.web.client.RestClient;
 class ResendEmailServiceTest {
     private MockRestServiceServer server;
     private ResendEmailService service;
+    private Logger logger;
+    private ListAppender<ILoggingEvent> logs;
 
     @BeforeEach
     void configurar() {
@@ -31,6 +40,16 @@ class ResendEmailServiceTest {
         properties.setApiUrl("https://resend.example.test/emails");
         properties.setApiKey("re_test_key");
         service = new ResendEmailService(builder.build(), properties, "Mercadeira <onboarding@resend.dev>");
+        logger = (Logger) LoggerFactory.getLogger(ResendEmailService.class);
+        logs = new ListAppender<>();
+        logs.start();
+        logger.addAppender(logs);
+    }
+
+    @AfterEach
+    void removerAppender() {
+        logger.detachAppender(logs);
+        logs.stop();
     }
 
     @Test
@@ -62,12 +81,22 @@ class ResendEmailServiceTest {
     }
 
     @Test
-    void converteErroHttpEmFalhaDeEnvio() {
+    void registraErroHttpEstruturadoSemVazarCredenciaisOuConteudoDoEmail() {
         server.expect(requestTo("https://resend.example.test/emails"))
-                .andRespond(withServerError());
+                .andRespond(withStatus(HttpStatus.BAD_REQUEST)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body("""
+                                {"name":"validation_error","type":"invalid_parameter","message":"O remetente nao foi verificado."}
+                                """));
 
-        assertThatThrownBy(() -> service.enviarRedefinicaoSenha("ana@example.test", "https://app.example.test/link",
+        assertThatThrownBy(() -> service.enviarRedefinicaoSenha("ana@example.test",
+                "https://app.example.test/redefinir-senha?token=segredo",
                 Duration.ofMinutes(30))).isInstanceOf(MailSendException.class);
+
+        String mensagem = logs.list.getFirst().getFormattedMessage();
+        assertThat(mensagem).contains("status=400", "name=validation_error", "type=invalid_parameter",
+                "message=O remetente nao foi verificado.");
+        assertThat(mensagem).doesNotContain("re_test_key", "segredo", "Foi solicitada uma redefinicao de senha");
     }
 
     @Test
