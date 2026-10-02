@@ -7,9 +7,10 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import com.mercadeira.api.autenticacao.application.PasswordResetProperties;
+import com.mercadeira.api.autenticacao.email.ResendProperties;
 
 @SpringBootApplication
-@EnableConfigurationProperties(PasswordResetProperties.class)
+@EnableConfigurationProperties({ PasswordResetProperties.class, ResendProperties.class })
 public class Application {
 
 	@Bean

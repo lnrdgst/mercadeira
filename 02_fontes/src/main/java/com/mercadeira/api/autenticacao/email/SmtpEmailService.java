@@ -8,8 +8,10 @@ import org.springframework.mail.MailPreparationException;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 
 @Service
+@ConditionalOnProperty(name = "mercadeira.email.provider", havingValue = "smtp", matchIfMissing = true)
 public class SmtpEmailService implements EmailService {
     private final JavaMailSender mailSender;
     private final String remetente;
