@@ -42,6 +42,7 @@ import com.mercadeira.api.compra.application.CompraListaInconsistenteException;
 import com.mercadeira.api.compra.application.CompraNaoEncontradaException;
 import com.mercadeira.api.compra.application.CompraForaDeAndamentoException;
 import com.mercadeira.api.compra.application.ItemCompraNaoEncontradoException;
+import com.mercadeira.api.compra.application.RegistroFinanceiroCompraNaoEncontradoException;
 import com.mercadeira.api.compra.application.ListaCompraSemItensException;
 import com.mercadeira.api.compra.application.ListaCompraSemParticipantesException;
 import com.mercadeira.api.compra.application.UsuarioNaoParticipaDaCompraException;
@@ -107,7 +108,8 @@ public class ApiExceptionHandler {
 
     @ExceptionHandler({ UsuarioNaoEncontradoException.class, SolicitacaoNaoEncontradaException.class,
             ListaCompraNaoEncontradaException.class, ItemListaNaoEncontradoException.class,
-            CompraNaoEncontradaException.class, ItemCompraNaoEncontradoException.class })
+            CompraNaoEncontradaException.class, ItemCompraNaoEncontradoException.class,
+            RegistroFinanceiroCompraNaoEncontradoException.class })
     ResponseEntity<ErroApiResponse> tratarNaoEncontrado(Exception exception, HttpServletRequest request) {
         return resposta(HttpStatus.NOT_FOUND, "RECURSO_NAO_ENCONTRADO", "Recurso nao encontrado.", request, Map.of());
     }

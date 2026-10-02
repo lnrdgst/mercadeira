@@ -5,6 +5,7 @@ import java.util.List;
 import com.mercadeira.api.compra.domain.Compra;
 import com.mercadeira.api.compra.domain.ItemCompra;
 import com.mercadeira.api.compra.domain.ParticipanteCompra;
+import com.mercadeira.api.compra.domain.RegistroFinanceiroCompra;
 import com.mercadeira.api.compra.domain.SolicitacaoPresencaCompra;
 import com.mercadeira.api.compra.domain.SolicitacaoResponsabilidadeOperacional;
 
@@ -12,6 +13,7 @@ public record ResultadoConsultaCompra(
         Compra compra,
         List<ParticipanteCompra> participantes,
         List<ItemCompra> itens,
+        List<RegistroFinanceiroCompra> registrosFinanceiros,
         boolean participanteCompra,
         boolean administradorAtivo,
         SolicitacaoPresencaCompra minhaSolicitacao,

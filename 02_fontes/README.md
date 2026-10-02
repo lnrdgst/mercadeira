@@ -1,5 +1,16 @@
 # Mercadeira API
 
+## Registros financeiros da compra
+
+Uma Compra pode ter zero ou mais registros financeiros manuais. O valor é opcional: finalizar sem registros é permitido. Os registros são vinculados à Compra, e `totalRegistrado` é sempre calculado pela soma dos registros persistidos, sem coluna de total redundante.
+
+Durante `EM_ANDAMENTO`, somente participante ativo da Compra com presença operacional informada pode criar ou remover registros. Administrador(a) familiar que não participa da Compra não recebe essa capacidade. Em `FINALIZADA`, os registros e o total permanecem consultáveis, mas nenhuma mutação é aceita.
+
+- `POST /api/familias/{familiaId}/listas/{listaId}/compra/registros-financeiros` recebe `{ "valor": 82.40, "estabelecimentoNome": "Mercado Central" }` e retorna `201 Created` com `CompraResponse` atualizado.
+- `DELETE /api/familias/{familiaId}/listas/{listaId}/compra/registros-financeiros/{registroId}` retorna `200 OK` com `CompraResponse` atualizado.
+
+Cada registro em `CompraResponse.registrosFinanceiros` tem `id`, `valor`, `tipo`, `estabelecimentoNome` e `criadoEm`; o total vem em `CompraResponse.totalRegistrado`. Atualmente o tipo é `MANUAL`. Não há forma de pagamento, NFC-e, QR Code, câmera ou integração SEFAZ neste fluxo.
+
 ## Minha conta
 
 Todos os endpoints abaixo são autenticados e operam exclusivamente sobre o usuário identificado pelo UUID no `sub` do JWT. Não é aceito um identificador de usuário arbitrário.

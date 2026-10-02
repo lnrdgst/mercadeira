@@ -1,6 +1,7 @@
 package com.mercadeira.api.compra.api;
 
 import java.time.Instant;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
@@ -31,6 +32,8 @@ public record CompraResponse(
         List<SolicitacaoResponsabilidadeResponse> solicitacoesResponsabilidadePendentes,
         List<ParticipanteCompraResponse> participantes,
         List<ItemCompraResponse> itens,
+        List<RegistroFinanceiroCompraResponse> registrosFinanceiros,
+        BigDecimal totalRegistrado,
         ContextoUsuarioCompraResponse contextoUsuario) {
 
     public static CompraResponse from(ResultadoConsultaCompra resultado, UUID usuarioId) {
@@ -70,6 +73,7 @@ public record CompraResponse(
                 && participanteAtual.getPresencaOperacional() != com.mercadeira.api.compra.domain.PresencaOperacional.NAO_PRESENTE;
         boolean podeAdicionarItem = participanteAtual != null && emAndamento
                 && participanteAtual.getPresencaOperacional() != com.mercadeira.api.compra.domain.PresencaOperacional.NAO_INFORMADA;
+        boolean podeGerenciarRegistrosFinanceiros = podeAdicionarItem;
         boolean podeCancelar = resultado.minhaSolicitacao() != null
                 && resultado.minhaSolicitacao().getEstado() == EstadoSolicitacaoPresenca.PENDENTE;
         boolean podeSolicitarResponsabilidade = emAndamento && participanteAtual != null && participanteAtual.estaPresente()
@@ -117,13 +121,16 @@ public record CompraResponse(
                 resultado.itens().stream()
                         .map(mapper::from)
                         .toList(),
+                resultado.registrosFinanceiros().stream().map(RegistroFinanceiroCompraResponse::from).toList(),
+                resultado.registrosFinanceiros().stream().map(registro -> registro.getValor())
+                        .reduce(BigDecimal.ZERO, BigDecimal::add),
                 new ContextoUsuarioCompraResponse(resultado.participanteCompra(), podeDeclararSaida, podeFinalizar,
                         compra.getStatus() == StatusCompra.FINALIZADA && compra.getListaCompra().getStatus() == StatusListaCompra.FINALIZADA && compra.getListaCompra().getFamilia().getStatus() == com.mercadeira.api.familia.domain.StatusFamilia.ATIVA && resultado.itens().stream().noneMatch(item -> item.getStatus() == StatusItemCompra.REMOCAO_SOLICITADA),
                         compra.getStatus() == StatusCompra.FINALIZADA && compra.getListaCompra().getStatus() == StatusListaCompra.FINALIZADA && compra.getListaCompra().getFamilia().getStatus() == com.mercadeira.api.familia.domain.StatusFamilia.ATIVA
                                 && resultado.itens().stream().anyMatch(item -> item.getStatus() == StatusItemCompra.PENDENTE || item.getStatus() == StatusItemCompra.REMOVIDO),
                         podeSolicitarPresenca, podeCancelar, podeDeclararSaida, podeSolicitarResponsabilidade,
                         podeCancelarResponsabilidade, precisaEstarPresenteParaFinalizar, podeEncerrarAdministrativamente,
-                        podeAdicionarItem, podeTransferirResponsabilidade));
+                        podeAdicionarItem, podeTransferirResponsabilidade, podeGerenciarRegistrosFinanceiros));
     }
 
     public record ParticipanteCompraResponse(
@@ -179,6 +186,7 @@ public record CompraResponse(
             boolean podeCancelarSolicitacaoPresenca, boolean podeDeclararSaida,
             boolean podeSolicitarResponsabilidade, boolean podeCancelarSolicitacaoResponsabilidade,
             boolean precisaEstarPresenteParaFinalizar, boolean podeEncerrarCompraAdministrativamente,
-            boolean podeAdicionarItemDuranteCompra, boolean podeTransferirResponsabilidade) {
+            boolean podeAdicionarItemDuranteCompra, boolean podeTransferirResponsabilidade,
+            boolean podeGerenciarRegistrosFinanceiros) {
     }
 }

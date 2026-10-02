@@ -9,6 +9,7 @@ import com.mercadeira.api.compra.domain.ParticipanteCompra;
 import com.mercadeira.api.compra.repository.CompraRepository;
 import com.mercadeira.api.compra.repository.ItemCompraRepository;
 import com.mercadeira.api.compra.repository.ParticipanteCompraRepository;
+import com.mercadeira.api.compra.repository.RegistroFinanceiroCompraRepository;
 import com.mercadeira.api.compra.repository.SolicitacaoPresencaCompraRepository;
 import com.mercadeira.api.compra.repository.SolicitacaoResponsabilidadeOperacionalRepository;
 import com.mercadeira.api.compra.domain.EstadoSolicitacaoPresenca;
@@ -32,18 +33,21 @@ public class ConsultarCompraDaLista {
     private final CompraRepository compraRepository;
     private final ParticipanteCompraRepository participanteRepository;
     private final ItemCompraRepository itemRepository;
+    private final RegistroFinanceiroCompraRepository registroFinanceiroRepository;
     private final SolicitacaoPresencaCompraRepository solicitacaoRepository;
     private final SolicitacaoResponsabilidadeOperacionalRepository solicitacaoResponsabilidadeRepository;
 
     public ConsultarCompraDaLista(ListaCompraRepository listaRepository, MembroFamiliaRepository membroRepository,
             CompraRepository compraRepository, ParticipanteCompraRepository participanteRepository,
-            ItemCompraRepository itemRepository, SolicitacaoPresencaCompraRepository solicitacaoRepository,
+            ItemCompraRepository itemRepository, RegistroFinanceiroCompraRepository registroFinanceiroRepository,
+            SolicitacaoPresencaCompraRepository solicitacaoRepository,
             SolicitacaoResponsabilidadeOperacionalRepository solicitacaoResponsabilidadeRepository) {
         this.listaRepository = listaRepository;
         this.membroRepository = membroRepository;
         this.compraRepository = compraRepository;
         this.participanteRepository = participanteRepository;
         this.itemRepository = itemRepository;
+        this.registroFinanceiroRepository = registroFinanceiroRepository;
         this.solicitacaoRepository = solicitacaoRepository;
         this.solicitacaoResponsabilidadeRepository = solicitacaoResponsabilidadeRepository;
     }
@@ -62,6 +66,7 @@ public class ConsultarCompraDaLista {
                 .orElseThrow(() -> new CompraNaoEncontradaException(listaId));
         List<ParticipanteCompra> participantes = participanteRepository.findByCompra_IdOrderByGeradoEmAscIdAsc(compra.getId());
         List<ItemCompra> itens = itemRepository.findByCompra_IdOrderByOrdemExibicaoAscIdAsc(compra.getId());
+        var registrosFinanceiros = registroFinanceiroRepository.findByCompra_IdOrderByCriadoEmAscIdAsc(compra.getId());
         var participanteAtual = participantes.stream().filter(p -> p.getMembroFamilia().getId().equals(membro.getId())).findFirst();
         boolean participanteCompra = participanteAtual.isPresent();
         var minhaSolicitacao = participanteAtual.flatMap(p -> solicitacaoRepository
@@ -70,7 +75,7 @@ public class ConsultarCompraDaLista {
         var minhaResponsabilidade = participanteAtual.flatMap(p -> solicitacaoResponsabilidadeRepository
                 .findFirstByCompraIdAndSolicitanteIdOrderBySolicitadaEmDescIdDesc(compra.getId(), p.getId())).orElse(null);
         var pendentesResponsabilidade = solicitacaoResponsabilidadeRepository.findByCompraIdAndEstadoOrderBySolicitadaEmAscIdAsc(compra.getId(), EstadoSolicitacaoResponsabilidade.PENDENTE);
-        return new ResultadoConsultaCompra(compra, participantes, itens, participanteCompra,
+        return new ResultadoConsultaCompra(compra, participantes, itens, registrosFinanceiros, participanteCompra,
                 membro.getPapel() == PapelMembroFamilia.ADMINISTRADOR, minhaSolicitacao, pendentes,
                 minhaResponsabilidade, pendentesResponsabilidade);
     }
