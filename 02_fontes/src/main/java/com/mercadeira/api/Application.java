@@ -4,12 +4,13 @@ import java.time.Clock;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.mail.autoconfigure.MailSenderAutoConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import com.mercadeira.api.autenticacao.application.PasswordResetProperties;
 import com.mercadeira.api.autenticacao.email.ResendProperties;
 
-@SpringBootApplication
+@SpringBootApplication(exclude = MailSenderAutoConfiguration.class)
 @EnableConfigurationProperties({ PasswordResetProperties.class, ResendProperties.class })
 public class Application {
 

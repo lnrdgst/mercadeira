@@ -4,12 +4,17 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.boot.autoconfigure.AutoConfigurations;
+import org.springframework.boot.mail.autoconfigure.MailHealthContributorAutoConfiguration;
+import org.springframework.boot.mail.health.MailHealthIndicator;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
+import org.springframework.mail.javamail.JavaMailSender;
 
 class EmailProviderSelectionTest {
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
+            .withConfiguration(AutoConfigurations.of(MailHealthContributorAutoConfiguration.class))
             .withUserConfiguration(ProviderConfiguration.class)
             .withPropertyValues(
                     "mercadeira.mail.from=no-reply@example.test",
@@ -21,6 +26,7 @@ class EmailProviderSelectionTest {
     void selecionaSomenteEmailServiceSmtp() {
         contextRunner.withPropertyValues("mercadeira.email.provider=smtp").run(context -> {
             assertThat(context).hasSingleBean(EmailService.class);
+            assertThat(context).hasSingleBean(JavaMailSender.class);
             assertThat(context.getBean(EmailService.class)).isInstanceOf(SmtpEmailService.class);
         });
     }
@@ -29,6 +35,8 @@ class EmailProviderSelectionTest {
     void selecionaSomenteEmailServiceResend() {
         contextRunner.withPropertyValues("mercadeira.email.provider=resend").run(context -> {
             assertThat(context).hasSingleBean(EmailService.class);
+            assertThat(context).doesNotHaveBean(JavaMailSender.class);
+            assertThat(context.getBeansOfType(MailHealthIndicator.class)).isEmpty();
             assertThat(context.getBean(EmailService.class)).isInstanceOf(ResendEmailService.class);
         });
     }
