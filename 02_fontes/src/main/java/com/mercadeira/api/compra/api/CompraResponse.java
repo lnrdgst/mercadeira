@@ -73,7 +73,8 @@ public record CompraResponse(
                 && participanteAtual.getPresencaOperacional() != com.mercadeira.api.compra.domain.PresencaOperacional.NAO_PRESENTE;
         boolean podeAdicionarItem = participanteAtual != null && emAndamento
                 && participanteAtual.getPresencaOperacional() != com.mercadeira.api.compra.domain.PresencaOperacional.NAO_INFORMADA;
-        boolean podeGerenciarRegistrosFinanceiros = podeAdicionarItem;
+        boolean podeGerenciarRegistrosFinanceiros = participanteAtual != null
+                && (compra.getStatus() == StatusCompra.FINALIZADA || podeAdicionarItem);
         boolean podeCancelar = resultado.minhaSolicitacao() != null
                 && resultado.minhaSolicitacao().getEstado() == EstadoSolicitacaoPresenca.PENDENTE;
         boolean podeSolicitarResponsabilidade = emAndamento && participanteAtual != null && participanteAtual.estaPresente()

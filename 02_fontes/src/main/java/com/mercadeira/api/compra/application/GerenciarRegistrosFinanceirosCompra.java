@@ -69,12 +69,12 @@ public class GerenciarRegistrosFinanceirosCompra {
                 .orElseThrow(MembroFamiliaInvalidoException::new);
         var compra = compraRepository.findByListaCompra_IdForUpdate(listaId)
                 .orElseThrow(() -> new CompraNaoEncontradaException(listaId));
-        if (compra.getStatus() != StatusCompra.EM_ANDAMENTO) {
+        if (compra.getStatus() != StatusCompra.EM_ANDAMENTO && compra.getStatus() != StatusCompra.FINALIZADA) {
             throw new CompraForaDeAndamentoException();
         }
         var participante = participanteRepository.findByCompra_IdAndMembroFamilia_Id(compra.getId(), membro.getId())
                 .orElseThrow(UsuarioNaoParticipaDaCompraException::new);
-        if (participante.getPresencaOperacional() == PresencaOperacional.NAO_INFORMADA) {
+        if (compra.getStatus() == StatusCompra.EM_ANDAMENTO && participante.getPresencaOperacional() == PresencaOperacional.NAO_INFORMADA) {
             throw new PresencaOperacionalObrigatoriaException();
         }
         return compra;

@@ -111,7 +111,7 @@ class GerenciarRegistrosFinanceirosCompraApplicationTests {
     }
 
     @Test
-    void bloqueiaInclusaoAposCompraFinalizada() {
+    void permiteInclusaoAposCompraFinalizadaSemReabrirACompra() {
         Contexto contexto = criarContexto();
         jdbcTemplate.update("""
                 update compra set status = 'FINALIZADA', finalizada_em = CURRENT_TIMESTAMP,
@@ -122,10 +122,10 @@ class GerenciarRegistrosFinanceirosCompraApplicationTests {
                 """, contexto.compraId());
         entityManager.clear();
 
-        assertThatThrownBy(() -> gerenciarRegistros.adicionar(
+        gerenciarRegistros.adicionar(
                 contexto.usuario().getId(), contexto.familia().getId(), contexto.lista().getId(),
-                new AdicionarRegistroFinanceiroCompraCommand(new BigDecimal("10.00"), null)))
-                .isInstanceOf(CompraForaDeAndamentoException.class);
+                new AdicionarRegistroFinanceiroCompraCommand(new BigDecimal("10.00"), null));
+        assertThat(registroRepository.findByCompra_IdOrderByCriadoEmAscIdAsc(contexto.compraId())).hasSize(1);
     }
 
     @Test
@@ -158,7 +158,7 @@ class GerenciarRegistrosFinanceirosCompraApplicationTests {
         assertThat(response.status().name()).isEqualTo("FINALIZADA");
         assertThat(response.registrosFinanceiros()).hasSize(1);
         assertThat(response.totalRegistrado()).isEqualByComparingTo("130.00");
-        assertThat(response.contextoUsuario().podeGerenciarRegistrosFinanceiros()).isFalse();
+        assertThat(response.contextoUsuario().podeGerenciarRegistrosFinanceiros()).isTrue();
     }
 
     private Contexto criarContexto() {
