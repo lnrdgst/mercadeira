@@ -8,9 +8,13 @@ import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.UUID;
 
 import com.mercadeira.api.compra.application.IniciarCompra;
+import com.mercadeira.api.compra.domain.RegistroFinanceiroCompra;
+import com.mercadeira.api.compra.repository.CompraRepository;
+import com.mercadeira.api.compra.repository.RegistroFinanceiroCompraRepository;
 import com.mercadeira.api.familia.application.CriarFamilia;
 import com.mercadeira.api.lista.application.AdicionarItemLista;
 import com.mercadeira.api.lista.application.CriarListaCompra;
@@ -38,6 +42,7 @@ class HistoricoComprasIntegrationTests {
     @Container @ServiceConnection static PostgreSQLContainer postgres = new PostgreSQLContainer(DockerImageName.parse("postgres:18-alpine"));
     @Autowired CadastrarUsuario usuarios; @Autowired CriarFamilia familias; @Autowired CriarListaCompra listas;
     @Autowired AdicionarItemLista itens; @Autowired IniciarCompra iniciar; @Autowired ListarListasFamilia historico; @Autowired JdbcTemplate jdbc;
+    @Autowired CompraRepository compras; @Autowired RegistroFinanceiroCompraRepository registrosFinanceiros;
     @MockitoBean Clock clock;
 
     @BeforeEach void tempo() { given(clock.instant()).willReturn(AGORA); given(clock.getZone()).willReturn(ZoneOffset.UTC); }
@@ -64,6 +69,41 @@ class HistoricoComprasIntegrationTests {
         assertThat(preparacao.getId()).isNotNull(); assertThat(andamento.getId()).isNotNull();
     }
 
+    @Test void resumeRegistrosFinanceirosPorListaEPorPaginaDeHistoricoSemCarregarOsRegistros() {
+        var ana = usuario("Ana"); var familia = familias.criar(ana.getId(), "Casa Ana");
+        var semRegistro = finalizada(ana, familia.getId(), "Sem valor", AGORA.minusSeconds(15 * 86400));
+        var unico = finalizada(ana, familia.getId(), "Um registro", AGORA.minusSeconds(16 * 86400));
+        var mesmoEstabelecimento = finalizada(ana, familia.getId(), "Mesmo estabelecimento", AGORA.minusSeconds(17 * 86400));
+        var variosEstabelecimentos = finalizada(ana, familia.getId(), "Varios estabelecimentos", AGORA.minusSeconds(18 * 86400));
+
+        adicionarRegistro(unico, "130.00", "Mercado Central");
+        adicionarRegistro(mesmoEstabelecimento, "100.00", "Mercado Central");
+        adicionarRegistro(mesmoEstabelecimento, "30.00", "mercado central");
+        adicionarRegistro(variosEstabelecimentos, "50.00", "Mercado A");
+        adicionarRegistro(variosEstabelecimentos, "20.00", "Mercado B");
+        adicionarRegistro(variosEstabelecimentos, "10.00", null);
+
+        var porLista = registrosFinanceiros.resumirPorListaIds(List.of(semRegistro.getId(), unico.getId(), mesmoEstabelecimento.getId(), variosEstabelecimentos.getId()));
+        assertThat(porLista).hasSize(3);
+        var um = porLista.stream().filter(resumo -> resumo.referenciaId().equals(unico.getId())).findFirst().orElseThrow();
+        assertThat(um.totalRegistrado()).isEqualByComparingTo("130.00");
+        assertThat(um.quantidadeRegistrosFinanceiros()).isEqualTo(1);
+        assertThat(um.quantidadeEstabelecimentos()).isEqualTo(1);
+        assertThat(um.estabelecimentoResumo()).isEqualTo("Mercado Central");
+        var mesmo = porLista.stream().filter(resumo -> resumo.referenciaId().equals(mesmoEstabelecimento.getId())).findFirst().orElseThrow();
+        assertThat(mesmo.totalRegistrado()).isEqualByComparingTo("130.00");
+        assertThat(mesmo.quantidadeRegistrosFinanceiros()).isEqualTo(2);
+        assertThat(mesmo.quantidadeEstabelecimentos()).isEqualTo(1);
+        var varios = porLista.stream().filter(resumo -> resumo.referenciaId().equals(variosEstabelecimentos.getId())).findFirst().orElseThrow();
+        assertThat(varios.totalRegistrado()).isEqualByComparingTo("80.00");
+        assertThat(varios.quantidadeRegistrosFinanceiros()).isEqualTo(3);
+        assertThat(varios.quantidadeEstabelecimentos()).isEqualTo(2);
+
+        var pagina = historico.historico(ana.getId(), familia.getId(), 0, 20);
+        var porCompra = registrosFinanceiros.resumirPorCompraIds(pagina.getContent().stream().map(compra -> compra.getId()).toList());
+        assertThat(porCompra).hasSize(3);
+    }
+
     private com.mercadeira.api.lista.domain.ListaCompra iniciar(Usuario usuario, UUID familia, String nome) {
         var lista = listas.criar(usuario.getId(), familia, nome, CategoriaCompra.OUTROS, null);
         itens.adicionar(usuario.getId(), familia, lista.getId(), "Item", BigDecimal.ONE, UnidadeMedida.UNIDADE, null, null);
@@ -74,6 +114,10 @@ class HistoricoComprasIntegrationTests {
         var timestamp = java.sql.Timestamp.from(fim);
         jdbc.update("update compra set status='FINALIZADA', finalizada_em=?, finalizada_por_participante_compra_id=(select id from participante_compra where compra_id=compra.id limit 1) where lista_compra_id=?", timestamp, lista.getId());
         jdbc.update("update lista_compra set status='FINALIZADA', atualizada_em=? where id=?", timestamp, lista.getId()); return lista;
+    }
+    private void adicionarRegistro(com.mercadeira.api.lista.domain.ListaCompra lista, String valor, String estabelecimento) {
+        var compra = compras.findByListaCompra_Id(lista.getId()).orElseThrow();
+        registrosFinanceiros.save(RegistroFinanceiroCompra.manual(compra, new BigDecimal(valor), estabelecimento, AGORA));
     }
     private Usuario usuario(String nome) { return usuarios.cadastrar(nome, UUID.randomUUID()+"@test.local", "senha-original"); }
 }

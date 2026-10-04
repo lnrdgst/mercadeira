@@ -1,8 +1,10 @@
 package com.mercadeira.api.lista.api;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.time.LocalDate;
+import java.util.stream.Collectors;
 
 import com.mercadeira.api.autenticacao.security.UsuarioAutenticado;
 import com.mercadeira.api.lista.application.AdicionarItemLista;
@@ -15,6 +17,8 @@ import com.mercadeira.api.lista.application.EditarItemLista;
 import com.mercadeira.api.lista.application.EditarDadosBasicosLista;
 import com.mercadeira.api.lista.application.ExcluirListaCompra;
 import com.mercadeira.api.compra.repository.CompraRepository;
+import com.mercadeira.api.compra.repository.RegistroFinanceiroCompraRepository;
+import com.mercadeira.api.compra.repository.ResumoFinanceiroCompraConsulta;
 import com.mercadeira.api.lista.application.ListarItensLista;
 import com.mercadeira.api.lista.application.ListarListasFamilia;
 import com.mercadeira.api.lista.application.FiltrosListas;
@@ -53,32 +57,38 @@ public class ListaCompraController {
     private final EditarItemLista editarItem; private final RemoverItemLista removerItem; private final ReordenarItensLista reordenar;
     private final ListaCompraRepository listaRepository; private final MembroFamiliaRepository membroRepository; private final ParticipanteListaRepository participanteRepository;
     private final CompraRepository compraRepository; private final ExcluirListaCompra excluir;
+    private final RegistroFinanceiroCompraRepository registrosFinanceiros;
 
     public ListaCompraController(ReutilizarListaCompra reutilizar, ReaproveitarItensForaCompra reaproveitarItensFora, EditarDadosBasicosLista editarDados, UsuarioAutenticado usuario, CriarListaCompra criar, ListarListasFamilia listar,
             ConsultarListaCompra consultar, ListarParticipantesLista participantes, AdicionarParticipanteLista adicionarParticipante,
             RemoverParticipanteLista removerParticipante, ListarItensLista itens, AdicionarItemLista adicionarItem,
             EditarItemLista editarItem, RemoverItemLista removerItem, ReordenarItensLista reordenar, ListaCompraRepository listaRepository, MembroFamiliaRepository membroRepository, ParticipanteListaRepository participanteRepository,
-            CompraRepository compraRepository, ExcluirListaCompra excluir) {
+            CompraRepository compraRepository, ExcluirListaCompra excluir, RegistroFinanceiroCompraRepository registrosFinanceiros) {
         this.reutilizar = reutilizar; this.reaproveitarItensFora = reaproveitarItensFora; this.editarDados = editarDados; this.usuario = usuario; this.criar = criar; this.listar = listar; this.consultar = consultar;
         this.participantes = participantes; this.adicionarParticipante = adicionarParticipante; this.removerParticipante = removerParticipante;
         this.itens = itens; this.adicionarItem = adicionarItem; this.editarItem = editarItem; this.removerItem = removerItem; this.reordenar = reordenar;
         this.listaRepository = listaRepository; this.membroRepository = membroRepository; this.participanteRepository = participanteRepository;
-        this.compraRepository = compraRepository; this.excluir = excluir;
+        this.compraRepository = compraRepository; this.excluir = excluir; this.registrosFinanceiros = registrosFinanceiros;
     }
 
     @GetMapping public ResponseEntity<List<ListaCompraResponse>> listar(@PathVariable UUID familiaId,
             @RequestParam(required = false) LocalDate criadaDe, @RequestParam(required = false) LocalDate criadaAte,
             @RequestParam(required = false) UUID criadaPorUsuarioId, @RequestParam(required = false) UUID participanteMembroFamiliaId) {
         var filtros = new FiltrosListas(criadaDe, criadaAte, criadaPorUsuarioId, participanteMembroFamiliaId);
+        var listas = listar.listar(usuario.getId(), familiaId, filtros);
+        var resumos = resumirPorListaIds(listas.stream()
+                .filter(lista -> lista.getStatus() == com.mercadeira.api.lista.domain.StatusListaCompra.FINALIZADA)
+                .map(lista -> lista.getId()).toList());
         return ResponseEntity.ok().header("X-Total-Compras-Anteriores", String.valueOf(listar.totalHistorico(usuario.getId(), familiaId, filtros)))
-                .body(listar.listar(usuario.getId(), familiaId, filtros).stream().map(ListaCompraResponse::from).toList());
+                .body(listas.stream().map(lista -> ListaCompraResponse.from(lista, resumos.get(lista.getId()))).toList());
     }
     @GetMapping("/historico")
     public HistoricoListaCompraResponse historico(@PathVariable UUID familiaId,
             @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size,
             @RequestParam(required = false) LocalDate criadaDe, @RequestParam(required = false) LocalDate criadaAte,
             @RequestParam(required = false) UUID criadaPorUsuarioId, @RequestParam(required = false) UUID participanteMembroFamiliaId) {
-        return HistoricoListaCompraResponse.from(listar.historico(usuario.getId(), familiaId, page, size, new FiltrosListas(criadaDe, criadaAte, criadaPorUsuarioId, participanteMembroFamiliaId)));
+        var compras = listar.historico(usuario.getId(), familiaId, page, size, new FiltrosListas(criadaDe, criadaAte, criadaPorUsuarioId, participanteMembroFamiliaId));
+        return HistoricoListaCompraResponse.from(compras, resumirPorCompraIds(compras.getContent().stream().map(compra -> compra.getId()).toList()));
     }
     @PostMapping public ResponseEntity<ListaCompraResponse> criar(@PathVariable UUID familiaId, @Valid @RequestBody ListaCompraRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(ListaCompraResponse.from(
@@ -140,5 +150,21 @@ public class ListaCompraController {
     }
     @PutMapping("/{listaId}/itens/ordem") public ResponseEntity<Void> reordenar(@PathVariable UUID familiaId, @PathVariable UUID listaId, @Valid @RequestBody ReordenarItensRequest request) {
         reordenar.reordenar(usuario.getId(), familiaId, listaId, request.itens()); return ResponseEntity.noContent().build();
+    }
+
+    private Map<UUID, ResumoFinanceiroCompraResponse> resumirPorListaIds(List<UUID> listaIds) {
+        if (listaIds.isEmpty()) return Map.of();
+        return resumir(registrosFinanceiros.resumirPorListaIds(listaIds));
+    }
+
+    private Map<UUID, ResumoFinanceiroCompraResponse> resumirPorCompraIds(List<UUID> compraIds) {
+        if (compraIds.isEmpty()) return Map.of();
+        return resumir(registrosFinanceiros.resumirPorCompraIds(compraIds));
+    }
+
+    private Map<UUID, ResumoFinanceiroCompraResponse> resumir(List<ResumoFinanceiroCompraConsulta> consultas) {
+        return consultas.stream().collect(Collectors.toMap(ResumoFinanceiroCompraConsulta::referenciaId,
+                consulta -> new ResumoFinanceiroCompraResponse(consulta.totalRegistrado(), consulta.quantidadeRegistrosFinanceiros(),
+                        consulta.quantidadeEstabelecimentos(), consulta.estabelecimentoResumo())));
     }
 }
