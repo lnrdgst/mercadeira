@@ -14,7 +14,6 @@ public interface RegistroFinanceiroCompraRepository extends JpaRepository<Regist
     List<RegistroFinanceiroCompra> findByCompra_IdOrderByCriadoEmAscIdAsc(UUID compraId);
 
     Optional<RegistroFinanceiroCompra> findByIdAndCompra_Id(UUID id, UUID compraId);
-    boolean existsByCompra_IdAndChaveNfce(UUID compraId, String chaveNfce);
 
     @Query("""
             select new com.mercadeira.api.compra.repository.ResumoFinanceiroCompraConsulta(

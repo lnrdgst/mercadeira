@@ -129,40 +129,6 @@ class GerenciarRegistrosFinanceirosCompraApplicationTests {
     }
 
     @Test
-    void registraNfceEmCompraFinalizadaCalculaTotalEImpedeDuplicidadeNaMesmaCompra() {
-        Contexto contexto = criarContexto();
-        jdbcTemplate.update("""
-                update compra set status = 'FINALIZADA', finalizada_em = CURRENT_TIMESTAMP,
-                    finalizada_por_participante_compra_id = (
-                        select pc.id from participante_compra pc where pc.compra_id = compra.id order by pc.id limit 1)
-                where id = ?
-                """, contexto.compraId());
-        entityManager.clear();
-        String chave = "35261012345678000123550010000012341000012345";
-
-        gerenciarRegistros.adicionarNfce(contexto.usuario().getId(), contexto.familia().getId(), contexto.lista().getId(),
-                new BigDecimal("37.53"), null, chave, "https://sefaz.exemplo.gov.br/nfce?q=" + chave,
-                "12345678000190");
-
-        var registros = registroRepository.findByCompra_IdOrderByCriadoEmAscIdAsc(contexto.compraId());
-        assertThat(registros).singleElement().satisfies(registro -> {
-            assertThat(registro.getTipo().name()).isEqualTo("NFCE");
-            assertThat(registro.getChaveNfce()).isEqualTo(chave);
-            assertThat(registro.getValor()).isEqualByComparingTo("37.53");
-        });
-        assertThat(CompraResponse.from(consultarCompra.consultar(contexto.usuario().getId(), contexto.familia().getId(),
-                contexto.lista().getId()), contexto.usuario().getId()).totalRegistrado()).isEqualByComparingTo("37.53");
-        assertThatThrownBy(() -> gerenciarRegistros.adicionarNfce(contexto.usuario().getId(), contexto.familia().getId(),
-                contexto.lista().getId(), BigDecimal.ONE, null, chave, null, null))
-                .isInstanceOf(IllegalArgumentException.class).hasMessage("Este cupom já foi registrado nesta compra.");
-
-        Contexto outraCompra = criarContexto();
-        gerenciarRegistros.adicionarNfce(outraCompra.usuario().getId(), outraCompra.familia().getId(),
-                outraCompra.lista().getId(), BigDecimal.ONE, null, chave, null, null);
-        assertThat(registroRepository.findByCompra_IdOrderByCriadoEmAscIdAsc(outraCompra.compraId())).hasSize(1);
-    }
-
-    @Test
     void bloqueiaMembroAtivoQueNaoParticipaDaCompra() {
         Contexto contexto = criarContexto();
         Usuario observador = criarUsuario("Bia");

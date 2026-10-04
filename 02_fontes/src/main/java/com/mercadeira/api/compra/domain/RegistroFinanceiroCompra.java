@@ -84,29 +84,4 @@ public class RegistroFinanceiroCompra {
     public String getCnpjEmitente() { return cnpjEmitente; }
     public Instant getDataHoraDocumento() { return dataHoraDocumento; }
 
-    public static RegistroFinanceiroCompra nfce(Compra compra, BigDecimal valor, String estabelecimentoNome,
-            String chaveNfce, String urlConsulta, String cnpjEmitente, Instant dataHoraDocumento, Instant criadoEm) {
-        RegistroFinanceiroCompra registro = manual(compra, valor, estabelecimentoNome, criadoEm);
-        registro.tipo = TipoRegistroFinanceiroCompra.NFCE;
-        registro.chaveNfce = normalizarChave(chaveNfce);
-        registro.urlConsulta = urlConsulta;
-        registro.cnpjEmitente = normalizarCnpj(cnpjEmitente);
-        registro.dataHoraDocumento = dataHoraDocumento;
-        return registro;
-    }
-
-    private static String normalizarChave(String chave) {
-        String normalizada = normalizar(chave);
-        if (normalizada == null) return null;
-        if (!normalizada.matches("\\d{44}")) throw new IllegalArgumentException("Chave NFC-e invalida.");
-        return normalizada;
-    }
-
-    private static String normalizarCnpj(String cnpj) {
-        String normalizado = normalizar(cnpj);
-        if (normalizado == null) return null;
-        String somenteDigitos = normalizado.replaceAll("\\D", "");
-        if (somenteDigitos.length() != 14) throw new IllegalArgumentException("CNPJ emitente invalido.");
-        return somenteDigitos;
-    }
 }
