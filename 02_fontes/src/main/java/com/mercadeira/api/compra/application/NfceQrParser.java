@@ -4,7 +4,6 @@ import java.math.BigDecimal;
 import java.net.URI;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
-import java.util.Locale;
 import java.util.regex.Pattern;
 
 import org.springframework.stereotype.Service;
@@ -16,26 +15,39 @@ public class NfceQrParser {
     public NfceQrAnalise analisar(String conteudo) {
         if (conteudo == null || conteudo.isBlank()) return NfceQrAnalise.naoReconhecida();
         try {
-            URI uri = URI.create(conteudo.trim());
+            String urlConsulta = conteudo.trim();
+            // Alguns estados, como MG, enviam os separadores de p como | literal.
+            // URI exige que esses caracteres estejam percent-encoded para o parsing.
+            URI uri = URI.create(urlConsulta.replace("|", "%7C"));
             if (!("http".equalsIgnoreCase(uri.getScheme()) || "https".equalsIgnoreCase(uri.getScheme()))
                     || uri.getHost() == null) return NfceQrAnalise.naoReconhecida();
 
-            var chaveMatcher = CHAVE.matcher(conteudo);
-            String chave = chaveMatcher.find() ? chaveMatcher.group(1) : null;
-            String textoNormalizado = conteudo.toLowerCase(Locale.ROOT);
-            String caminho = uri.getPath() == null ? "" : uri.getPath().toLowerCase(Locale.ROOT);
-            boolean nfce = caminho.contains("nfce") || textoNormalizado.contains("nfce")
-                    || textoNormalizado.contains("chave") || chave != null;
-            if (!nfce) return NfceQrAnalise.naoReconhecida();
-
             String query = uri.getRawQuery() == null ? "" : uri.getRawQuery();
+            String chave = extrairChaveDoParametroP(query);
+            if (chave == null) {
+                var chaveMatcher = CHAVE.matcher(conteudo);
+                chave = chaveMatcher.find() ? chaveMatcher.group(1) : null;
+            }
+            if (!chaveNfceValida(chave)) return NfceQrAnalise.naoReconhecida();
+
             String cnpj = extrair(query, "cnpj");
-            return new NfceQrAnalise(true, chave, uri.toString(), extrairValor(query),
+            return new NfceQrAnalise(true, chave, urlConsulta, extrairValor(query),
                     extrair(query, "estabelecimento", "emitente", "razao_social", "nome"),
                     normalizarCnpj(cnpj), null);
         } catch (IllegalArgumentException ignored) {
             return NfceQrAnalise.naoReconhecida();
         }
+    }
+
+    private String extrairChaveDoParametroP(String query) {
+        String parametroP = extrair(query, "p");
+        if (parametroP == null || parametroP.isBlank()) return null;
+        String primeiroSegmento = parametroP.split("\\|", 2)[0].trim();
+        return primeiroSegmento.matches("\\d{44}") ? primeiroSegmento : null;
+    }
+
+    private boolean chaveNfceValida(String chave) {
+        return chave != null && chave.matches("\\d{44}") && "65".equals(chave.substring(20, 22));
     }
 
     private BigDecimal extrairValor(String query) {
