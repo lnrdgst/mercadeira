@@ -47,10 +47,11 @@ public class CompraController {
     private final ColocarItemNoCarrinho colocarItemNoCarrinho;
     private final AdicionarItemDuranteCompra adicionarItemDuranteCompra;
     private final GerenciarRegistrosFinanceirosCompra gerenciarRegistrosFinanceiros;
+    private final com.mercadeira.api.compra.application.NfceQrParser nfceQrParser;
 
     public CompraController(UsuarioAutenticado usuario, IniciarCompra iniciarCompra,
             ConsultarCompraDaLista consultarCompra, ColocarItemNoCarrinho colocarItemNoCarrinho,
-            AdicionarItemDuranteCompra adicionarItemDuranteCompra, GerenciarRegistrosFinanceirosCompra gerenciarRegistrosFinanceiros,
+            AdicionarItemDuranteCompra adicionarItemDuranteCompra, GerenciarRegistrosFinanceirosCompra gerenciarRegistrosFinanceiros, com.mercadeira.api.compra.application.NfceQrParser nfceQrParser,
             SolicitarRemocaoItemCompra solicitarRemocao,
             AprovarRemocaoItemCompra aprovarRemocao, RejeitarRemocaoItemCompra rejeitarRemocao, FinalizarCompra finalizarCompra,
             RestaurarItemNoCarrinho restaurarItemNoCarrinho,
@@ -69,6 +70,7 @@ public class CompraController {
         this.colocarItemNoCarrinho = colocarItemNoCarrinho;
         this.adicionarItemDuranteCompra = adicionarItemDuranteCompra;
         this.gerenciarRegistrosFinanceiros = gerenciarRegistrosFinanceiros;
+        this.nfceQrParser = nfceQrParser;
     }
 
     @PostMapping
@@ -194,6 +196,18 @@ public class CompraController {
                 new AdicionarRegistroFinanceiroCompraCommand(request.valor(), request.estabelecimentoNome()));
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(CompraResponse.from(consultarCompra.consultar(usuario.getId(), familiaId, listaId), usuario.getId()));
+    }
+    @PostMapping("/registros-financeiros/analisar-qr")
+    public com.mercadeira.api.compra.application.NfceQrAnalise analisarQr(@PathVariable UUID familiaId, @PathVariable UUID listaId,
+            @Valid @RequestBody AnalisarQrNfceRequest request) {
+        consultarCompra.consultar(usuario.getId(), familiaId, listaId);
+        return nfceQrParser.analisar(request.conteudoQr());
+    }
+    @PostMapping("/registros-financeiros/nfce")
+    public ResponseEntity<CompraResponse> adicionarNfce(@PathVariable UUID familiaId, @PathVariable UUID listaId,
+            @Valid @RequestBody AdicionarRegistroNfceRequest request) {
+        gerenciarRegistrosFinanceiros.adicionarNfce(usuario.getId(), familiaId, listaId, request.valor(), request.estabelecimentoNome(), request.chaveNfce(), request.urlConsulta(), request.cnpjEmitente());
+        return ResponseEntity.status(HttpStatus.CREATED).body(CompraResponse.from(consultarCompra.consultar(usuario.getId(), familiaId, listaId), usuario.getId()));
     }
 
     @DeleteMapping("/registros-financeiros/{registroId}")

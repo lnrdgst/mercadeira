@@ -39,6 +39,15 @@ public class RegistroFinanceiroCompra {
     @Column(name = "estabelecimento_nome", length = 120)
     private String estabelecimentoNome;
 
+    @Column(name = "chave_nfce", length = 44)
+    private String chaveNfce;
+    @Column(name = "url_consulta", length = 1000)
+    private String urlConsulta;
+    @Column(name = "cnpj_emitente", length = 14)
+    private String cnpjEmitente;
+    @Column(name = "data_hora_documento")
+    private Instant dataHoraDocumento;
+
     @Column(name = "criado_em", nullable = false)
     private Instant criadoEm;
 
@@ -70,4 +79,34 @@ public class RegistroFinanceiroCompra {
     public TipoRegistroFinanceiroCompra getTipo() { return tipo; }
     public String getEstabelecimentoNome() { return estabelecimentoNome; }
     public Instant getCriadoEm() { return criadoEm; }
+    public String getChaveNfce() { return chaveNfce; }
+    public String getUrlConsulta() { return urlConsulta; }
+    public String getCnpjEmitente() { return cnpjEmitente; }
+    public Instant getDataHoraDocumento() { return dataHoraDocumento; }
+
+    public static RegistroFinanceiroCompra nfce(Compra compra, BigDecimal valor, String estabelecimentoNome,
+            String chaveNfce, String urlConsulta, String cnpjEmitente, Instant dataHoraDocumento, Instant criadoEm) {
+        RegistroFinanceiroCompra registro = manual(compra, valor, estabelecimentoNome, criadoEm);
+        registro.tipo = TipoRegistroFinanceiroCompra.NFCE;
+        registro.chaveNfce = normalizarChave(chaveNfce);
+        registro.urlConsulta = urlConsulta;
+        registro.cnpjEmitente = normalizarCnpj(cnpjEmitente);
+        registro.dataHoraDocumento = dataHoraDocumento;
+        return registro;
+    }
+
+    private static String normalizarChave(String chave) {
+        String normalizada = normalizar(chave);
+        if (normalizada == null) return null;
+        if (!normalizada.matches("\\d{44}")) throw new IllegalArgumentException("Chave NFC-e invalida.");
+        return normalizada;
+    }
+
+    private static String normalizarCnpj(String cnpj) {
+        String normalizado = normalizar(cnpj);
+        if (normalizado == null) return null;
+        String somenteDigitos = normalizado.replaceAll("\\D", "");
+        if (somenteDigitos.length() != 14) throw new IllegalArgumentException("CNPJ emitente invalido.");
+        return somenteDigitos;
+    }
 }

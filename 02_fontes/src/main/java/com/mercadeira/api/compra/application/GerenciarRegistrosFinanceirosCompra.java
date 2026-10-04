@@ -56,6 +56,18 @@ public class GerenciarRegistrosFinanceirosCompra {
                 .orElseThrow(RegistroFinanceiroCompraNaoEncontradoException::new);
         registroRepository.delete(registro);
     }
+    @Transactional
+    public RegistroFinanceiroCompra adicionarNfce(UUID usuarioId, UUID familiaId, UUID listaId,
+            java.math.BigDecimal valor, String estabelecimento, String chave, String url, String cnpj) {
+        if (valor == null || valor.signum() <= 0) throw new IllegalArgumentException("O valor deve ser maior que zero.");
+        var compra = carregarCompraOperacional(usuarioId, familiaId, listaId);
+        String chaveNormalizada = chave == null ? null : chave.trim();
+        if (chaveNormalizada != null && !chaveNormalizada.isBlank()
+                && registroRepository.existsByCompra_IdAndChaveNfce(compra.getId(), chaveNormalizada))
+            throw new IllegalArgumentException("Este cupom já foi registrado nesta compra.");
+        return registroRepository.save(RegistroFinanceiroCompra.nfce(
+                compra, valor, estabelecimento, chaveNormalizada, url, cnpj, null, clock.instant()));
+    }
 
     private com.mercadeira.api.compra.domain.Compra carregarCompraOperacional(
             UUID usuarioId, UUID familiaId, UUID listaId) {

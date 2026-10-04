@@ -2,14 +2,24 @@
 
 ## Registros financeiros da compra
 
-Uma Compra pode ter zero ou mais registros financeiros manuais. O valor é opcional: finalizar sem registros é permitido. Os registros são vinculados à Compra, e `totalRegistrado` é sempre calculado pela soma dos registros persistidos, sem coluna de total redundante.
+Uma Compra pode ter zero ou mais registros financeiros. O valor é opcional: finalizar sem registros é permitido. Os registros são vinculados à Compra, e `totalRegistrado` é sempre calculado pela soma dos registros persistidos, sem coluna de total redundante.
 
 Durante `EM_ANDAMENTO`, somente participante ativo da Compra com presença operacional informada pode criar ou remover registros. Administrador(a) familiar que não participa da Compra não recebe essa capacidade. Em `FINALIZADA`, a Compra permanece operacionalmente imutável, mas participante autorizado pode incluir ou remover registros financeiros sem presença operacional atual. Isso não reabre a Compra, não altera seu status nem seus snapshots operacionais; correções de valor ou estabelecimento são feitas removendo o registro e incluindo-o novamente.
 
 - `POST /api/familias/{familiaId}/listas/{listaId}/compra/registros-financeiros` recebe `{ "valor": 82.40, "estabelecimentoNome": "Mercado Central" }` e retorna `201 Created` com `CompraResponse` atualizado.
 - `DELETE /api/familias/{familiaId}/listas/{listaId}/compra/registros-financeiros/{registroId}` retorna `200 OK` com `CompraResponse` atualizado.
 
-Cada registro em `CompraResponse.registrosFinanceiros` tem `id`, `valor`, `tipo`, `estabelecimentoNome` e `criadoEm`; o total vem em `CompraResponse.totalRegistrado`. Atualmente o tipo é `MANUAL`. Não há forma de pagamento, NFC-e, QR Code, câmera ou integração SEFAZ neste fluxo.
+Cada registro em `CompraResponse.registrosFinanceiros` tem `id`, `valor`, `tipo`, `estabelecimentoNome` e `criadoEm`; registros NFC-e também podem trazer os metadados fiscais opcionais. O total vem em `CompraResponse.totalRegistrado`.
+
+### NFC-e por QR Code
+
+O QR Code é uma forma de captura do mesmo `RegistroFinanceiroCompra`, nunca um domínio financeiro paralelo. O frontend envia o texto lido para `POST /api/familias/{familiaId}/listas/{listaId}/compra/registros-financeiros/analisar-qr`; esse endpoint apenas interpreta dados já presentes no conteúdo e não persiste nada. Depois da confirmação do usuário, `POST /api/familias/{familiaId}/listas/{listaId}/compra/registros-financeiros/nfce` recebe valor, estabelecimento e os metadados fiscais disponíveis.
+
+O tipo de registro pode ser `MANUAL` ou `NFCE`. Para NFC-e, `chaveNfce`, `urlConsulta`, `cnpjEmitente` e `dataHoraDocumento` são opcionais. O parser tolera QR parcial: valor e estabelecimento podem não estar disponíveis, mas o valor continua obrigatório para persistir. A mesma chave de 44 dígitos não pode ser repetida na mesma Compra; pode existir em Compras diferentes.
+
+Por segurança, a API **não faz HTTP, scraping ou consulta SEFAZ** para URLs lidas do QR. Ela somente interpreta dados já presentes e armazena a URL como metadado opcional. Consulta fiscal externa e itens do cupom continuam fora de escopo.
+
+O scanner do frontend usa `getUserMedia` com preferência pela câmera traseira e `@zxing/browser`, inclusive em Safari/iPhone. O modal via Portal usa preview `playsInline` e encerra a câmera ao detectar, cancelar ou fechar. Permissão negada, câmera indisponível ou contexto não seguro mantêm disponíveis a colagem do conteúdo e o registro manual. Câmera requer HTTPS em DSV/PWA; `localhost` é considerado contexto seguro, mas HTTP por IP de rede pode ser bloqueado.
 
 ## Minha conta
 
