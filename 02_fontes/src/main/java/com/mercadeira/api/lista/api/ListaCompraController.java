@@ -17,6 +17,9 @@ import com.mercadeira.api.lista.application.EditarItemLista;
 import com.mercadeira.api.lista.application.EditarDadosBasicosLista;
 import com.mercadeira.api.lista.application.ExcluirListaCompra;
 import com.mercadeira.api.compra.repository.CompraRepository;
+import com.mercadeira.api.compra.repository.ParticipanteCompraRepository;
+import com.mercadeira.api.compra.application.AlertaContinuidadeCompra;
+import com.mercadeira.api.compra.api.AlertaContinuidadeCompraResponse;
 import com.mercadeira.api.compra.repository.RegistroFinanceiroCompraRepository;
 import com.mercadeira.api.compra.repository.ResumoFinanceiroCompraConsulta;
 import com.mercadeira.api.lista.application.ListarItensLista;
@@ -58,17 +61,21 @@ public class ListaCompraController {
     private final ListaCompraRepository listaRepository; private final MembroFamiliaRepository membroRepository; private final ParticipanteListaRepository participanteRepository;
     private final CompraRepository compraRepository; private final ExcluirListaCompra excluir;
     private final RegistroFinanceiroCompraRepository registrosFinanceiros;
+    private final ParticipanteCompraRepository participantesCompra;
+    private final AlertaContinuidadeCompra alertaContinuidade;
 
     public ListaCompraController(ReutilizarListaCompra reutilizar, ReaproveitarItensForaCompra reaproveitarItensFora, EditarDadosBasicosLista editarDados, UsuarioAutenticado usuario, CriarListaCompra criar, ListarListasFamilia listar,
             ConsultarListaCompra consultar, ListarParticipantesLista participantes, AdicionarParticipanteLista adicionarParticipante,
             RemoverParticipanteLista removerParticipante, ListarItensLista itens, AdicionarItemLista adicionarItem,
             EditarItemLista editarItem, RemoverItemLista removerItem, ReordenarItensLista reordenar, ListaCompraRepository listaRepository, MembroFamiliaRepository membroRepository, ParticipanteListaRepository participanteRepository,
-            CompraRepository compraRepository, ExcluirListaCompra excluir, RegistroFinanceiroCompraRepository registrosFinanceiros) {
+            CompraRepository compraRepository, ExcluirListaCompra excluir, RegistroFinanceiroCompraRepository registrosFinanceiros,
+            ParticipanteCompraRepository participantesCompra, AlertaContinuidadeCompra alertaContinuidade) {
         this.reutilizar = reutilizar; this.reaproveitarItensFora = reaproveitarItensFora; this.editarDados = editarDados; this.usuario = usuario; this.criar = criar; this.listar = listar; this.consultar = consultar;
         this.participantes = participantes; this.adicionarParticipante = adicionarParticipante; this.removerParticipante = removerParticipante;
         this.itens = itens; this.adicionarItem = adicionarItem; this.editarItem = editarItem; this.removerItem = removerItem; this.reordenar = reordenar;
         this.listaRepository = listaRepository; this.membroRepository = membroRepository; this.participanteRepository = participanteRepository;
         this.compraRepository = compraRepository; this.excluir = excluir; this.registrosFinanceiros = registrosFinanceiros;
+        this.participantesCompra = participantesCompra; this.alertaContinuidade = alertaContinuidade;
     }
 
     @GetMapping public ResponseEntity<List<ListaCompraResponse>> listar(@PathVariable UUID familiaId,
@@ -79,8 +86,9 @@ public class ListaCompraController {
         var resumos = resumirPorListaIds(listas.stream()
                 .filter(lista -> lista.getStatus() == com.mercadeira.api.lista.domain.StatusListaCompra.FINALIZADA)
                 .map(lista -> lista.getId()).toList());
+        var membro = membroRepository.findByFamilia_IdAndUsuario_IdAndStatus(familiaId, usuario.getId(), StatusMembroFamilia.ATIVO).orElseThrow();
         return ResponseEntity.ok().header("X-Total-Compras-Anteriores", String.valueOf(listar.totalHistorico(usuario.getId(), familiaId, filtros)))
-                .body(listas.stream().map(lista -> ListaCompraResponse.from(lista, resumos.get(lista.getId()))).toList());
+                .body(listas.stream().map(lista -> ListaCompraResponse.from(lista, resumos.get(lista.getId()), alertaDaLista(lista.getId(), membro.getId()))).toList());
     }
     @GetMapping("/historico")
     public HistoricoListaCompraResponse historico(@PathVariable UUID familiaId,
@@ -155,6 +163,14 @@ public class ListaCompraController {
     private Map<UUID, ResumoFinanceiroCompraResponse> resumirPorListaIds(List<UUID> listaIds) {
         if (listaIds.isEmpty()) return Map.of();
         return resumir(registrosFinanceiros.resumirPorListaIds(listaIds));
+    }
+
+    private AlertaContinuidadeCompraResponse alertaDaLista(UUID listaId, UUID membroId) {
+        return compraRepository.findByListaCompra_Id(listaId)
+                .map(compra -> AlertaContinuidadeCompraResponse.from(alertaContinuidade.avaliar(compra,
+                        participantesCompra.findByCompra_IdAndMembroFamilia_Id(compra.getId(), membroId)
+                                .map(participante -> participante.getId()).orElse(null))))
+                .orElse(null);
     }
 
     private Map<UUID, ResumoFinanceiroCompraResponse> resumirPorCompraIds(List<UUID> compraIds) {

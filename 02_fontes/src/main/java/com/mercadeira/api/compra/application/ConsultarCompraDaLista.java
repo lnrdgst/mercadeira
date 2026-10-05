@@ -2,6 +2,7 @@ package com.mercadeira.api.compra.application;
 
 import java.util.List;
 import java.util.UUID;
+import java.time.Clock;
 
 import com.mercadeira.api.compra.domain.Compra;
 import com.mercadeira.api.compra.domain.ItemCompra;
@@ -36,12 +37,14 @@ public class ConsultarCompraDaLista {
     private final RegistroFinanceiroCompraRepository registroFinanceiroRepository;
     private final SolicitacaoPresencaCompraRepository solicitacaoRepository;
     private final SolicitacaoResponsabilidadeOperacionalRepository solicitacaoResponsabilidadeRepository;
+    private final AlertaContinuidadeCompra alertaContinuidade;
 
     public ConsultarCompraDaLista(ListaCompraRepository listaRepository, MembroFamiliaRepository membroRepository,
             CompraRepository compraRepository, ParticipanteCompraRepository participanteRepository,
             ItemCompraRepository itemRepository, RegistroFinanceiroCompraRepository registroFinanceiroRepository,
             SolicitacaoPresencaCompraRepository solicitacaoRepository,
-            SolicitacaoResponsabilidadeOperacionalRepository solicitacaoResponsabilidadeRepository) {
+            SolicitacaoResponsabilidadeOperacionalRepository solicitacaoResponsabilidadeRepository,
+            AlertaContinuidadeCompra alertaContinuidade) {
         this.listaRepository = listaRepository;
         this.membroRepository = membroRepository;
         this.compraRepository = compraRepository;
@@ -50,6 +53,7 @@ public class ConsultarCompraDaLista {
         this.registroFinanceiroRepository = registroFinanceiroRepository;
         this.solicitacaoRepository = solicitacaoRepository;
         this.solicitacaoResponsabilidadeRepository = solicitacaoResponsabilidadeRepository;
+        this.alertaContinuidade = alertaContinuidade;
     }
 
     @Transactional(readOnly = true)
@@ -75,7 +79,8 @@ public class ConsultarCompraDaLista {
         var minhaResponsabilidade = participanteAtual.flatMap(p -> solicitacaoResponsabilidadeRepository
                 .findFirstByCompraIdAndSolicitanteIdOrderBySolicitadaEmDescIdDesc(compra.getId(), p.getId())).orElse(null);
         var pendentesResponsabilidade = solicitacaoResponsabilidadeRepository.findByCompraIdAndEstadoOrderBySolicitadaEmAscIdAsc(compra.getId(), EstadoSolicitacaoResponsabilidade.PENDENTE);
-        return new ResultadoConsultaCompra(compra, participantes, itens, registrosFinanceiros, participanteCompra,
+        return new ResultadoConsultaCompra(compra, participantes, itens, registrosFinanceiros,
+                alertaContinuidade.avaliar(compra, participanteAtual.map(ParticipanteCompra::getId).orElse(null)), participanteCompra,
                 membro.getPapel() == PapelMembroFamilia.ADMINISTRADOR, minhaSolicitacao, pendentes,
                 minhaResponsabilidade, pendentesResponsabilidade);
     }

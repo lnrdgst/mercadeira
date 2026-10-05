@@ -14,6 +14,7 @@ public record ResultadoConsultaCompra(
         List<ParticipanteCompra> participantes,
         List<ItemCompra> itens,
         List<RegistroFinanceiroCompra> registrosFinanceiros,
+        EstadoAlertaContinuidadeCompra alertaContinuidade,
         boolean participanteCompra,
         boolean administradorAtivo,
         SolicitacaoPresencaCompra minhaSolicitacao,

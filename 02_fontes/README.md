@@ -6,6 +6,10 @@ Uma Compra pode ter zero ou mais registros financeiros. O valor é opcional: fin
 
 Durante `EM_ANDAMENTO`, somente participante ativo da Compra com presença operacional informada pode criar ou remover registros. Administrador(a) familiar que não participa da Compra não recebe essa capacidade. Em `FINALIZADA`, a Compra permanece operacionalmente imutável, mas participante autorizado pode incluir ou remover registros financeiros sem presença operacional atual. Isso não reabre a Compra, não altera seu status nem seus snapshots operacionais; correções de valor ou estabelecimento são feitas removendo o registro e incluindo-o novamente.
 
+## Alerta de continuidade da compra
+
+Uma Compra `EM_ANDAMENTO` há pelo menos 24 horas pode solicitar uma confirmação de continuidade somente ao responsável operacional atual. O limite é configurável por `COMPRA_ALERTA_CONTINUIDADE_HORAS` (padrão `24`). Escolher **Continuar compra** persiste o adiamento por mais um período na própria Compra; esse adiamento permanece válido se a responsabilidade for transferida. Fechar o alerta apenas o dispensa na sessão atual da tela, sem gravar decisão. **Encerrar compra** leva ao fluxo normal de revisão e finalização: não há encerramento automático, job, cron ou polling específico para este alerta.
+
 - `POST /api/familias/{familiaId}/listas/{listaId}/compra/registros-financeiros` recebe `{ "valor": 82.40, "estabelecimentoNome": "Mercado Central" }` e retorna `201 Created` com `CompraResponse` atualizado.
 - `DELETE /api/familias/{familiaId}/listas/{listaId}/compra/registros-financeiros/{registroId}` retorna `200 OK` com `CompraResponse` atualizado.
 

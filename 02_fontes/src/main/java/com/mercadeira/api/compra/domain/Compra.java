@@ -51,6 +51,9 @@ public class Compra {
     @Column(name = "iniciada_em", nullable = false)
     private Instant iniciadaEm;
 
+    @Column(name = "alerta_continuidade_adiado_ate")
+    private Instant alertaContinuidadeAdiadoAte;
+
     @Column(name = "finalizada_em")
     private Instant finalizadaEm;
 
@@ -135,6 +138,14 @@ public class Compra {
         return finalizar(executor, instante, true);
     }
 
+    public void adiarAlertaContinuidade(ParticipanteCompra executor, Instant proximoAlerta) {
+        if (status != StatusCompra.EM_ANDAMENTO || executor == null || proximoAlerta == null
+                || responsavelOperacionalId == null || !responsavelOperacionalId.equals(executor.getId())) {
+            throw new IllegalStateException("Somente o responsavel operacional pode continuar esta compra.");
+        }
+        alertaContinuidadeAdiadoAte = proximoAlerta;
+    }
+
     public boolean finalizarAdministrativamente(ParticipanteCompra executor, Instant instante) {
         return finalizar(executor, instante, false);
     }
@@ -174,6 +185,7 @@ public class Compra {
     public String getCategoriaSnapshot() { return categoriaSnapshot; }
     public String getEstabelecimentoSnapshot() { return estabelecimentoSnapshot; }
     public Instant getIniciadaEm() { return iniciadaEm; }
+    public Instant getAlertaContinuidadeAdiadoAte() { return alertaContinuidadeAdiadoAte; }
     public Instant getFinalizadaEm() { return finalizadaEm; }
     public ParticipanteCompra getFinalizadaPorParticipanteCompra() { return finalizadaPorParticipanteCompra; }
 }
