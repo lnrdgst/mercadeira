@@ -14,6 +14,8 @@ import com.mercadeira.api.autenticacao.email.EmailService;
 import com.mercadeira.api.autenticacao.repository.TokenRedefinicaoSenhaRepository;
 import com.mercadeira.api.usuario.application.CadastrarUsuario;
 import com.mercadeira.api.usuario.domain.Usuario;
+import com.mercadeira.api.usuario.domain.ProvedorIdentidadeUsuario;
+import com.mercadeira.api.usuario.repository.UsuarioIdentidadeRepository;
 import com.mercadeira.api.usuario.repository.UsuarioRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -23,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class RecuperarSenha {
     private static final SecureRandom RANDOM = new SecureRandom();
     private final UsuarioRepository usuarios;
+    private final UsuarioIdentidadeRepository identidades;
     private final TokenRedefinicaoSenhaRepository tokens;
     private final EmailService emailService;
     private final PasswordEncoder passwordEncoder;
@@ -30,10 +33,10 @@ public class RecuperarSenha {
     private final GerenciarSessoesPersistentes sessoes;
     private final Clock clock;
 
-    public RecuperarSenha(UsuarioRepository usuarios, TokenRedefinicaoSenhaRepository tokens, EmailService emailService,
+    public RecuperarSenha(UsuarioRepository usuarios, UsuarioIdentidadeRepository identidades, TokenRedefinicaoSenhaRepository tokens, EmailService emailService,
             PasswordEncoder passwordEncoder, PasswordResetProperties properties, GerenciarSessoesPersistentes sessoes,
             Clock clock) {
-        this.usuarios = usuarios; this.tokens = tokens; this.emailService = emailService;
+        this.usuarios = usuarios; this.identidades = identidades; this.tokens = tokens; this.emailService = emailService;
         this.passwordEncoder = passwordEncoder; this.properties = properties; this.sessoes = sessoes; this.clock = clock;
     }
 
@@ -41,7 +44,7 @@ public class RecuperarSenha {
     public void solicitar(String email) {
         String emailNormalizado = CadastrarUsuario.normalizarEmail(email);
         Usuario usuario = usuarios.findByEmail(emailNormalizado).orElse(null);
-        if (usuario == null) return;
+        if (usuario == null || !identidades.existsByUsuarioIdAndProvedor(usuario.getId(), ProvedorIdentidadeUsuario.LOCAL)) return;
         Instant agora = clock.instant();
         if (tokens.findTopByUsuarioIdAndUsadoEmIsNullOrderByCriadoEmDesc(usuario.getId())
                 .filter(token -> token.getCriadoEm().plusSeconds(properties.getCooldownSeconds()).isAfter(agora)).isPresent()) return;

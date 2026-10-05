@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -56,6 +57,7 @@ public class JwtConfiguration {
     }
 
     @Bean
+    @Primary
     JwtDecoder jwtDecoder(SecretKey jwtSecretKey) {
         return NimbusJwtDecoder.withSecretKey(jwtSecretKey)
                 .macAlgorithm(MacAlgorithm.HS256)
@@ -96,7 +98,8 @@ public class JwtConfiguration {
                         .requestMatchers(HttpMethod.GET, "/actuator/health").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/usuarios", "/api/autenticacao/login",
                                 "/api/autenticacao/refresh", "/api/autenticacao/logout",
-                                "/api/autenticacao/esqueci-senha", "/api/autenticacao/redefinir-senha").permitAll()
+                                "/api/autenticacao/esqueci-senha", "/api/autenticacao/redefinir-senha",
+                                "/api/autenticacao/google", "/api/autenticacao/google/vincular").permitAll()
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()))
                 .build();

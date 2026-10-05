@@ -11,6 +11,7 @@ import com.mercadeira.api.compra.application.ResponsavelRemocaoItemCompraInvalid
 import com.mercadeira.api.autenticacao.application.CredenciaisInvalidasException;
 import com.mercadeira.api.autenticacao.application.TokenRedefinicaoInvalidoException;
 import com.mercadeira.api.autenticacao.application.SessaoInvalidaException;
+import com.mercadeira.api.autenticacao.google.CredencialGoogleInvalidaException;
 import com.mercadeira.api.autenticacao.security.UsuarioNaoAutenticadoException;
 import com.mercadeira.api.familia.application.CodigoFamiliaInvalidoException;
 import com.mercadeira.api.familia.application.FamiliaInativaException;
@@ -27,6 +28,7 @@ import com.mercadeira.api.familia.application.TransferenciaAdministracaoInvalida
 import com.mercadeira.api.usuario.application.DadosUsuarioInvalidosException;
 import com.mercadeira.api.usuario.application.EmailJaCadastradoException;
 import com.mercadeira.api.usuario.application.SenhaAtualIncorretaException;
+import com.mercadeira.api.usuario.application.FormaAcessoNaoDisponivelException;
 import com.mercadeira.api.lista.application.ItemListaNaoEncontradoException;
 import com.mercadeira.api.lista.application.ListaCompraNaoEncontradaException;
 import com.mercadeira.api.lista.application.MembroFamiliaInvalidoException;
@@ -85,10 +87,15 @@ public class ApiExceptionHandler {
         return resposta(HttpStatus.BAD_REQUEST, "REQUISICAO_INVALIDA", "Requisicao invalida.", request, Map.of());
     }
 
-    @ExceptionHandler({ CredenciaisInvalidasException.class, SessaoInvalidaException.class, UsuarioNaoAutenticadoException.class, SenhaAtualIncorretaException.class })
+    @ExceptionHandler({ CredenciaisInvalidasException.class, SessaoInvalidaException.class, UsuarioNaoAutenticadoException.class, SenhaAtualIncorretaException.class, CredencialGoogleInvalidaException.class })
     ResponseEntity<ErroApiResponse> tratarNaoAutenticado(Exception exception, HttpServletRequest request) {
         String mensagem = exception instanceof SenhaAtualIncorretaException ? exception.getMessage() : "Credenciais invalidas.";
         return resposta(HttpStatus.UNAUTHORIZED, "NAO_AUTENTICADO", mensagem, request, Map.of());
+    }
+
+    @ExceptionHandler(FormaAcessoNaoDisponivelException.class)
+    ResponseEntity<ErroApiResponse> tratarFormaAcessoNaoDisponivel(FormaAcessoNaoDisponivelException exception, HttpServletRequest request) {
+        return resposta(HttpStatus.CONFLICT, "FORMA_ACESSO_NAO_DISPONIVEL", exception.getMessage(), request, Map.of());
     }
 
     @ExceptionHandler(TokenRedefinicaoInvalidoException.class)

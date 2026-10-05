@@ -1,5 +1,17 @@
 # Mercadeira API
 
+## AutenticaÃ§Ã£o local e Conta Google
+
+`Usuario` continua sendo a pessoa e seus vÃ­nculos no Mercadeira. As formas de acesso ficam em `UsuarioIdentidade`: contas existentes recebem `LOCAL` pela migration V21; um primeiro acesso Google cria somente `GOOGLE`, sem senha artificial. A identidade Google Ã© localizada pelo claim `sub` validado, nunca pelo e-mail; uma mudanÃ§a posterior de e-mail no Google apenas atualiza o metadado do provedor.
+
+O frontend envia ao backend somente a credential/ID token do Google Identity Services. O backend a valida com as chaves pÃºblicas JWKS oficiais, assinatura, expiraÃ§Ã£o, issuer, audience (`GOOGLE_CLIENT_ID`), `sub`, e-mail e `email_verified`. A credential Google nÃ£o Ã© persistida e a sessÃ£o posterior continua sendo exclusivamente a sessÃ£o Mercadeira (JWT + refresh token rotativo).
+
+Se um e-mail Google verificado jÃ¡ pertence a uma conta LOCAL, a API nÃ£o cria nem vincula nada automaticamente: retorna que o vÃ­nculo Ã© necessÃ¡rio. `POST /api/autenticacao/google/vincular` recebe novamente a credential e a senha local atual; em sucesso adiciona `GOOGLE` ao mesmo `Usuario.id` e cria a sessÃ£o normal.
+
+`GET /api/usuarios/me` informa `formasAcesso`, `podeAlterarEmail` e `podeAlterarSenha`. Contas somente Google podem alterar o nome, mas nÃ£o e-mail nem senha; o reset de senha conserva a resposta anti-enumeraÃ§Ã£o e nÃ£o emite token para elas. Contas LOCAL ou LOCAL+GOOGLE preservam os fluxos de senha atuais.
+
+ConfiguraÃ§Ã£o: defina `GOOGLE_CLIENT_ID` no backend e o mesmo valor em `VITE_GOOGLE_CLIENT_ID` no frontend. No Google Cloud Console, crie um cliente OAuth do tipo **Web application** e autorize explicitamente as JavaScript Origins, pelo menos `http://localhost:5173` para desenvolvimento e `https://mercadeira-dsv.vercel.app` para DSV (alÃ©m das origens futuras necessÃ¡rias). NÃ£o hÃ¡ client secret no frontend nem no repositÃ³rio.
+
 ## Registros financeiros da compra
 
 Uma Compra pode ter zero ou mais registros financeiros. O valor é opcional: finalizar sem registros é permitido. Os registros são vinculados à Compra, e `totalRegistrado` é sempre calculado pela soma dos registros persistidos, sem coluna de total redundante.

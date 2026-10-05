@@ -20,6 +20,8 @@ import com.mercadeira.api.autenticacao.email.EmailService;
 import com.mercadeira.api.autenticacao.repository.TokenRedefinicaoSenhaRepository;
 import com.mercadeira.api.usuario.domain.Usuario;
 import com.mercadeira.api.usuario.repository.UsuarioRepository;
+import com.mercadeira.api.usuario.repository.UsuarioIdentidadeRepository;
+import com.mercadeira.api.usuario.domain.ProvedorIdentidadeUsuario;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -27,6 +29,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 class RecuperarSenhaTest {
     private final UsuarioRepository usuarios = mock(UsuarioRepository.class);
+    private final UsuarioIdentidadeRepository identidades = mock(UsuarioIdentidadeRepository.class);
     private final TokenRedefinicaoSenhaRepository tokens = mock(TokenRedefinicaoSenhaRepository.class);
     private final EmailService email = mock(EmailService.class);
     private final PasswordEncoder encoder = mock(PasswordEncoder.class);
@@ -37,13 +40,14 @@ class RecuperarSenhaTest {
     @BeforeEach void configurar() {
         PasswordResetProperties properties = new PasswordResetProperties();
         properties.setFrontendUrl("https://app.example.test/"); properties.setExpirationMinutes(30); properties.setCooldownSeconds(60);
-        service = new RecuperarSenha(usuarios, tokens, email, encoder, properties, sessoes, Clock.fixed(agora, ZoneOffset.UTC));
+        service = new RecuperarSenha(usuarios, identidades, tokens, email, encoder, properties, sessoes, Clock.fixed(agora, ZoneOffset.UTC));
     }
 
     @Test void solicitaNormalizaEmailPersisteSomenteHashEEnviaLink() {
         Usuario usuario = mock(Usuario.class);
         when(usuario.getId()).thenReturn(UUID.randomUUID()); when(usuario.getEmail()).thenReturn("ana@example.test");
         when(usuarios.findByEmail("ana@example.test")).thenReturn(Optional.of(usuario));
+        when(identidades.existsByUsuarioIdAndProvedor(usuario.getId(), ProvedorIdentidadeUsuario.LOCAL)).thenReturn(true);
         when(tokens.findTopByUsuarioIdAndUsadoEmIsNullOrderByCriadoEmDesc(usuario.getId())).thenReturn(Optional.empty());
         service.solicitar("  ANA@EXAMPLE.TEST ");
         ArgumentCaptor<TokenRedefinicaoSenha> token = ArgumentCaptor.forClass(TokenRedefinicaoSenha.class);
@@ -53,6 +57,18 @@ class RecuperarSenhaTest {
         assertThat(token.getValue().getTokenHash()).isEqualTo(RecuperarSenha.hash(tokenPuro)).isNotEqualTo(tokenPuro);
         assertThat(token.getValue().getCriadoEm()).isEqualTo(agora);
         verify(tokens).invalidarAtivosDoUsuario(usuario.getId(), agora);
+    }
+
+    @Test void contaSomenteGoogleNaoRecebeTokenDeRedefinicao() {
+        Usuario usuario = mock(Usuario.class);
+        when(usuario.getId()).thenReturn(UUID.randomUUID());
+        when(usuarios.findByEmail("ana@example.test")).thenReturn(Optional.of(usuario));
+        when(identidades.existsByUsuarioIdAndProvedor(usuario.getId(), ProvedorIdentidadeUsuario.LOCAL)).thenReturn(false);
+
+        service.solicitar("ana@example.test");
+
+        verify(tokens, org.mockito.Mockito.never()).save(any());
+        verify(email, org.mockito.Mockito.never()).enviarRedefinicaoSenha(any(), any(), any());
     }
 
     @Test void emailInexistenteNaoRevelaExistenciaNemEmiteToken() {

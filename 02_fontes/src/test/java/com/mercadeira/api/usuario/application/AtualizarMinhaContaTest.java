@@ -14,6 +14,8 @@ import java.util.UUID;
 import com.mercadeira.api.autenticacao.application.GerenciarSessoesPersistentes;
 import com.mercadeira.api.usuario.domain.Usuario;
 import com.mercadeira.api.usuario.repository.UsuarioRepository;
+import com.mercadeira.api.usuario.repository.UsuarioIdentidadeRepository;
+import com.mercadeira.api.usuario.domain.ProvedorIdentidadeUsuario;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
@@ -21,13 +23,15 @@ class AtualizarMinhaContaTest {
     @Test
     void alterarSenhaRevogaTodasAsSessoesPersistentesDoUsuario() {
         UsuarioRepository usuarios = mock(UsuarioRepository.class);
+        UsuarioIdentidadeRepository identidades = mock(UsuarioIdentidadeRepository.class);
         PasswordEncoder encoder = mock(PasswordEncoder.class);
         GerenciarSessoesPersistentes sessoes = mock(GerenciarSessoesPersistentes.class);
-        AtualizarMinhaConta service = new AtualizarMinhaConta(usuarios, encoder, sessoes,
+        AtualizarMinhaConta service = new AtualizarMinhaConta(usuarios, identidades, encoder, sessoes,
                 Clock.fixed(Instant.parse("2026-10-02T12:00:00Z"), ZoneOffset.UTC));
         UUID usuarioId = UUID.randomUUID();
         Usuario usuario = mock(Usuario.class);
         when(usuarios.findById(usuarioId)).thenReturn(Optional.of(usuario));
+        when(identidades.existsByUsuarioIdAndProvedor(usuarioId, ProvedorIdentidadeUsuario.LOCAL)).thenReturn(true);
         when(usuario.getSenhaHash()).thenReturn("hash-atual");
         when(encoder.matches("senha-atual", "hash-atual")).thenReturn(true);
         when(encoder.encode("senha-nova")).thenReturn("novo-hash");

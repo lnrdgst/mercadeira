@@ -3,6 +3,8 @@ package com.mercadeira.api.usuario.application;
 import java.time.Clock;
 
 import com.mercadeira.api.usuario.domain.Usuario;
+import com.mercadeira.api.usuario.domain.UsuarioIdentidade;
+import com.mercadeira.api.usuario.repository.UsuarioIdentidadeRepository;
 import com.mercadeira.api.usuario.repository.UsuarioRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -12,11 +14,14 @@ import org.springframework.transaction.annotation.Transactional;
 public class CadastrarUsuario {
 
     private final UsuarioRepository usuarioRepository;
+    private final UsuarioIdentidadeRepository identidadeRepository;
     private final PasswordEncoder passwordEncoder;
     private final Clock clock;
 
-    public CadastrarUsuario(UsuarioRepository usuarioRepository, PasswordEncoder passwordEncoder, Clock clock) {
+    public CadastrarUsuario(UsuarioRepository usuarioRepository, UsuarioIdentidadeRepository identidadeRepository,
+            PasswordEncoder passwordEncoder, Clock clock) {
         this.usuarioRepository = usuarioRepository;
+        this.identidadeRepository = identidadeRepository;
         this.passwordEncoder = passwordEncoder;
         this.clock = clock;
     }
@@ -31,8 +36,10 @@ public class CadastrarUsuario {
             throw new EmailJaCadastradoException();
         }
 
-        Usuario usuario = Usuario.criar(nome, email, passwordEncoder.encode(senha), clock.instant());
-        return usuarioRepository.save(usuario);
+        var agora = clock.instant();
+        Usuario usuario = usuarioRepository.save(Usuario.criar(nome, email, passwordEncoder.encode(senha), agora));
+        identidadeRepository.save(UsuarioIdentidade.local(usuario, agora));
+        return usuario;
     }
 
     public static String normalizarNome(String valor) {

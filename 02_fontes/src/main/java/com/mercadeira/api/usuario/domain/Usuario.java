@@ -25,7 +25,7 @@ public class Usuario {
     @Column(name = "email", nullable = false, length = 255)
     private String email;
 
-    @Column(name = "senha_hash", nullable = false, length = 255)
+    @Column(name = "senha_hash", length = 255)
     private String senhaHash;
 
     @Column(name = "criado_em", nullable = false)
@@ -45,6 +45,10 @@ public class Usuario {
         usuario.criadoEm = agora;
         usuario.atualizadoEm = agora;
         return usuario;
+    }
+
+    public static Usuario criarSemSenha(String nome, String email, Instant agora) {
+        return criar(nome, email, null, agora);
     }
 
     public UUID getId() {

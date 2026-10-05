@@ -10,10 +10,11 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import com.mercadeira.api.autenticacao.application.PasswordResetProperties;
 import com.mercadeira.api.autenticacao.application.SessionProperties;
 import com.mercadeira.api.autenticacao.email.ResendProperties;
+import com.mercadeira.api.autenticacao.google.GoogleProperties;
 import com.mercadeira.api.compra.application.AlertaContinuidadeCompraProperties;
 
 @SpringBootApplication(exclude = MailSenderAutoConfiguration.class)
-@EnableConfigurationProperties({ PasswordResetProperties.class, ResendProperties.class, SessionProperties.class, AlertaContinuidadeCompraProperties.class })
+@EnableConfigurationProperties({ PasswordResetProperties.class, ResendProperties.class, SessionProperties.class, AlertaContinuidadeCompraProperties.class, GoogleProperties.class })
 public class Application {
 
 	@Bean
