@@ -94,6 +94,27 @@ public class ListaCompra {
         atualizadaEm = agora;
     }
 
+    /**
+     * Enriquece a referencia descritiva da lista sem mudar seu estado
+     * operacional. O estabelecimento, uma vez informado, pertence a lista e
+     * nao deve ser substituido por registros financeiros posteriores.
+     */
+    public boolean preencherEstabelecimentoSeAusente(String novoEstabelecimento, Instant agora) {
+        String normalizado = normalizarEstabelecimento(novoEstabelecimento);
+        if (normalizado == null || estabelecimento != null && !estabelecimento.isBlank()) {
+            return false;
+        }
+        estabelecimento = normalizado;
+        atualizadaEm = agora;
+        return true;
+    }
+
+    private static String normalizarEstabelecimento(String valor) {
+        if (valor == null) return null;
+        String normalizado = valor.trim();
+        return normalizado.isEmpty() ? null : normalizado;
+    }
+
     public void iniciarCompra(Instant agora) {
         if (status != StatusListaCompra.EM_PREPARACAO) {
             throw new TransicaoStatusListaCompraInvalidaException(status, StatusListaCompra.EM_COMPRA);

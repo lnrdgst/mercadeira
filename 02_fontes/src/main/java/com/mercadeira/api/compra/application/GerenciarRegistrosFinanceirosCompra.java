@@ -1,6 +1,7 @@
 package com.mercadeira.api.compra.application;
 
 import java.time.Clock;
+import java.time.Instant;
 import java.util.UUID;
 
 import com.mercadeira.api.compra.domain.PresencaOperacional;
@@ -13,6 +14,7 @@ import com.mercadeira.api.familia.domain.StatusMembroFamilia;
 import com.mercadeira.api.familia.repository.MembroFamiliaRepository;
 import com.mercadeira.api.lista.application.ListaCompraNaoEncontradaException;
 import com.mercadeira.api.lista.application.MembroFamiliaInvalidoException;
+import com.mercadeira.api.lista.domain.ListaCompra;
 import com.mercadeira.api.lista.repository.ListaCompraRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -44,21 +46,24 @@ public class GerenciarRegistrosFinanceirosCompra {
         if (command.valor() == null || command.valor().signum() <= 0) {
             throw new IllegalArgumentException("O valor deve ser maior que zero.");
         }
-        var compra = carregarCompraOperacional(usuarioId, familiaId, listaId);
-        return registroRepository.save(RegistroFinanceiroCompra.manual(
-                compra, command.valor(), command.estabelecimentoNome(), clock.instant()));
+        var contexto = carregarCompraOperacional(usuarioId, familiaId, listaId);
+        Instant agora = clock.instant();
+        var registro = RegistroFinanceiroCompra.manual(
+                contexto.compra(), command.valor(), command.estabelecimentoNome(), agora);
+        contexto.lista().preencherEstabelecimentoSeAusente(registro.getEstabelecimentoNome(), agora);
+        return registroRepository.save(registro);
     }
 
     @Transactional
     public void remover(UUID usuarioId, UUID familiaId, UUID listaId, UUID registroId) {
-        var compra = carregarCompraOperacional(usuarioId, familiaId, listaId);
-        var registro = registroRepository.findByIdAndCompra_Id(registroId, compra.getId())
+        var contexto = carregarCompraOperacional(usuarioId, familiaId, listaId);
+        var registro = registroRepository.findByIdAndCompra_Id(registroId, contexto.compra().getId())
                 .orElseThrow(RegistroFinanceiroCompraNaoEncontradoException::new);
         registroRepository.delete(registro);
     }
-    private com.mercadeira.api.compra.domain.Compra carregarCompraOperacional(
+    private ContextoOperacional carregarCompraOperacional(
             UUID usuarioId, UUID familiaId, UUID listaId) {
-        var lista = listaRepository.findById(listaId)
+        var lista = listaRepository.findByIdForUpdate(listaId)
                 .orElseThrow(() -> new ListaCompraNaoEncontradaException(listaId));
         if (!lista.getFamilia().getId().equals(familiaId)) {
             throw new ListaCompraNaoEncontradaException(listaId);
@@ -76,6 +81,9 @@ public class GerenciarRegistrosFinanceirosCompra {
         if (compra.getStatus() == StatusCompra.EM_ANDAMENTO && participante.getPresencaOperacional() == PresencaOperacional.NAO_INFORMADA) {
             throw new PresencaOperacionalObrigatoriaException();
         }
-        return compra;
+        return new ContextoOperacional(lista, compra);
+    }
+
+    private record ContextoOperacional(ListaCompra lista, com.mercadeira.api.compra.domain.Compra compra) {
     }
 }

@@ -88,6 +88,7 @@ class GerenciarRegistrosFinanceirosCompraApplicationTests {
         assertThat(response.registrosFinanceiros().getFirst().estabelecimentoNome()).isEqualTo("Mercado Central");
         assertThat(response.totalRegistrado()).isEqualByComparingTo("100.00");
         assertThat(response.contextoUsuario().podeGerenciarRegistrosFinanceiros()).isTrue();
+        assertThat(response.estabelecimentoLista()).isEqualTo("Mercado Central");
 
         assertThatThrownBy(() -> gerenciarRegistros.adicionar(contexto.usuario().getId(), contexto.familia().getId(), contexto.lista().getId(),
                 new AdicionarRegistroFinanceiroCompraCommand(BigDecimal.ZERO, null))).isInstanceOf(IllegalArgumentException.class);
@@ -96,15 +97,62 @@ class GerenciarRegistrosFinanceirosCompraApplicationTests {
     }
 
     @Test
+    void naoSobrescreveEstabelecimentoPrincipalDaListaComRegistroPosterior() {
+        Contexto contexto = criarContexto("Supermaxi");
+
+        RegistroFinanceiroCompra registro = gerenciarRegistros.adicionar(
+                contexto.usuario().getId(), contexto.familia().getId(), contexto.lista().getId(),
+                new AdicionarRegistroFinanceiroCompraCommand(new BigDecimal("20.00"), " Farmacia X "));
+        entityManager.flush();
+        entityManager.clear();
+
+        assertThat(registro.getEstabelecimentoNome()).isEqualTo("Farmacia X");
+        assertThat(listaCompraRepository.findById(contexto.lista().getId()).orElseThrow().getEstabelecimento())
+                .isEqualTo("Supermaxi");
+    }
+
+    @Test
+    void registroComEstabelecimentoPreencheListaVaziaUmaUnicaVez() {
+        Contexto contexto = criarContexto();
+
+        gerenciarRegistros.adicionar(contexto.usuario().getId(), contexto.familia().getId(), contexto.lista().getId(),
+                new AdicionarRegistroFinanceiroCompraCommand(new BigDecimal("37.53"), " Supermaxi "));
+        gerenciarRegistros.adicionar(contexto.usuario().getId(), contexto.familia().getId(), contexto.lista().getId(),
+                new AdicionarRegistroFinanceiroCompraCommand(new BigDecimal("20.00"), "Farmacia X"));
+        entityManager.flush();
+        entityManager.clear();
+
+        assertThat(listaCompraRepository.findById(contexto.lista().getId()).orElseThrow().getEstabelecimento())
+                .isEqualTo("Supermaxi");
+        assertThat(registroRepository.findByCompra_IdOrderByCriadoEmAscIdAsc(contexto.compraId()))
+                .extracting(RegistroFinanceiroCompra::getEstabelecimentoNome)
+                .containsExactly("Supermaxi", "Farmacia X");
+    }
+
+    @Test
+    void registroSemEstabelecimentoNaoPreencheListaVazia() {
+        Contexto contexto = criarContexto();
+
+        gerenciarRegistros.adicionar(contexto.usuario().getId(), contexto.familia().getId(), contexto.lista().getId(),
+                new AdicionarRegistroFinanceiroCompraCommand(new BigDecimal("10.00"), "   "));
+        entityManager.flush();
+        entityManager.clear();
+
+        assertThat(listaCompraRepository.findById(contexto.lista().getId()).orElseThrow().getEstabelecimento()).isNull();
+    }
+
+    @Test
     void participantePodeRemoverRegistroDaPropriaCompra() {
         Contexto contexto = criarContexto();
         RegistroFinanceiroCompra registro = gerenciarRegistros.adicionar(
                 contexto.usuario().getId(), contexto.familia().getId(), contexto.lista().getId(),
-                new AdicionarRegistroFinanceiroCompraCommand(new BigDecimal("10.00"), null));
+                new AdicionarRegistroFinanceiroCompraCommand(new BigDecimal("10.00"), "Supermaxi"));
 
         gerenciarRegistros.remover(contexto.usuario().getId(), contexto.familia().getId(), contexto.lista().getId(), registro.getId());
 
         assertThat(registroRepository.findByCompra_IdOrderByCriadoEmAscIdAsc(contexto.compraId())).isEmpty();
+        assertThat(listaCompraRepository.findById(contexto.lista().getId()).orElseThrow().getEstabelecimento())
+                .isEqualTo("Supermaxi");
         CompraResponse response = CompraResponse.from(consultarCompra.consultar(
                 contexto.usuario().getId(), contexto.familia().getId(), contexto.lista().getId()), contexto.usuario().getId());
         assertThat(response.totalRegistrado()).isEqualByComparingTo("0.00");
@@ -113,19 +161,19 @@ class GerenciarRegistrosFinanceirosCompraApplicationTests {
     @Test
     void permiteInclusaoAposCompraFinalizadaSemReabrirACompra() {
         Contexto contexto = criarContexto();
-        jdbcTemplate.update("""
-                update compra set status = 'FINALIZADA', finalizada_em = CURRENT_TIMESTAMP,
-                    finalizada_por_participante_compra_id = (
-                        select pc.id from participante_compra pc
-                        where pc.compra_id = compra.id order by pc.id limit 1)
-                where id = ?
-                """, contexto.compraId());
+        jdbcTemplate.update("update item_compra set status = 'NO_CARRINHO' where compra_id = ?", contexto.compraId());
         entityManager.clear();
+        finalizarCompra.executar(contexto.usuario().getId(), contexto.familia().getId(), contexto.lista().getId());
 
         gerenciarRegistros.adicionar(
                 contexto.usuario().getId(), contexto.familia().getId(), contexto.lista().getId(),
-                new AdicionarRegistroFinanceiroCompraCommand(new BigDecimal("10.00"), null));
+                new AdicionarRegistroFinanceiroCompraCommand(new BigDecimal("10.00"), "Supermaxi"));
+        entityManager.flush();
+        entityManager.clear();
         assertThat(registroRepository.findByCompra_IdOrderByCriadoEmAscIdAsc(contexto.compraId())).hasSize(1);
+        assertThat(compraRepository.findById(contexto.compraId()).orElseThrow().getStatus().name()).isEqualTo("FINALIZADA");
+        assertThat(listaCompraRepository.findById(contexto.lista().getId()).orElseThrow().getEstabelecimento())
+                .isEqualTo("Supermaxi");
     }
 
     @Test
@@ -162,13 +210,17 @@ class GerenciarRegistrosFinanceirosCompraApplicationTests {
     }
 
     private Contexto criarContexto() {
+        return criarContexto(null);
+    }
+
+    private Contexto criarContexto(String estabelecimento) {
         Usuario usuario = criarUsuario("Ana");
         Familia familia = familiaRepository.saveAndFlush(Familia.criar(
                 "Familia Teste", UUID.randomUUID().toString().replace("-", ""), usuario, agora()));
         MembroFamilia membro = membroFamiliaRepository.saveAndFlush(
                 MembroFamilia.criarAdministrador(familia, usuario, agora()));
         ListaCompra lista = listaCompraRepository.saveAndFlush(ListaCompra.criar(
-                familia, "Lista", CategoriaCompra.SUPERMERCADO, null, membro, agora()));
+                familia, "Lista", CategoriaCompra.SUPERMERCADO, estabelecimento, membro, agora()));
         participanteListaRepository.saveAndFlush(ParticipanteLista.criar(lista, membro, agora()));
         itemListaRepository.saveAndFlush(ItemLista.criar(
                 lista, "Arroz", BigDecimal.ONE, UnidadeMedida.UNIDADE, null, null, 1, membro, agora()));
