@@ -5,7 +5,7 @@ import com.mercadeira.api.familia.domain.MembroFamilia;
 import com.mercadeira.api.familia.domain.PapelMembroFamilia;
 
 public record MembroFamiliaResponse(UUID membroFamiliaId, UUID usuarioId, String nome, String email,
-        PapelMembroFamilia papel, boolean usuarioAtual, Acoes acoes) {
+        PapelMembroFamilia papel, boolean usuarioAtual, boolean podeIniciarCompra, Acoes acoes) {
 
     public record Acoes(boolean podeTransferirAdministracao, boolean podeRemoverIntegrante, MotivoRemocaoIndisponivel motivoRemocaoIndisponivel) {
     }
@@ -13,7 +13,7 @@ public record MembroFamiliaResponse(UUID membroFamiliaId, UUID usuarioId, String
     static MembroFamiliaResponse from(MembroFamilia membro, UUID usuarioAtualId, boolean podeTransferirAdministracao,
             boolean podeRemoverIntegrante, MotivoRemocaoIndisponivel motivoRemocaoIndisponivel) {
         return new MembroFamiliaResponse(membro.getId(), membro.getUsuario().getId(), membro.getUsuario().getNome(),
-                membro.getUsuario().getEmail(), membro.getPapel(), membro.getUsuario().getId().equals(usuarioAtualId),
+                membro.getUsuario().getEmail(), membro.getPapel(), membro.getUsuario().getId().equals(usuarioAtualId), membro.isPodeIniciarCompra(),
                 new Acoes(podeTransferirAdministracao, podeRemoverIntegrante, motivoRemocaoIndisponivel));
     }
 }

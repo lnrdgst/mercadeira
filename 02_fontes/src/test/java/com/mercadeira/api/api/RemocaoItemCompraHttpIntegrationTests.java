@@ -95,7 +95,9 @@ class RemocaoItemCompraHttpIntegrationTests {
     @Test
     void autoaprovacaoRetornaRemovidoSemAcoesEPreservaItemNoGet() throws Exception {
         var c = contexto();
-        colocar(c);
+        var carrinho = colocar(c);
+        assertThat(objeto(carrinho, "acoes")).containsEntry("podeRemoverDiretamente", true);
+        assertThat(objeto(getItem(c, c.outro()), "acoes")).containsEntry("podeRemoverDiretamente", false);
         var item = acao(c, "solicitar", c.responsavel(), 200);
         assertThat(item.get("status")).isEqualTo("REMOVIDO");
         var remocao = objeto(item, "remocao");
@@ -107,6 +109,24 @@ class RemocaoItemCompraHttpIntegrationTests {
         acoes(item, false, false);
         assertThat(getItem(c, c.responsavel())).isEqualTo(item);
         assertThat(acao(c, "aprovar", c.responsavel(), 200)).isEqualTo(item);
+    }
+
+    @Test
+    void capabilityDiretaRefleteAutoaprovacaoAtualSemTransformarAutoriaEmRegraDoFrontend() throws Exception {
+        var c = contexto();
+        var carrinho = colocar(c);
+        assertThat(objeto(carrinho, "acoes")).containsEntry("podeRemoverDiretamente", true)
+                .containsEntry("podeSolicitarRemocao", true);
+        assertThat(objeto(getItem(c, c.outro()), "acoes")).containsEntry("podeRemoverDiretamente", false)
+                .containsEntry("podeSolicitarRemocao", true);
+
+        jdbc.update("update participante_compra set presenca_operacional = 'NAO_PRESENTE' where compra_id = (select id from compra where lista_compra_id = ?) and membro_familia_id = ?", c.listaId(), c.responsavelMembro());
+        assertThat(objeto(getItem(c, c.responsavel()), "acoes")).containsEntry("podeRemoverDiretamente", false)
+                .containsEntry("podeSolicitarRemocao", true);
+
+        jdbc.update("update participante_compra set presenca_operacional = 'NAO_INFORMADA', presenca_alterada_em = null where compra_id = (select id from compra where lista_compra_id = ?) and membro_familia_id = ?", c.listaId(), c.outroMembro());
+        assertThat(objeto(getItem(c, c.outro()), "acoes")).containsEntry("podeRemoverDiretamente", false)
+                .containsEntry("podeSolicitarRemocao", false).containsEntry("podeDecidirRemocao", false);
     }
 
     @ParameterizedTest

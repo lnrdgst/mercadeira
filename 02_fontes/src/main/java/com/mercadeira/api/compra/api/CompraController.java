@@ -12,6 +12,9 @@ import com.mercadeira.api.autenticacao.security.UsuarioAutenticado;
 import com.mercadeira.api.compra.application.ConsultarCompraDaLista;
 import com.mercadeira.api.compra.application.AdicionarItemDuranteCompra;
 import com.mercadeira.api.compra.application.AdicionarItemDuranteCompraCommand;
+import com.mercadeira.api.compra.application.AdicionarRegistroFinanceiroCompraCommand;
+import com.mercadeira.api.compra.application.GerenciarRegistrosFinanceirosCompra;
+import com.mercadeira.api.compra.application.ContinuarCompra;
 import com.mercadeira.api.compra.application.ColocarItemNoCarrinho;
 import com.mercadeira.api.compra.application.IniciarCompra;
 import com.mercadeira.api.compra.application.FluxoPresencaCompra;
@@ -21,6 +24,7 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -43,14 +47,17 @@ public class CompraController {
     private final ConsultarCompraDaLista consultarCompra;
     private final ColocarItemNoCarrinho colocarItemNoCarrinho;
     private final AdicionarItemDuranteCompra adicionarItemDuranteCompra;
+    private final GerenciarRegistrosFinanceirosCompra gerenciarRegistrosFinanceiros;
+    private final ContinuarCompra continuarCompra;
 
     public CompraController(UsuarioAutenticado usuario, IniciarCompra iniciarCompra,
             ConsultarCompraDaLista consultarCompra, ColocarItemNoCarrinho colocarItemNoCarrinho,
-            AdicionarItemDuranteCompra adicionarItemDuranteCompra, SolicitarRemocaoItemCompra solicitarRemocao,
+            AdicionarItemDuranteCompra adicionarItemDuranteCompra, GerenciarRegistrosFinanceirosCompra gerenciarRegistrosFinanceiros,
+            SolicitarRemocaoItemCompra solicitarRemocao,
             AprovarRemocaoItemCompra aprovarRemocao, RejeitarRemocaoItemCompra rejeitarRemocao, FinalizarCompra finalizarCompra,
             RestaurarItemNoCarrinho restaurarItemNoCarrinho,
             com.mercadeira.api.compra.application.AlterarMinhaPresencaCompra alterarPresenca,
-            FluxoPresencaCompra fluxoPresenca) {
+            FluxoPresencaCompra fluxoPresenca, ContinuarCompra continuarCompra) {
         this.alterarPresenca = alterarPresenca;
         this.fluxoPresenca = fluxoPresenca;
         this.solicitarRemocao = solicitarRemocao;
@@ -63,6 +70,8 @@ public class CompraController {
         this.consultarCompra = consultarCompra;
         this.colocarItemNoCarrinho = colocarItemNoCarrinho;
         this.adicionarItemDuranteCompra = adicionarItemDuranteCompra;
+        this.gerenciarRegistrosFinanceiros = gerenciarRegistrosFinanceiros;
+        this.continuarCompra = continuarCompra;
     }
 
     @PostMapping
@@ -179,6 +188,28 @@ public class CompraController {
                 new AdicionarItemDuranteCompraCommand(request.descricao(), request.quantidade(), request.unidadeMedida(),
                         request.marca(), request.observacoes()));
         return ResponseEntity.status(HttpStatus.CREATED).body(itemResponse(familiaId, listaId, item.getId()));
+    }
+
+    @PostMapping("/continuar")
+    public CompraResponse continuar(@PathVariable UUID familiaId, @PathVariable UUID listaId) {
+        continuarCompra.executar(usuario.getId(), familiaId, listaId);
+        return CompraResponse.from(consultarCompra.consultar(usuario.getId(), familiaId, listaId), usuario.getId());
+    }
+
+    @PostMapping("/registros-financeiros")
+    public ResponseEntity<CompraResponse> adicionarRegistroFinanceiro(@PathVariable UUID familiaId, @PathVariable UUID listaId,
+            @Valid @RequestBody AdicionarRegistroFinanceiroCompraRequest request) {
+        gerenciarRegistrosFinanceiros.adicionar(usuario.getId(), familiaId, listaId,
+                new AdicionarRegistroFinanceiroCompraCommand(request.valor(), request.estabelecimentoNome()));
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(CompraResponse.from(consultarCompra.consultar(usuario.getId(), familiaId, listaId), usuario.getId()));
+    }
+
+    @DeleteMapping("/registros-financeiros/{registroId}")
+    public CompraResponse removerRegistroFinanceiro(@PathVariable UUID familiaId, @PathVariable UUID listaId,
+            @PathVariable UUID registroId) {
+        gerenciarRegistrosFinanceiros.remover(usuario.getId(), familiaId, listaId, registroId);
+        return CompraResponse.from(consultarCompra.consultar(usuario.getId(), familiaId, listaId), usuario.getId());
     }
 
     @PostMapping("/itens/{itemCompraId}/solicitar-remocao")

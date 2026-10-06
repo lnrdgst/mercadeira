@@ -25,7 +25,7 @@ public class Usuario {
     @Column(name = "email", nullable = false, length = 255)
     private String email;
 
-    @Column(name = "senha_hash", nullable = false, length = 255)
+    @Column(name = "senha_hash", length = 255)
     private String senhaHash;
 
     @Column(name = "criado_em", nullable = false)
@@ -47,6 +47,10 @@ public class Usuario {
         return usuario;
     }
 
+    public static Usuario criarSemSenha(String nome, String email, Instant agora) {
+        return criar(nome, email, null, agora);
+    }
+
     public UUID getId() {
         return id;
     }
@@ -61,5 +65,16 @@ public class Usuario {
 
     public String getSenhaHash() {
         return senhaHash;
+    }
+
+    public void alterarDadosPessoais(String nome, String email, Instant agora) {
+        this.nome = nome;
+        this.email = email;
+        this.atualizadoEm = agora;
+    }
+
+    public void alterarSenha(String senhaHash, Instant agora) {
+        this.senhaHash = senhaHash;
+        this.atualizadoEm = agora;
     }
 }

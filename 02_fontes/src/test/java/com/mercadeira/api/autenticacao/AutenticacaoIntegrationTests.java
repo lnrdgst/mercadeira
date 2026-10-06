@@ -11,6 +11,9 @@ import java.util.UUID;
 import com.mercadeira.api.autenticacao.application.AutenticarUsuario;
 import com.mercadeira.api.autenticacao.application.CredenciaisInvalidasException;
 import com.mercadeira.api.autenticacao.application.TokenAutenticacao;
+import com.mercadeira.api.autenticacao.application.SessaoAutenticada;
+import com.mercadeira.api.autenticacao.application.GerenciarSessoesPersistentes;
+import com.mercadeira.api.autenticacao.repository.SessaoPersistenteRepository;
 import com.mercadeira.api.autenticacao.security.UsuarioAutenticado;
 import com.mercadeira.api.usuario.application.CadastrarUsuario;
 import com.mercadeira.api.usuario.domain.Usuario;
@@ -62,6 +65,12 @@ class AutenticacaoIntegrationTests {
     private AutenticarUsuario autenticarUsuario;
 
     @Autowired
+    private GerenciarSessoesPersistentes gerenciarSessoes;
+
+    @Autowired
+    private SessaoPersistenteRepository sessoes;
+
+    @Autowired
     private JwtDecoder jwtDecoder;
 
     @Autowired
@@ -85,6 +94,23 @@ class AutenticacaoIntegrationTests {
                 .extracting(componente -> componente.getName())
                 .doesNotContain("senhaHash");
         assertThat(jwtDecoder.decode(resultado.token()).getSubject()).isEqualTo(usuario.getId().toString());
+    }
+
+    @Test
+    void criaERotacionaSessaoPersistenteSemPersistirRefreshPuro() {
+        Usuario usuario = cadastrarUsuario.cadastrar("Ana", "ana@example.test", "senha-original");
+
+        SessaoAutenticada login = autenticarUsuario.autenticarComSessao("ana@example.test", "senha-original");
+        var persistida = sessoes.findAll().getFirst();
+        SessaoAutenticada refresh = gerenciarSessoes.renovar(login.refreshToken());
+
+        assertThat(login.refreshToken()).isNotEqualTo(refresh.refreshToken());
+        assertThat(persistida.getTokenHash()).isNotEqualTo(login.refreshToken());
+        assertThat(persistida.getTokenHash()).isNotEqualTo(refresh.refreshToken());
+        assertThat(persistida.getExpiraEm()).isAfter(Instant.now().plusSeconds(179L * 24 * 60 * 60));
+        assertThat(jwtDecoder.decode(refresh.accessToken().token()).getSubject()).isEqualTo(usuario.getId().toString());
+        assertThatThrownBy(() -> gerenciarSessoes.renovar(login.refreshToken()))
+                .isInstanceOf(com.mercadeira.api.autenticacao.application.SessaoInvalidaException.class);
     }
 
     @Test

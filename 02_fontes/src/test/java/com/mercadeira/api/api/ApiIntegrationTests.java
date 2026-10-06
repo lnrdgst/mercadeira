@@ -634,7 +634,9 @@ class ApiIntegrationTests {
         Usuario ana = usuario("Ana");
         Familia familia = criarFamilia.criar(ana.getId(), "Familia Compra");
         ListaCompra semItens = criarListaCompra.criar(ana.getId(), familia.getId(), "Sem itens", CategoriaCompra.OUTROS, null);
-        mockMvc.perform(post(compraUrl(familia, semItens)).header("Authorization", bearer(ana))).andExpect(status().isConflict());
+        mockMvc.perform(post(compraUrl(familia, semItens)).header("Authorization", bearer(ana)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.mensagem").value("Adicione pelo menos um item antes de iniciar a compra."));
 
         ListaCompra finalizada = listaComItens(ana, familia, "Finalizada");
         entityManager.flush();

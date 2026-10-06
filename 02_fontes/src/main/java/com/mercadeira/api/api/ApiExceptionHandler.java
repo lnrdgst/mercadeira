@@ -9,6 +9,9 @@ import com.mercadeira.api.compra.application.CompraComRemocaoPendenteException;
 import com.mercadeira.api.compra.application.UsuarioNaoPodeDecidirRemocaoItemCompraException;
 import com.mercadeira.api.compra.application.ResponsavelRemocaoItemCompraInvalidoException;
 import com.mercadeira.api.autenticacao.application.CredenciaisInvalidasException;
+import com.mercadeira.api.autenticacao.application.TokenRedefinicaoInvalidoException;
+import com.mercadeira.api.autenticacao.application.SessaoInvalidaException;
+import com.mercadeira.api.autenticacao.google.CredencialGoogleInvalidaException;
 import com.mercadeira.api.autenticacao.security.UsuarioNaoAutenticadoException;
 import com.mercadeira.api.familia.application.CodigoFamiliaInvalidoException;
 import com.mercadeira.api.familia.application.FamiliaInativaException;
@@ -24,6 +27,8 @@ import com.mercadeira.api.familia.application.UsuarioNaoEncontradoException;
 import com.mercadeira.api.familia.application.TransferenciaAdministracaoInvalidaException;
 import com.mercadeira.api.usuario.application.DadosUsuarioInvalidosException;
 import com.mercadeira.api.usuario.application.EmailJaCadastradoException;
+import com.mercadeira.api.usuario.application.SenhaAtualIncorretaException;
+import com.mercadeira.api.usuario.application.FormaAcessoNaoDisponivelException;
 import com.mercadeira.api.lista.application.ItemListaNaoEncontradoException;
 import com.mercadeira.api.lista.application.ListaCompraNaoEncontradaException;
 import com.mercadeira.api.lista.application.MembroFamiliaInvalidoException;
@@ -39,6 +44,7 @@ import com.mercadeira.api.compra.application.CompraListaInconsistenteException;
 import com.mercadeira.api.compra.application.CompraNaoEncontradaException;
 import com.mercadeira.api.compra.application.CompraForaDeAndamentoException;
 import com.mercadeira.api.compra.application.ItemCompraNaoEncontradoException;
+import com.mercadeira.api.compra.application.RegistroFinanceiroCompraNaoEncontradoException;
 import com.mercadeira.api.compra.application.ListaCompraSemItensException;
 import com.mercadeira.api.compra.application.ListaCompraSemParticipantesException;
 import com.mercadeira.api.compra.application.UsuarioNaoParticipaDaCompraException;
@@ -81,20 +87,36 @@ public class ApiExceptionHandler {
         return resposta(HttpStatus.BAD_REQUEST, "REQUISICAO_INVALIDA", "Requisicao invalida.", request, Map.of());
     }
 
-    @ExceptionHandler({ CredenciaisInvalidasException.class, UsuarioNaoAutenticadoException.class })
+    @ExceptionHandler({ CredenciaisInvalidasException.class, SessaoInvalidaException.class, UsuarioNaoAutenticadoException.class, SenhaAtualIncorretaException.class, CredencialGoogleInvalidaException.class })
     ResponseEntity<ErroApiResponse> tratarNaoAutenticado(Exception exception, HttpServletRequest request) {
-        return resposta(HttpStatus.UNAUTHORIZED, "NAO_AUTENTICADO", "Credenciais invalidas.", request, Map.of());
+        String mensagem = exception instanceof SenhaAtualIncorretaException ? exception.getMessage() : "Credenciais invalidas.";
+        return resposta(HttpStatus.UNAUTHORIZED, "NAO_AUTENTICADO", mensagem, request, Map.of());
+    }
+
+    @ExceptionHandler(FormaAcessoNaoDisponivelException.class)
+    ResponseEntity<ErroApiResponse> tratarFormaAcessoNaoDisponivel(FormaAcessoNaoDisponivelException exception, HttpServletRequest request) {
+        return resposta(HttpStatus.CONFLICT, "FORMA_ACESSO_NAO_DISPONIVEL", exception.getMessage(), request, Map.of());
+    }
+
+    @ExceptionHandler(TokenRedefinicaoInvalidoException.class)
+    ResponseEntity<ErroApiResponse> tratarTokenRedefinicaoInvalido(TokenRedefinicaoInvalidoException exception,
+            HttpServletRequest request) {
+        return resposta(HttpStatus.BAD_REQUEST, "TOKEN_REDEFINICAO_INVALIDO",
+                "Este link de redefinicao e invalido ou expirou.", request, Map.of());
     }
 
     @ExceptionHandler({ MembroSemPermissaoException.class, MembroFamiliaInvalidoException.class,
-            UsuarioNaoParticipaDaListaException.class, UsuarioNaoParticipaDaCompraException.class, UsuarioNaoPodeDecidirRemocaoItemCompraException.class, AutoridadePresencaException.class })
+            UsuarioNaoParticipaDaListaException.class, UsuarioNaoParticipaDaCompraException.class, UsuarioNaoPodeDecidirRemocaoItemCompraException.class, AutoridadePresencaException.class, com.mercadeira.api.compra.application.PermissaoIniciarCompraNegadaException.class })
     ResponseEntity<ErroApiResponse> tratarSemPermissao(Exception exception, HttpServletRequest request) {
-        return resposta(HttpStatus.FORBIDDEN, "ACESSO_NEGADO", "Acesso negado.", request, Map.of());
+        String mensagem = exception instanceof com.mercadeira.api.compra.application.PermissaoIniciarCompraNegadaException ? exception.getMessage() : "Acesso negado.";
+        String erro = exception instanceof com.mercadeira.api.compra.application.PermissaoIniciarCompraNegadaException ? "SEM_PERMISSAO_INICIAR_COMPRA" : "ACESSO_NEGADO";
+        return resposta(HttpStatus.FORBIDDEN, erro, mensagem, request, Map.of());
     }
 
     @ExceptionHandler({ UsuarioNaoEncontradoException.class, SolicitacaoNaoEncontradaException.class,
             ListaCompraNaoEncontradaException.class, ItemListaNaoEncontradoException.class,
-            CompraNaoEncontradaException.class, ItemCompraNaoEncontradoException.class })
+            CompraNaoEncontradaException.class, ItemCompraNaoEncontradoException.class,
+            RegistroFinanceiroCompraNaoEncontradoException.class })
     ResponseEntity<ErroApiResponse> tratarNaoEncontrado(Exception exception, HttpServletRequest request) {
         return resposta(HttpStatus.NOT_FOUND, "RECURSO_NAO_ENCONTRADO", "Recurso nao encontrado.", request, Map.of());
     }
