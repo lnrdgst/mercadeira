@@ -215,6 +215,112 @@ class PresencaOperacionalIntegrationTests {
         assertThat(jdbc.queryForMap("select * from item_compra where id=?",c.item())).isEqualTo(restaurado);
     }
 
+    @Test void dadosDaCompraExigemParticipantePresenteMesmoEmChamadaDireta() throws Exception {
+        var c = contexto(true);
+        postItem(c, c.ana(), "colocar-no-carrinho", 200);
+        declarar(c, c.ana(), "NAO_PRESENTE");
+
+        mvc.perform(put(c.url()+"/itens/"+c.item()+"/dados-compra")
+                .with(jwt().jwt(j -> j.subject(c.ana().toString())))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"precoUnitario\":10,\"quantidadeComprada\":2}"))
+            .andExpect(status().isConflict());
+
+        assertThat(jdbc.queryForMap("select preco_unitario, quantidade_comprada from item_compra where id=?", c.item()))
+            .containsEntry("preco_unitario", null)
+            .containsEntry("quantidade_comprada", null);
+    }
+
+    @Test void continuarCompraProlongadaPersisteAdiamentoParaConsultasSubsequentes() throws Exception {
+        var c = contexto(true);
+        jdbc.update("update compra set iniciada_em=now() - interval '25 hours' where id=?", c.compra());
+
+        mvc.perform(get(c.url()).with(jwt().jwt(j -> j.subject(c.ana().toString()))))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.alertaContinuidade.necessario").value(true));
+        mvc.perform(post(c.url()+"/continuar").with(jwt().jwt(j -> j.subject(c.ana().toString()))))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.alertaContinuidade.necessario").value(false))
+            .andExpect(jsonPath("$.alertaContinuidade.adiadoAte").isNotEmpty());
+        mvc.perform(get(c.url()).with(jwt().jwt(j -> j.subject(c.ana().toString()))))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.alertaContinuidade.necessario").value(false));
+
+        jdbc.update("update compra set alerta_continuidade_adiado_ate=now() - interval '1 second' where id=?", c.compra());
+        mvc.perform(get(c.url()).with(jwt().jwt(j -> j.subject(c.ana().toString()))))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.alertaContinuidade.necessario").value(true));
+    }
+
+    @Test void responsavelEncerraCompraProlongadaSemFinalizarEAcoesConcorrentesSaoCoerentes() throws Exception {
+        var c = contexto(true);
+        jdbc.update("update compra set iniciada_em=now() - interval '25 hours' where id=?", c.compra());
+
+        mvc.perform(post(c.url()+"/encerrar-prolongada").with(jwt().jwt(j -> j.subject(c.bia().toString()))))
+            .andExpect(status().isForbidden());
+        jdbc.update("update membro_familia set papel='ADMINISTRADOR' where familia_id=? and usuario_id=?", c.familia(), c.bia());
+        mvc.perform(post(c.url()+"/encerrar-prolongada").with(jwt().jwt(j -> j.subject(c.bia().toString()))))
+            .andExpect(status().isForbidden());
+
+        mvc.perform(post(c.url()+"/encerrar-prolongada").with(jwt().jwt(j -> j.subject(c.ana().toString()))))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.status").value("CANCELADA"))
+            .andExpect(jsonPath("$.alertaContinuidade.necessario").value(false));
+        assertThat(jdbc.queryForMap("select status,finalizada_em,finalizada_por_participante_compra_id from compra where id=?", c.compra()))
+            .containsEntry("status", "CANCELADA")
+            .containsEntry("finalizada_em", null)
+            .containsEntry("finalizada_por_participante_compra_id", null);
+        assertThat(jdbc.queryForMap("select status from lista_compra where id=?", c.lista()))
+            .containsEntry("status", "CANCELADA");
+        assertThat(jdbc.queryForObject("select count(*) from item_compra where compra_id=?", Integer.class, c.compra()))
+            .isEqualTo(1);
+        var listasAtivas = mvc.perform(get("/api/familias/"+c.familia()+"/listas")
+                .with(jwt().jwt(j -> j.subject(c.ana().toString()))))
+            .andExpect(status().isOk()).andReturn();
+        List<String> idsAtivos = JsonPath.read(listasAtivas.getResponse().getContentAsString(), "$[*].id");
+        assertThat(idsAtivos).doesNotContain(c.lista().toString());
+
+        mvc.perform(post(c.url()+"/encerrar-prolongada").with(jwt().jwt(j -> j.subject(c.ana().toString()))))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.status").value("CANCELADA"));
+    }
+
+    @Test void registrosFinanceirosExigemParticipantePresenteMesmoAposFinalizacaoEMantemConsultaRemota() throws Exception {
+        var c = contexto(true);
+        declarar(c, c.bia(), "NAO_PRESENTE");
+
+        mvc.perform(get(c.url()).with(jwt().jwt(j -> j.subject(c.ana().toString()))))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.contextoUsuario.podeGerenciarRegistrosFinanceiros").value(true));
+        mvc.perform(post(c.url()+"/registros-financeiros")
+                .with(jwt().jwt(j -> j.subject(c.ana().toString())))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"valor\":10,\"estabelecimentoNome\":\"Mercado\"}"))
+            .andExpect(status().isCreated());
+        UUID registroId = jdbc.queryForObject(
+                "select id from registro_financeiro_compra where compra_id=?", UUID.class, c.compra());
+
+        postItem(c, c.ana(), "colocar-no-carrinho", 200);
+        mvc.perform(post(c.url()+"/finalizar").with(jwt().jwt(j -> j.subject(c.ana().toString()))))
+            .andExpect(status().isOk());
+        mvc.perform(get(c.url()).with(jwt().jwt(j -> j.subject(c.bia().toString()))))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.contextoUsuario.podeGerenciarRegistrosFinanceiros").value(false))
+            .andExpect(jsonPath("$.registrosFinanceiros[0].valor").value(10));
+        mvc.perform(post(c.url()+"/registros-financeiros")
+                .with(jwt().jwt(j -> j.subject(c.bia().toString())))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"valor\":5}"))
+            .andExpect(status().isConflict());
+        mvc.perform(delete(c.url()+"/registros-financeiros/"+registroId)
+                .with(jwt().jwt(j -> j.subject(c.bia().toString()))))
+            .andExpect(status().isConflict());
+
+        assertThat(jdbc.queryForObject(
+                "select count(*) from registro_financeiro_compra where compra_id=?", Integer.class, c.compra()))
+            .isEqualTo(1);
+    }
+
     @Test void legadoEmAndamentoPermiteInclusaoFinalizacaoEReutilizacaoSemCopiarPresenca() throws Exception {
         var c=contexto(true);
         jdbc.update("update participante_compra set presenca_operacional='NAO_INFORMADA',presenca_alterada_em=null where compra_id=?",c.compra());

@@ -146,6 +146,20 @@ public class Compra {
         alertaContinuidadeAdiadoAte = proximoAlerta;
     }
 
+    public boolean cancelar(ParticipanteCompra executor) {
+        if (executor == null || id == null || !id.equals(executor.getCompra().getId())
+                || responsavelOperacionalId == null || !responsavelOperacionalId.equals(executor.getId())) {
+            throw new IllegalStateException("Somente o responsavel operacional pode encerrar esta compra.");
+        }
+        if (status == StatusCompra.CANCELADA) return false;
+        if (status != StatusCompra.EM_ANDAMENTO) {
+            throw new IllegalStateException("A compra nao esta em andamento.");
+        }
+        status = StatusCompra.CANCELADA;
+        cicloOperacionalAtivo = false;
+        return true;
+    }
+
     public boolean finalizarAdministrativamente(ParticipanteCompra executor, Instant instante) {
         return finalizar(executor, instante, false);
     }

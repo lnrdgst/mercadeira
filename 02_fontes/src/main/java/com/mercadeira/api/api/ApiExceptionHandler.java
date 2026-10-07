@@ -5,6 +5,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 import com.mercadeira.api.compra.domain.FinalizacaoCompraInvalidaException;
+import com.mercadeira.api.compra.domain.DadosFinanceirosItemCompraInvalidosException;
 import com.mercadeira.api.compra.application.CompraComRemocaoPendenteException;
 import com.mercadeira.api.compra.application.UsuarioNaoPodeDecidirRemocaoItemCompraException;
 import com.mercadeira.api.compra.application.ResponsavelRemocaoItemCompraInvalidoException;
@@ -82,7 +83,7 @@ public class ApiExceptionHandler {
     }
 
     @ExceptionHandler({ HttpMessageNotReadableException.class, DadosUsuarioInvalidosException.class,
-            IllegalArgumentException.class, CodigoFamiliaInvalidoException.class })
+            IllegalArgumentException.class, CodigoFamiliaInvalidoException.class, DadosFinanceirosItemCompraInvalidosException.class })
     ResponseEntity<ErroApiResponse> tratarRequisicaoInvalida(Exception exception, HttpServletRequest request) {
         return resposta(HttpStatus.BAD_REQUEST, "REQUISICAO_INVALIDA", "Requisicao invalida.", request, Map.of());
     }

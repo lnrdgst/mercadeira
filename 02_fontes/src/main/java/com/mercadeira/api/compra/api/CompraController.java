@@ -15,6 +15,8 @@ import com.mercadeira.api.compra.application.AdicionarItemDuranteCompraCommand;
 import com.mercadeira.api.compra.application.AdicionarRegistroFinanceiroCompraCommand;
 import com.mercadeira.api.compra.application.GerenciarRegistrosFinanceirosCompra;
 import com.mercadeira.api.compra.application.ContinuarCompra;
+import com.mercadeira.api.compra.application.EncerrarCompraProlongada;
+import com.mercadeira.api.compra.application.RegistrarDadosItemCompra;
 import com.mercadeira.api.compra.application.ColocarItemNoCarrinho;
 import com.mercadeira.api.compra.application.IniciarCompra;
 import com.mercadeira.api.compra.application.FluxoPresencaCompra;
@@ -27,6 +29,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
@@ -49,6 +52,8 @@ public class CompraController {
     private final AdicionarItemDuranteCompra adicionarItemDuranteCompra;
     private final GerenciarRegistrosFinanceirosCompra gerenciarRegistrosFinanceiros;
     private final ContinuarCompra continuarCompra;
+    private final EncerrarCompraProlongada encerrarCompraProlongada;
+    private final RegistrarDadosItemCompra registrarDadosItemCompra;
 
     public CompraController(UsuarioAutenticado usuario, IniciarCompra iniciarCompra,
             ConsultarCompraDaLista consultarCompra, ColocarItemNoCarrinho colocarItemNoCarrinho,
@@ -57,7 +62,8 @@ public class CompraController {
             AprovarRemocaoItemCompra aprovarRemocao, RejeitarRemocaoItemCompra rejeitarRemocao, FinalizarCompra finalizarCompra,
             RestaurarItemNoCarrinho restaurarItemNoCarrinho,
             com.mercadeira.api.compra.application.AlterarMinhaPresencaCompra alterarPresenca,
-            FluxoPresencaCompra fluxoPresenca, ContinuarCompra continuarCompra) {
+            FluxoPresencaCompra fluxoPresenca, ContinuarCompra continuarCompra,
+            RegistrarDadosItemCompra registrarDadosItemCompra, EncerrarCompraProlongada encerrarCompraProlongada) {
         this.alterarPresenca = alterarPresenca;
         this.fluxoPresenca = fluxoPresenca;
         this.solicitarRemocao = solicitarRemocao;
@@ -72,6 +78,8 @@ public class CompraController {
         this.adicionarItemDuranteCompra = adicionarItemDuranteCompra;
         this.gerenciarRegistrosFinanceiros = gerenciarRegistrosFinanceiros;
         this.continuarCompra = continuarCompra;
+        this.registrarDadosItemCompra = registrarDadosItemCompra;
+        this.encerrarCompraProlongada = encerrarCompraProlongada;
     }
 
     @PostMapping
@@ -181,6 +189,14 @@ public class CompraController {
         return itemResponse(familiaId, listaId, itemCompraId);
     }
 
+    @PutMapping("/itens/{itemCompraId}/dados-compra")
+    public ItemCompraResponse atualizarDadosItem(@PathVariable UUID familiaId, @PathVariable UUID listaId,
+            @PathVariable UUID itemCompraId, @Valid @RequestBody AtualizarDadosItemCompraRequest request) {
+        registrarDadosItemCompra.executar(usuario.getId(), familiaId, listaId, itemCompraId,
+                request.precoUnitario(), request.quantidadeComprada());
+        return itemResponse(familiaId, listaId, itemCompraId);
+    }
+
     @PostMapping("/itens")
     public ResponseEntity<ItemCompraResponse> adicionarItem(@PathVariable UUID familiaId, @PathVariable UUID listaId,
             @Valid @RequestBody AdicionarItemDuranteCompraRequest request) {
@@ -193,6 +209,12 @@ public class CompraController {
     @PostMapping("/continuar")
     public CompraResponse continuar(@PathVariable UUID familiaId, @PathVariable UUID listaId) {
         continuarCompra.executar(usuario.getId(), familiaId, listaId);
+        return CompraResponse.from(consultarCompra.consultar(usuario.getId(), familiaId, listaId), usuario.getId());
+    }
+
+    @PostMapping("/encerrar-prolongada")
+    public CompraResponse encerrarCompraProlongada(@PathVariable UUID familiaId, @PathVariable UUID listaId) {
+        encerrarCompraProlongada.executar(usuario.getId(), familiaId, listaId);
         return CompraResponse.from(consultarCompra.consultar(usuario.getId(), familiaId, listaId), usuario.getId());
     }
 

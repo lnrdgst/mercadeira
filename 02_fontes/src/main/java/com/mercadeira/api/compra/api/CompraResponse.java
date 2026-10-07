@@ -36,6 +36,8 @@ public record CompraResponse(
         List<ItemCompraResponse> itens,
         List<RegistroFinanceiroCompraResponse> registrosFinanceiros,
         BigDecimal totalRegistrado,
+        BigDecimal totalItensComprados,
+        long quantidadeItensNoCarrinhoSemPreco,
         ContextoUsuarioCompraResponse contextoUsuario) {
 
     public static CompraResponse from(ResultadoConsultaCompra resultado, UUID usuarioId) {
@@ -76,7 +78,8 @@ public record CompraResponse(
         boolean podeAdicionarItem = participanteAtual != null && emAndamento
                 && participanteAtual.getPresencaOperacional() != com.mercadeira.api.compra.domain.PresencaOperacional.NAO_INFORMADA;
         boolean podeGerenciarRegistrosFinanceiros = participanteAtual != null
-                && (compra.getStatus() == StatusCompra.FINALIZADA || podeAdicionarItem);
+                && participanteAtual.estaPresente()
+                && (compra.getStatus() == StatusCompra.EM_ANDAMENTO || compra.getStatus() == StatusCompra.FINALIZADA);
         boolean podeCancelar = resultado.minhaSolicitacao() != null
                 && resultado.minhaSolicitacao().getEstado() == EstadoSolicitacaoPresenca.PENDENTE;
         boolean podeSolicitarResponsabilidade = emAndamento && participanteAtual != null && participanteAtual.estaPresente()
@@ -89,6 +92,11 @@ public record CompraResponse(
         boolean podeTransferirResponsabilidade = emAndamento && responsavel != null && participanteAtual != null
                 && responsavel.getId().equals(participanteAtual.getId()) && participanteAtual.estaPresente()
                 && resultado.participantes().stream().anyMatch(p -> !p.getId().equals(participanteAtual.getId()) && p.estaPresente());
+        var itensNoCarrinho = resultado.itens().stream()
+                .filter(item -> item.getStatus() == StatusItemCompra.NO_CARRINHO).toList();
+        BigDecimal totalItensComprados = itensNoCarrinho.stream().map(item -> item.getValorTotal())
+                .filter(java.util.Objects::nonNull).reduce(BigDecimal.ZERO, BigDecimal::add);
+        long itensSemPreco = itensNoCarrinho.stream().filter(item -> item.getValorTotal() == null).count();
         var responsabilidade = new ResponsabilidadeOperacionalResponse(
                 responsavel == null ? null : ParticipanteCompraReferenciaResponse.from(responsavel),
                 compra.getCicloOperacional(), compra.isCicloOperacionalAtivo(), compra.getResponsabilidadeRevisao(),
@@ -129,6 +137,8 @@ public record CompraResponse(
                 resultado.registrosFinanceiros().stream().map(RegistroFinanceiroCompraResponse::from).toList(),
                 resultado.registrosFinanceiros().stream().map(registro -> registro.getValor())
                         .reduce(BigDecimal.ZERO, BigDecimal::add),
+                totalItensComprados,
+                itensSemPreco,
                 new ContextoUsuarioCompraResponse(resultado.participanteCompra(), podeDeclararSaida, podeFinalizar,
                         compra.getStatus() == StatusCompra.FINALIZADA && compra.getListaCompra().getStatus() == StatusListaCompra.FINALIZADA && compra.getListaCompra().getFamilia().getStatus() == com.mercadeira.api.familia.domain.StatusFamilia.ATIVA && resultado.itens().stream().noneMatch(item -> item.getStatus() == StatusItemCompra.REMOCAO_SOLICITADA),
                         compra.getStatus() == StatusCompra.FINALIZADA && compra.getListaCompra().getStatus() == StatusListaCompra.FINALIZADA && compra.getListaCompra().getFamilia().getStatus() == com.mercadeira.api.familia.domain.StatusFamilia.ATIVA

@@ -65,6 +65,7 @@ final class ItemCompraResponseMapper {
                 item.getId(), item.getItemListaOrigem() == null ? null : item.getItemListaOrigem().getId(),
                 item.isAdicionadoDuranteCompra(), item.getDescricaoSnapshot(), item.getQuantidadeSnapshot(),
                 item.getUnidadeMedidaSnapshot(), item.getMarcaSnapshot(), item.getObservacoesSnapshot(),
+                item.getPrecoUnitario(), item.getQuantidadeComprada(), item.getValorTotal(),
                 item.getOrdemExibicao(), item.getStatus(),
                 item.getAdicionadoPorParticipanteCompra() == null ? null
                         : porParticipante.get(item.getAdicionadoPorParticipanteCompra().getId()),

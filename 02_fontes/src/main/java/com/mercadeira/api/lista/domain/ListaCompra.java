@@ -134,6 +134,19 @@ public class ListaCompra {
         atualizadaEm = instante;
     }
 
+    public boolean cancelarCompra(Instant instante) {
+        if (status == StatusListaCompra.CANCELADA) return false;
+        if (status != StatusListaCompra.EM_COMPRA) {
+            throw new TransicaoStatusListaCompraInvalidaException(status, StatusListaCompra.CANCELADA);
+        }
+        if (instante == null) {
+            throw new IllegalArgumentException("O instante do encerramento e obrigatorio.");
+        }
+        status = StatusListaCompra.CANCELADA;
+        atualizadaEm = instante;
+        return true;
+    }
+
     public UUID getId() { return id; }
     public Familia getFamilia() { return familia; }
     public String getNome() { return nome; }

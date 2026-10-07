@@ -1,6 +1,7 @@
 package com.mercadeira.api.compra.domain;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -64,6 +65,12 @@ public class ItemCompra {
 
     @Column(name = "observacoes_snapshot", columnDefinition = "TEXT")
     private String observacoesSnapshot;
+
+    @Column(name = "preco_unitario", precision = 19, scale = 4)
+    private BigDecimal precoUnitario;
+
+    @Column(name = "quantidade_comprada", precision = 12, scale = 3)
+    private BigDecimal quantidadeComprada;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 40)
@@ -155,6 +162,21 @@ public class ItemCompra {
         marcadoPorMembroFamilia = executor;
         marcadoEm = instante;
         return true;
+    }
+
+    public void registrarDadosDaCompra(BigDecimal precoUnitario, BigDecimal quantidadeComprada) {
+        if (status != StatusItemCompra.NO_CARRINHO) throw new TransicaoStatusItemCompraInvalidaException(status);
+        if (precoUnitario != null && (quantidadeComprada == null || precoUnitario.signum() <= 0)
+                || quantidadeComprada != null && quantidadeComprada.signum() <= 0) {
+            throw new DadosFinanceirosItemCompraInvalidosException();
+        }
+        this.precoUnitario = precoUnitario;
+        this.quantidadeComprada = quantidadeComprada;
+    }
+
+    public BigDecimal getValorTotal() {
+        if (precoUnitario == null || quantidadeComprada == null) return null;
+        return precoUnitario.multiply(quantidadeComprada).setScale(2, RoundingMode.HALF_UP);
     }
 
     public boolean solicitarRemocao(MembroFamilia solicitante, Instant instante) {
@@ -250,6 +272,8 @@ public class ItemCompra {
     public String getUnidadeMedidaSnapshot() { return unidadeMedidaSnapshot; }
     public String getMarcaSnapshot() { return marcaSnapshot; }
     public String getObservacoesSnapshot() { return observacoesSnapshot; }
+    public BigDecimal getPrecoUnitario() { return precoUnitario; }
+    public BigDecimal getQuantidadeComprada() { return quantidadeComprada; }
     public StatusItemCompra getStatus() { return status; }
     public MembroFamilia getMarcadoPorMembroFamilia() { return marcadoPorMembroFamilia; }
     public Instant getMarcadoEm() { return marcadoEm; }

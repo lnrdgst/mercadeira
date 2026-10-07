@@ -4,7 +4,6 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.UUID;
 
-import com.mercadeira.api.compra.domain.PresencaOperacional;
 import com.mercadeira.api.compra.domain.RegistroFinanceiroCompra;
 import com.mercadeira.api.compra.domain.StatusCompra;
 import com.mercadeira.api.compra.repository.CompraRepository;
@@ -78,7 +77,7 @@ public class GerenciarRegistrosFinanceirosCompra {
         }
         var participante = participanteRepository.findByCompra_IdAndMembroFamilia_Id(compra.getId(), membro.getId())
                 .orElseThrow(UsuarioNaoParticipaDaCompraException::new);
-        if (compra.getStatus() == StatusCompra.EM_ANDAMENTO && participante.getPresencaOperacional() == PresencaOperacional.NAO_INFORMADA) {
+        if (!participante.estaPresente()) {
             throw new PresencaOperacionalObrigatoriaException();
         }
         return new ContextoOperacional(lista, compra);
