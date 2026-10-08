@@ -1,0 +1,7 @@
+package com.mercadeira.api.compra.leiturapreco;
+import java.util.*;
+import org.springframework.http.MediaType; import org.springframework.stereotype.Component; import org.springframework.web.client.*;
+@Component class RestClientGeminiClient {
+ private final RestClient rest=RestClient.builder().baseUrl("https://generativelanguage.googleapis.com/v1beta").build();
+ String identificar(String key,String model,byte[] image,String mime){ try { var body=Map.of("contents",List.of(Map.of("parts",List.of(Map.of("text","Identifique todos os valores monetarios visiveis. Retorne somente precos, sem produtos, quantidades, codigos ou interpretacao."),Map.of("inlineData",Map.of("mimeType",mime,"data",Base64.getEncoder().encodeToString(image)))))),"generationConfig",Map.of("responseMimeType","application/json","responseJsonSchema",Map.of("type","object","properties",Map.of("precos",Map.of("type","array","items",Map.of("type","number"))),"required",List.of("precos")))); var r=rest.post().uri("/models/{model}:generateContent",model).header("x-goog-api-key",key).contentType(MediaType.APPLICATION_JSON).body(body).retrieve().body(Map.class); var candidato=(Map)((List)r.get("candidates")).getFirst(); var conteudo=(Map)candidato.get("content"); var parte=(Map)((List)conteudo.get("parts")).getFirst(); return (String)parte.get("text"); } catch(ResourceAccessException e){throw new LeituraPrecoIaTimeoutException("Timeout Gemini.",e);} catch(RestClientException e){throw new LeituraPrecoIaProvedorException("Falha Gemini.",e);} }
+}

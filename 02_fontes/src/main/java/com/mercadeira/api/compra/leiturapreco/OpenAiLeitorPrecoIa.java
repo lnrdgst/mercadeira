@@ -9,11 +9,13 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.util.StringUtils;
 
 import tools.jackson.databind.ObjectMapper;
 
 @Service
+@ConditionalOnProperty(name = "mercadeira.ai-price-reader.provider", havingValue = "openai", matchIfMissing = true)
 public class OpenAiLeitorPrecoIa implements LeitorPrecoIa {
     private static final Logger logger = LoggerFactory.getLogger(OpenAiLeitorPrecoIa.class);
     private static final int MAXIMO_CANDIDATOS = 20;
