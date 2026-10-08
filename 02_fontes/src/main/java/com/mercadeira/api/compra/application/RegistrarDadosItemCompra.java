@@ -31,6 +31,14 @@ public class RegistrarDadosItemCompra {
     @Transactional
     public void executar(UUID usuarioId, UUID familiaId, UUID listaId, UUID itemId,
             BigDecimal precoUnitario, BigDecimal quantidadeComprada) {
+        var item = validarEdicao(usuarioId, familiaId, listaId, itemId);
+        item.registrarDadosDaCompra(precoUnitario, quantidadeComprada);
+    }
+
+    /** Reutilizado por acoes que exigem a mesma capacidade operacional da edicao financeira. */
+    @Transactional
+    public com.mercadeira.api.compra.domain.ItemCompra validarEdicao(UUID usuarioId, UUID familiaId, UUID listaId,
+            UUID itemId) {
         var lista = listas.findById(listaId).orElseThrow(() -> new ListaCompraNaoEncontradaException(listaId));
         if (!lista.getFamilia().getId().equals(familiaId)) throw new ListaCompraNaoEncontradaException(listaId);
         var membro = membros.findByFamilia_IdAndUsuario_IdAndStatus(familiaId, usuarioId, StatusMembroFamilia.ATIVO)
@@ -42,6 +50,6 @@ public class RegistrarDadosItemCompra {
         if (!participante.estaPresente()) throw new PresencaOperacionalObrigatoriaException();
         var item = itens.findByIdForUpdate(itemId).orElseThrow(() -> new ItemCompraNaoEncontradoException(itemId));
         if (!item.getCompra().getId().equals(compra.getId())) throw new ItemCompraNaoEncontradoException(itemId);
-        item.registrarDadosDaCompra(precoUnitario, quantidadeComprada);
+        return item;
     }
 }

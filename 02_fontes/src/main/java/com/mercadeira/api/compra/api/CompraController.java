@@ -17,6 +17,7 @@ import com.mercadeira.api.compra.application.GerenciarRegistrosFinanceirosCompra
 import com.mercadeira.api.compra.application.ContinuarCompra;
 import com.mercadeira.api.compra.application.EncerrarCompraProlongada;
 import com.mercadeira.api.compra.application.RegistrarDadosItemCompra;
+import com.mercadeira.api.compra.application.LerPrecoIaItemCompra;
 import com.mercadeira.api.compra.application.ColocarItemNoCarrinho;
 import com.mercadeira.api.compra.application.IniciarCompra;
 import com.mercadeira.api.compra.application.FluxoPresencaCompra;
@@ -25,6 +26,7 @@ import com.mercadeira.api.compra.domain.PresencaOperacional;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -33,6 +35,8 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.RequestPart;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/familias/{familiaId}/listas/{listaId}/compra")
@@ -54,6 +58,7 @@ public class CompraController {
     private final ContinuarCompra continuarCompra;
     private final EncerrarCompraProlongada encerrarCompraProlongada;
     private final RegistrarDadosItemCompra registrarDadosItemCompra;
+    private final LerPrecoIaItemCompra lerPrecoIaItemCompra;
 
     public CompraController(UsuarioAutenticado usuario, IniciarCompra iniciarCompra,
             ConsultarCompraDaLista consultarCompra, ColocarItemNoCarrinho colocarItemNoCarrinho,
@@ -63,7 +68,8 @@ public class CompraController {
             RestaurarItemNoCarrinho restaurarItemNoCarrinho,
             com.mercadeira.api.compra.application.AlterarMinhaPresencaCompra alterarPresenca,
             FluxoPresencaCompra fluxoPresenca, ContinuarCompra continuarCompra,
-            RegistrarDadosItemCompra registrarDadosItemCompra, EncerrarCompraProlongada encerrarCompraProlongada) {
+            RegistrarDadosItemCompra registrarDadosItemCompra, EncerrarCompraProlongada encerrarCompraProlongada,
+            LerPrecoIaItemCompra lerPrecoIaItemCompra) {
         this.alterarPresenca = alterarPresenca;
         this.fluxoPresenca = fluxoPresenca;
         this.solicitarRemocao = solicitarRemocao;
@@ -80,6 +86,7 @@ public class CompraController {
         this.continuarCompra = continuarCompra;
         this.registrarDadosItemCompra = registrarDadosItemCompra;
         this.encerrarCompraProlongada = encerrarCompraProlongada;
+        this.lerPrecoIaItemCompra = lerPrecoIaItemCompra;
     }
 
     @PostMapping
@@ -197,6 +204,20 @@ public class CompraController {
         return itemResponse(familiaId, listaId, itemCompraId);
     }
 
+    @PostMapping(path = "/itens/{itemCompraId}/leitura-preco-ia", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public LeituraPrecoIaResponse lerPrecoIa(@PathVariable UUID familiaId, @PathVariable UUID listaId,
+            @PathVariable UUID itemCompraId, @RequestPart("imagem") MultipartFile imagem) {
+        validarImagemLeituraPreco(imagem);
+        byte[] bytes;
+        try {
+            bytes = imagem.getBytes();
+        } catch (java.io.IOException exception) {
+            throw new IllegalArgumentException("Imagem invalida.");
+        }
+        return new LeituraPrecoIaResponse(lerPrecoIaItemCompra.executar(usuario.getId(), familiaId, listaId,
+                itemCompraId, bytes, imagem.getContentType()));
+    }
+
     @PostMapping("/itens")
     public ResponseEntity<ItemCompraResponse> adicionarItem(@PathVariable UUID familiaId, @PathVariable UUID listaId,
             @Valid @RequestBody AdicionarItemDuranteCompraRequest request) {
@@ -269,5 +290,15 @@ public class CompraController {
                 .findFirst()
                 .map(new ItemCompraResponseMapper(resultado, usuario.getId())::from)
                 .orElseThrow(() -> new IllegalStateException("Item da compra nao encontrado apos operacao."));
+    }
+
+    private void validarImagemLeituraPreco(MultipartFile imagem) {
+        if (imagem == null || imagem.isEmpty() || imagem.getSize() > 2 * 1024 * 1024) {
+            throw new IllegalArgumentException("Imagem invalida.");
+        }
+        String contentType = imagem.getContentType();
+        if (!MediaType.IMAGE_PNG_VALUE.equals(contentType) && !MediaType.IMAGE_JPEG_VALUE.equals(contentType)) {
+            throw new IllegalArgumentException("Tipo de imagem invalido.");
+        }
     }
 }

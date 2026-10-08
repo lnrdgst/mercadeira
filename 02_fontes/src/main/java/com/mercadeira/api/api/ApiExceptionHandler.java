@@ -53,6 +53,10 @@ import com.mercadeira.api.compra.application.AutoridadePresencaException;
 import com.mercadeira.api.compra.application.ConflitoPresencaException;
 import com.mercadeira.api.compra.domain.TransicaoStatusItemCompraInvalidaException;
 import com.mercadeira.api.compra.domain.RestauracaoItemCompraInvalidaException;
+import com.mercadeira.api.compra.leiturapreco.LeituraPrecoIaIndisponivelException;
+import com.mercadeira.api.compra.leiturapreco.LeituraPrecoIaTimeoutException;
+import com.mercadeira.api.compra.leiturapreco.LeituraPrecoIaProvedorException;
+import com.mercadeira.api.compra.leiturapreco.LeituraPrecoIaRespostaInvalidaException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -61,6 +65,8 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 
 @RestControllerAdvice
 public class ApiExceptionHandler {
@@ -83,7 +89,8 @@ public class ApiExceptionHandler {
     }
 
     @ExceptionHandler({ HttpMessageNotReadableException.class, DadosUsuarioInvalidosException.class,
-            IllegalArgumentException.class, CodigoFamiliaInvalidoException.class, DadosFinanceirosItemCompraInvalidosException.class })
+            IllegalArgumentException.class, CodigoFamiliaInvalidoException.class, DadosFinanceirosItemCompraInvalidosException.class,
+            MissingServletRequestPartException.class, MaxUploadSizeExceededException.class })
     ResponseEntity<ErroApiResponse> tratarRequisicaoInvalida(Exception exception, HttpServletRequest request) {
         return resposta(HttpStatus.BAD_REQUEST, "REQUISICAO_INVALIDA", "Requisicao invalida.", request, Map.of());
     }
@@ -138,6 +145,26 @@ public class ApiExceptionHandler {
     @ExceptionHandler(OrdemItensInvalidaException.class)
     ResponseEntity<ErroApiResponse> tratarOrdemInvalida(OrdemItensInvalidaException exception, HttpServletRequest request) {
         return resposta(HttpStatus.BAD_REQUEST, "REQUISICAO_INVALIDA", exception.getMessage(), request, Map.of());
+    }
+
+    @ExceptionHandler(LeituraPrecoIaIndisponivelException.class)
+    ResponseEntity<ErroApiResponse> tratarLeituraPrecoIaIndisponivel(LeituraPrecoIaIndisponivelException exception,
+            HttpServletRequest request) {
+        return resposta(HttpStatus.SERVICE_UNAVAILABLE, "LEITURA_PRECO_IA_INDISPONIVEL",
+                "A leitura de preco por IA esta indisponivel.", request, Map.of());
+    }
+
+    @ExceptionHandler(LeituraPrecoIaTimeoutException.class)
+    ResponseEntity<ErroApiResponse> tratarLeituraPrecoIaTimeout(LeituraPrecoIaTimeoutException exception,
+            HttpServletRequest request) {
+        return resposta(HttpStatus.GATEWAY_TIMEOUT, "LEITURA_PRECO_IA_TIMEOUT",
+                "A leitura de preco por IA excedeu o tempo limite.", request, Map.of());
+    }
+
+    @ExceptionHandler({ LeituraPrecoIaProvedorException.class, LeituraPrecoIaRespostaInvalidaException.class })
+    ResponseEntity<ErroApiResponse> tratarLeituraPrecoIaProvedor(Exception exception, HttpServletRequest request) {
+        return resposta(HttpStatus.BAD_GATEWAY, "LEITURA_PRECO_IA_FALHOU",
+                "Nao foi possivel concluir a leitura de preco por IA.", request, Map.of());
     }
 
     @ExceptionHandler(Exception.class)

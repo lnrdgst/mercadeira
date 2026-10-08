@@ -12,9 +12,10 @@ import com.mercadeira.api.autenticacao.application.SessionProperties;
 import com.mercadeira.api.autenticacao.email.ResendProperties;
 import com.mercadeira.api.autenticacao.google.GoogleProperties;
 import com.mercadeira.api.compra.application.AlertaContinuidadeCompraProperties;
+import com.mercadeira.api.compra.leiturapreco.LeitorPrecoIaProperties;
 
 @SpringBootApplication(exclude = MailSenderAutoConfiguration.class)
-@EnableConfigurationProperties({ PasswordResetProperties.class, ResendProperties.class, SessionProperties.class, AlertaContinuidadeCompraProperties.class, GoogleProperties.class })
+@EnableConfigurationProperties({ PasswordResetProperties.class, ResendProperties.class, SessionProperties.class, AlertaContinuidadeCompraProperties.class, GoogleProperties.class, LeitorPrecoIaProperties.class })
 public class Application {
 
 	@Bean
