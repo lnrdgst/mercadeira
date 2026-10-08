@@ -11,9 +11,16 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestClientResponseException;
+
+import tools.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Component
 class RestClientOpenAiResponsesClient implements OpenAiResponsesClient {
+    private static final Logger logger = LoggerFactory.getLogger(RestClientOpenAiResponsesClient.class);
+    private static final ObjectMapper objectMapper = new ObjectMapper();
     private static final String INSTRUCAO = "Identifique todos os valores monetarios visiveis na imagem. "
             + "Nao identifique produto, nao escolha qual preco e correto, nao interprete atacado, varejo, clube ou promocao. "
             + "Nao devolva quantidade, codigo, percentual, peso ou volume como preco e nao infira valor ausente. "
@@ -51,9 +58,31 @@ class RestClientOpenAiResponsesClient implements OpenAiResponsesClient {
                 throw new LeituraPrecoIaTimeoutException("A leitura de preco excedeu o tempo limite.", exception);
             }
             throw new LeituraPrecoIaProvedorException("Nao foi possivel conectar ao provedor de leitura de preco.", exception);
+        } catch (RestClientResponseException exception) {
+            OpenAiError erro = extrairErro(exception.getResponseBodyAsString());
+            logger.warn("OpenAI Responses API falhou: status={}, type={}, code={}, param={}, message={}",
+                    exception.getStatusCode().value(), erro.type(), erro.code(), erro.param(), erro.message());
+            throw new LeituraPrecoIaProvedorException("O provedor de leitura de preco retornou uma falha.", exception);
         } catch (RestClientException exception) {
             throw new LeituraPrecoIaProvedorException("O provedor de leitura de preco retornou uma falha.", exception);
         }
+    }
+
+    private OpenAiError extrairErro(String corpo) {
+        try {
+            OpenAiErrorEnvelope envelope = objectMapper.readValue(corpo, OpenAiErrorEnvelope.class);
+            OpenAiError erro = envelope == null || envelope.error() == null ? new OpenAiError(null, null, null, null) : envelope.error();
+            return new OpenAiError(limpar(erro.type()), limpar(erro.code()), limpar(erro.param()), limpar(erro.message()));
+        } catch (Exception ignored) {
+            return new OpenAiError(null, null, null, null);
+        }
+    }
+
+    private String limpar(String valor) {
+        if (valor == null) return null;
+        String limpo = valor.replaceAll("data:[^\\s]+", "[data-url]").replaceAll("(?i)bearer\\s+\\S+", "Bearer [redacted]")
+                .replaceAll("(?i)sk-[a-z0-9_-]+", "[redacted]");
+        return limpo.substring(0, Math.min(500, limpo.length()));
     }
 
     private boolean causadoPorTimeout(Throwable exception) {
@@ -72,4 +101,6 @@ class RestClientOpenAiResponsesClient implements OpenAiResponsesClient {
     private record OpenAiResponsesResponse(String output_text) {
         String outputText() { return output_text; }
     }
+    private record OpenAiErrorEnvelope(OpenAiError error) { }
+    private record OpenAiError(String type, String code, String param, String message) { }
 }
