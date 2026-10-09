@@ -3,6 +3,7 @@ package com.mercadeira.api.lista.api;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.stream.Collectors;
 
@@ -31,6 +32,7 @@ import com.mercadeira.api.lista.application.RemoverParticipanteLista;
 import com.mercadeira.api.lista.application.ReordenarItensLista;
 import com.mercadeira.api.lista.repository.ListaCompraRepository;
 import com.mercadeira.api.lista.repository.ParticipanteListaRepository;
+import com.mercadeira.api.lista.repository.ReferenciaPrecoItensRepository;
 import com.mercadeira.api.familia.repository.MembroFamiliaRepository;
 import com.mercadeira.api.familia.domain.StatusMembroFamilia;
 import jakarta.validation.Valid;
@@ -63,19 +65,22 @@ public class ListaCompraController {
     private final RegistroFinanceiroCompraRepository registrosFinanceiros;
     private final ParticipanteCompraRepository participantesCompra;
     private final AlertaContinuidadeCompra alertaContinuidade;
+    private final ReferenciaPrecoItensRepository referenciasPreco;
 
     public ListaCompraController(ReutilizarListaCompra reutilizar, ReaproveitarItensForaCompra reaproveitarItensFora, EditarDadosBasicosLista editarDados, UsuarioAutenticado usuario, CriarListaCompra criar, ListarListasFamilia listar,
             ConsultarListaCompra consultar, ListarParticipantesLista participantes, AdicionarParticipanteLista adicionarParticipante,
             RemoverParticipanteLista removerParticipante, ListarItensLista itens, AdicionarItemLista adicionarItem,
             EditarItemLista editarItem, RemoverItemLista removerItem, ReordenarItensLista reordenar, ListaCompraRepository listaRepository, MembroFamiliaRepository membroRepository, ParticipanteListaRepository participanteRepository,
             CompraRepository compraRepository, ExcluirListaCompra excluir, RegistroFinanceiroCompraRepository registrosFinanceiros,
-            ParticipanteCompraRepository participantesCompra, AlertaContinuidadeCompra alertaContinuidade) {
+            ParticipanteCompraRepository participantesCompra, AlertaContinuidadeCompra alertaContinuidade,
+            ReferenciaPrecoItensRepository referenciasPreco) {
         this.reutilizar = reutilizar; this.reaproveitarItensFora = reaproveitarItensFora; this.editarDados = editarDados; this.usuario = usuario; this.criar = criar; this.listar = listar; this.consultar = consultar;
         this.participantes = participantes; this.adicionarParticipante = adicionarParticipante; this.removerParticipante = removerParticipante;
         this.itens = itens; this.adicionarItem = adicionarItem; this.editarItem = editarItem; this.removerItem = removerItem; this.reordenar = reordenar;
         this.listaRepository = listaRepository; this.membroRepository = membroRepository; this.participanteRepository = participanteRepository;
         this.compraRepository = compraRepository; this.excluir = excluir; this.registrosFinanceiros = registrosFinanceiros;
         this.participantesCompra = participantesCompra; this.alertaContinuidade = alertaContinuidade;
+        this.referenciasPreco = referenciasPreco;
     }
 
     @GetMapping public ResponseEntity<List<ListaCompraResponse>> listar(@PathVariable UUID familiaId,
@@ -130,7 +135,10 @@ public class ListaCompraController {
                 && compraRepository.findByListaCompra_Id(listaId).isEmpty()
                 && (lista.getCriadaPorMembroFamilia().getId().equals(membro.getId())
                         || membro.getPapel() == com.mercadeira.api.familia.domain.PapelMembroFamilia.ADMINISTRADOR);
-        return ListaCompraDetalheResponse.from(lista, membro, participanteAtivo, podeExcluirLista);
+        var itensDaLista = itens.listar(usuario.getId(), familiaId, listaId);
+        var referencias = referenciasDaLista(familiaId, lista);
+        return ListaCompraDetalheResponse.from(lista, membro, participanteAtivo, podeExcluirLista,
+                estimativa(lista, itensDaLista, referencias));
     }
     @DeleteMapping("/{listaId}") public ResponseEntity<Void> excluir(@PathVariable UUID familiaId, @PathVariable UUID listaId) {
         excluir.excluir(usuario.getId(), familiaId, listaId); return ResponseEntity.noContent().build();
@@ -145,7 +153,13 @@ public class ListaCompraController {
         removerParticipante.remover(usuario.getId(), familiaId, listaId, membroFamiliaId); return ResponseEntity.noContent().build();
     }
     @GetMapping("/{listaId}/itens") public List<ItemListaResponse> itens(@PathVariable UUID familiaId, @PathVariable UUID listaId) {
-        return itens.listar(usuario.getId(), familiaId, listaId).stream().map(ItemListaResponse::from).toList();
+        var lista = listaRepository.findById(listaId).orElseThrow();
+        var referencias = referenciasDaLista(familiaId, lista);
+        return itens.listar(usuario.getId(), familiaId, listaId).stream().map(item -> {
+            var referencia = referencias.get(item.getId());
+            return ItemListaResponse.from(item, referencia == null ? null : new ItemListaResponse.ReferenciaPreco(
+                    referencia.precoUnitario(), referencia.data(), referencia.estabelecimento()));
+        }).toList();
     }
     @PostMapping("/{listaId}/itens") public ResponseEntity<ItemListaResponse> adicionarItem(@PathVariable UUID familiaId, @PathVariable UUID listaId, @Valid @RequestBody ItemListaRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(ItemListaResponse.from(adicionarItem.adicionar(usuario.getId(), familiaId, listaId, request.descricao(), request.quantidade(), request.unidadeMedida(), request.marca(), request.observacoes())));
@@ -163,6 +177,29 @@ public class ListaCompraController {
     private Map<UUID, ResumoFinanceiroCompraResponse> resumirPorListaIds(List<UUID> listaIds) {
         if (listaIds.isEmpty()) return Map.of();
         return resumir(registrosFinanceiros.resumirPorListaIds(listaIds));
+    }
+
+    private Map<UUID, ReferenciaPrecoItensRepository.Referencia> referenciasDaLista(UUID familiaId,
+            com.mercadeira.api.lista.domain.ListaCompra lista) {
+        if (lista.getStatus() != com.mercadeira.api.lista.domain.StatusListaCompra.EM_PREPARACAO) return Map.of();
+        return referenciasPreco.buscar(familiaId, lista.getId(), lista.getCategoria().name()).stream()
+                .collect(Collectors.toMap(ReferenciaPrecoItensRepository.Referencia::itemListaId, referencia -> referencia));
+    }
+
+    private ListaCompraDetalheResponse.Estimativa estimativa(com.mercadeira.api.lista.domain.ListaCompra lista,
+            List<com.mercadeira.api.lista.domain.ItemLista> itensDaLista,
+            Map<UUID, ReferenciaPrecoItensRepository.Referencia> referencias) {
+        if (lista.getStatus() != com.mercadeira.api.lista.domain.StatusListaCompra.EM_PREPARACAO) return null;
+        var valor = BigDecimal.ZERO;
+        int itensComReferencia = 0;
+        for (var item : itensDaLista) {
+            var referencia = referencias.get(item.getId());
+            if (referencia != null && item.getQuantidade() != null) {
+                valor = valor.add(item.getQuantidade().multiply(referencia.precoUnitario()));
+                itensComReferencia++;
+            }
+        }
+        return new ListaCompraDetalheResponse.Estimativa(valor, itensComReferencia, itensDaLista.size());
     }
 
     private AlertaContinuidadeCompraResponse alertaDaLista(UUID listaId, UUID membroId) {
