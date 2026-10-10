@@ -152,6 +152,61 @@ class ApiIntegrationTests {
     }
 
     @Test
+    void listagemCorrigeSomenteAUnicaFamiliaAtivaSemPrincipal() throws Exception {
+        Usuario ana = usuario("Ana");
+        Familia unica = criarFamilia.criar(ana.getId(), "Unica");
+        entityManager.flush();
+        jdbcTemplate.update("update membro_familia set principal = false where familia_id = ? and usuario_id = ?", unica.getId(), ana.getId());
+        entityManager.clear();
+
+        mockMvc.perform(get("/api/familias").header("Authorization", bearer(ana)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(unica.getId().toString()))
+                .andExpect(jsonPath("$[0].principal").value(true));
+        entityManager.flush();
+        assertThat(jdbcTemplate.queryForObject("select principal from membro_familia where familia_id = ? and usuario_id = ?", Boolean.class, unica.getId(), ana.getId())).isTrue();
+
+        Familia segunda = criarFamilia.criar(ana.getId(), "Segunda");
+        entityManager.flush();
+        jdbcTemplate.update("update membro_familia set principal = false where usuario_id = ?", ana.getId());
+        entityManager.clear();
+        mockMvc.perform(get("/api/familias").header("Authorization", bearer(ana)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].principal").value(false))
+                .andExpect(jsonPath("$[1].principal").value(false));
+
+        mockMvc.perform(put("/api/familias/{familiaId}/principal", segunda.getId()).header("Authorization", bearer(ana)))
+                .andExpect(status().isNoContent());
+        mockMvc.perform(get("/api/familias").header("Authorization", bearer(ana)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(segunda.getId().toString()))
+                .andExpect(jsonPath("$[0].principal").value(true))
+                .andExpect(jsonPath("$[1].principal").value(false));
+    }
+
+    @Test
+    void listagemNaoPromoveVinculoOuFamiliaInativos() throws Exception {
+        Usuario ana = usuario("Ana");
+        Familia familia = criarFamilia.criar(ana.getId(), "Inativa");
+        entityManager.flush();
+        jdbcTemplate.update("update membro_familia set principal = false, status = 'INATIVO' where familia_id = ? and usuario_id = ?", familia.getId(), ana.getId());
+        entityManager.clear();
+        mockMvc.perform(get("/api/familias").header("Authorization", bearer(ana)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$").isEmpty());
+        assertThat(jdbcTemplate.queryForObject("select principal from membro_familia where familia_id = ? and usuario_id = ?", Boolean.class, familia.getId(), ana.getId())).isFalse();
+
+        Usuario bia = usuario("Bia");
+        Familia familiaInativa = criarFamilia.criar(bia.getId(), "Familia inativa");
+        entityManager.flush();
+        jdbcTemplate.update("update familia set status = 'INATIVA' where id = ?", familiaInativa.getId());
+        entityManager.clear();
+        mockMvc.perform(get("/api/familias").header("Authorization", bearer(bia)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$").isEmpty());
+        entityManager.flush();
+        assertThat(jdbcTemplate.queryForObject("select principal from membro_familia where familia_id = ? and usuario_id = ?", Boolean.class, familiaInativa.getId(), bia.getId())).isFalse();
+    }
+
+    @Test
     void saidaERemocaoLimpamFamiliaPrincipal() throws Exception {
         Usuario ana = usuario("Ana");
         Familia familia = criarFamilia.criar(ana.getId(), "Casa");
