@@ -223,7 +223,7 @@ class FinalizarCompraIntegrationTests {
     @Test
     void membroInativoNaoFinalizaNemFazReplay() throws Exception {
         var c=contexto();
-        jdbc.update("update membro_familia set status='INATIVO' where id=?",c.outroMembro());
+        jdbc.update("update membro_familia set principal=false, status='INATIVO' where id=?",c.outroMembro());
         finalizar(c,c.outro(),403);
         finalizar(c,c.responsavel(),200);
         finalizar(c,c.outro(),403);

@@ -121,7 +121,7 @@ class EditarDadosBasicosListaIntegrationTests {
             .contentType(MediaType.APPLICATION_JSON).content(BODY)).andExpect(status().isNotFound());
         mvc.perform(put("/api/familias/"+familiaId+"/listas/"+UUID.randomUUID()).header("Authorization", token(criador))
             .contentType(MediaType.APPLICATION_JSON).content(BODY)).andExpect(status().isNotFound());
-        jdbc.update("update membro_familia set status='INATIVO' where usuario_id=?", criador.getId());
+        jdbc.update("update membro_familia set principal=false, status='INATIVO' where usuario_id=?", criador.getId());
         mvc.perform(put(url).header("Authorization", token(criador)).contentType(MediaType.APPLICATION_JSON).content(BODY))
             .andExpect(status().isForbidden());
     }

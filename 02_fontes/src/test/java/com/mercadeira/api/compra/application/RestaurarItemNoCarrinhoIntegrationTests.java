@@ -168,7 +168,7 @@ class RestaurarItemNoCarrinhoIntegrationTests {
         var c=removido(); UUID usuario;
         if(tipo.equals("inativo")) {
             usuario=c.camilaUsuarioId();
-            jdbcTemplate.update("update membro_familia set status='INATIVO' where id=?",c.camilaMembroId());
+            jdbcTemplate.update("update membro_familia set principal=false, status='INATIVO' where id=?",c.camilaMembroId());
         } else if(tipo.equals("outra_familia")) usuario=criarContexto().primeiroUsuarioId();
         else {
             var novo=usuarioRepository.saveAndFlush(Usuario.criar("Observador",UUID.randomUUID()+"@test.local","hash",Instant.now()));

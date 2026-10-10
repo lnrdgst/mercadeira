@@ -25,6 +25,10 @@ public interface MembroFamiliaRepository extends JpaRepository<MembroFamilia, UU
     @EntityGraph(attributePaths = "familia")
     List<MembroFamilia> findByUsuario_IdAndStatusOrderByFamilia_NomeAsc(UUID usuarioId, StatusMembroFamilia status);
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select membro from MembroFamilia membro join fetch membro.familia where membro.usuario.id = :usuarioId order by membro.id")
+    List<MembroFamilia> findByUsuarioIdForUpdate(@Param("usuarioId") UUID usuarioId);
+
     Optional<MembroFamilia> findByFamilia_IdAndUsuario_Id(UUID familiaId, UUID usuarioId);
 
     @EntityGraph(attributePaths = "familia")

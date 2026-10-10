@@ -9,6 +9,7 @@ import com.mercadeira.api.compra.repository.ParticipanteCompraRepository;
 import com.mercadeira.api.familia.application.AprovarSolicitacaoEntradaFamilia;
 import com.mercadeira.api.familia.application.ConsultarMinhasSolicitacoesPendentes;
 import com.mercadeira.api.familia.application.CriarFamilia;
+import com.mercadeira.api.familia.application.DefinirFamiliaPrincipal;
 import com.mercadeira.api.familia.application.ListarFamiliasAtivasUsuario;
 import com.mercadeira.api.familia.application.ListarSolicitacoesPendentes;
 import com.mercadeira.api.familia.application.MembroSemPermissaoException;
@@ -34,6 +35,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -45,6 +47,7 @@ public class FamiliaController {
 
     private final UsuarioAutenticado usuarioAutenticado;
     private final CriarFamilia criarFamilia;
+    private final DefinirFamiliaPrincipal definirFamiliaPrincipal;
     private final ListarFamiliasAtivasUsuario listarFamiliasAtivasUsuario;
     private final ConsultarMinhasSolicitacoesPendentes consultarMinhasSolicitacoesPendentes;
     private final SolicitarEntradaFamiliaPorCodigo solicitarEntradaFamiliaPorCodigo;
@@ -60,7 +63,7 @@ public class FamiliaController {
     private final MembroFamiliaRepository membroFamiliaRepository;
     private final ParticipanteCompraRepository participanteCompraRepository;
 
-    public FamiliaController(UsuarioAutenticado usuarioAutenticado, CriarFamilia criarFamilia,
+    public FamiliaController(UsuarioAutenticado usuarioAutenticado, CriarFamilia criarFamilia, DefinirFamiliaPrincipal definirFamiliaPrincipal,
             ListarFamiliasAtivasUsuario listarFamiliasAtivasUsuario,
             ConsultarMinhasSolicitacoesPendentes consultarMinhasSolicitacoesPendentes,
             SolicitarEntradaFamiliaPorCodigo solicitarEntradaFamiliaPorCodigo,
@@ -75,6 +78,7 @@ public class FamiliaController {
             ParticipanteCompraRepository participanteCompraRepository) {
         this.usuarioAutenticado = usuarioAutenticado;
         this.criarFamilia = criarFamilia;
+        this.definirFamiliaPrincipal = definirFamiliaPrincipal;
         this.listarFamiliasAtivasUsuario = listarFamiliasAtivasUsuario;
         this.consultarMinhasSolicitacoesPendentes = consultarMinhasSolicitacoesPendentes;
         this.solicitarEntradaFamiliaPorCodigo = solicitarEntradaFamiliaPorCodigo;
@@ -101,8 +105,7 @@ public class FamiliaController {
     public ResponseEntity<FamiliaResponse> criar(@Valid @RequestBody CriarFamiliaRequest request) {
         Familia familia = criarFamilia.criar(usuarioAutenticado.getId(), request.nome());
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(FamiliaResponse.from(familia, PapelMembroFamilia.ADMINISTRADOR, false, false,
-                        MotivoSaidaFamiliaIndisponivel.ADMINISTRADOR_UNICO));
+                .body(familiaResponse(membroAtivoNaFamilia(familia.getId())));
     }
 
     @PostMapping("/solicitacoes")
@@ -161,6 +164,12 @@ public class FamiliaController {
         return ResponseEntity.noContent().build();
     }
 
+    @PutMapping("/{familiaId}/principal")
+    public ResponseEntity<Void> definirPrincipal(@PathVariable UUID familiaId) {
+        definirFamiliaPrincipal.definir(usuarioAutenticado.getId(), familiaId);
+        return ResponseEntity.noContent().build();
+    }
+
     @DeleteMapping("/{familiaId}/membros/{membroId}")
     public ResponseEntity<Void> removerIntegrante(@PathVariable UUID familiaId, @PathVariable UUID membroId) {
         removerIntegranteFamilia.remover(familiaId, usuarioAutenticado.getId(), membroId);
@@ -199,7 +208,7 @@ public class FamiliaController {
             motivo = MotivoSaidaFamiliaIndisponivel.COMPRA_EM_ANDAMENTO;
         }
         boolean podeExcluir = administradores.size() == 1 && administradores.getFirst().getUsuario().getId().equals(usuarioAutenticado.getId()) && !compraRepository.existsByListaCompra_Familia_Id(membro.getFamilia().getId());
-        return FamiliaResponse.from(membro.getFamilia(), membro.getPapel(), podeExcluir, motivo == null, motivo);
+        return FamiliaResponse.from(membro.getFamilia(), membro.getPapel(), membro.isPrincipal(), podeExcluir, motivo == null, motivo);
     }
 
     private MembroFamilia membroAtivoNaFamilia(UUID familiaId) {

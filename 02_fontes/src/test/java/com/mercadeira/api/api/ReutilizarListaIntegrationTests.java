@@ -145,7 +145,7 @@ class ReutilizarListaIntegrationTests {
         mvc.perform(post(url+"/reutilizar")).andExpect(status().isUnauthorized());
         mvc.perform(post(url+"/reutilizar").header("Authorization",token(usuario()))).andExpect(status().isForbidden());
         mvc.perform(post("/api/familias/"+UUID.randomUUID()+"/listas/"+listaId+"/reutilizar").header("Authorization",token(criador))).andExpect(status().isNotFound());
-        jdbc.update("update membro_familia set status='INATIVO' where usuario_id=?",criador.getId());
+        jdbc.update("update membro_familia set principal=false, status='INATIVO' where usuario_id=?",criador.getId());
         mvc.perform(post(url+"/reutilizar").header("Authorization",token(criador))).andExpect(status().isForbidden());
         assertThat(jdbc.queryForObject("select count(*) from lista_compra where familia_id=?",Integer.class,familiaId)).isEqualTo(1);
     }

@@ -169,7 +169,7 @@ class PresencaOperacionalIntegrationTests {
         mvc.perform(put(c.url()+"/minha-presenca").with(jwt().jwt(j -> j.subject(observador.toString()))).contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isForbidden());
         mvc.perform(get(c.url()).with(jwt().jwt(j -> j.subject(observador.toString()))))
             .andExpect(jsonPath("$.contextoUsuario.podeAlterarPresenca").value(false));
-        jdbc.update("update membro_familia set status='INATIVO' where familia_id=? and usuario_id=?",c.familia(),c.bia());
+        jdbc.update("update membro_familia set principal=false, status='INATIVO' where familia_id=? and usuario_id=?",c.familia(),c.bia());
         mvc.perform(put(c.url()+"/minha-presenca").with(jwt().jwt(j -> j.subject(c.bia().toString()))).contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isForbidden());
         mvc.perform(put(c.url().replace(c.familia().toString(),UUID.randomUUID().toString())+"/minha-presenca")
             .with(jwt().jwt(j -> j.subject(c.ana().toString()))).contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isNotFound());

@@ -47,6 +47,9 @@ public class MembroFamilia {
     @Column(name = "pode_iniciar_compra", nullable = false)
     private boolean podeIniciarCompra = true;
 
+    @Column(name = "principal", nullable = false)
+    private boolean principal;
+
     @Column(name = "criado_em", nullable = false)
     private Instant criadoEm;
 
@@ -71,6 +74,7 @@ public class MembroFamilia {
         membro.papel = papel;
         membro.status = StatusMembroFamilia.ATIVO;
         membro.podeIniciarCompra = true;
+        membro.principal = false;
         membro.criadoEm = agora;
         membro.atualizadoEm = agora;
         return membro;
@@ -79,6 +83,7 @@ public class MembroFamilia {
     public void reativarComoMembro(Instant agora) {
         this.papel = PapelMembroFamilia.MEMBRO;
         this.status = StatusMembroFamilia.ATIVO;
+        this.principal = false;
         this.atualizadoEm = agora;
     }
 
@@ -93,6 +98,7 @@ public class MembroFamilia {
     }
 
     public void inativar(Instant agora) {
+        this.principal = false;
         this.status = StatusMembroFamilia.INATIVO;
         this.atualizadoEm = agora;
     }
@@ -118,6 +124,18 @@ public class MembroFamilia {
     }
 
     public boolean isPodeIniciarCompra() { return podeIniciarCompra; }
+
+    public boolean isPrincipal() { return principal; }
+
+    public void tornarPrincipal(Instant agora) {
+        this.principal = true;
+        this.atualizadoEm = agora;
+    }
+
+    public void removerComoPrincipal(Instant agora) {
+        this.principal = false;
+        this.atualizadoEm = agora;
+    }
 
     public void alterarPodeIniciarCompra(boolean podeIniciarCompra, Instant agora) {
         this.podeIniciarCompra = podeIniciarCompra;

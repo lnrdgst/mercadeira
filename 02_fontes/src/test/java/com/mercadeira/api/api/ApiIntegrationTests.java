@@ -101,6 +101,87 @@ class ApiIntegrationTests {
     }
 
     @Test
+    void familiaPrincipalEhExpostaETrocadaPorQualquerMembroAtivo() throws Exception {
+        Usuario ana = usuario("Ana");
+        Familia primeira = criarFamilia.criar(ana.getId(), "Primeira");
+        Familia segunda = criarFamilia.criar(ana.getId(), "Segunda");
+        Usuario bia = usuario("Bia");
+        entityManager.flush();
+        jdbcTemplate.update("insert into membro_familia (id, familia_id, usuario_id, papel, status, criado_em, atualizado_em) values (?, ?, ?, 'MEMBRO', 'ATIVO', now(), now())",
+                UUID.randomUUID(), segunda.getId(), bia.getId());
+        assertThat(jdbcTemplate.queryForObject("select principal from membro_familia where familia_id = ? and usuario_id = ?", Boolean.class, segunda.getId(), bia.getId())).isFalse();
+
+        mockMvc.perform(get("/api/familias").header("Authorization", bearer(ana)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(primeira.getId().toString()))
+                .andExpect(jsonPath("$[0].principal").value(true))
+                .andExpect(jsonPath("$[1].id").value(segunda.getId().toString()))
+                .andExpect(jsonPath("$[1].principal").value(false));
+
+        mockMvc.perform(put("/api/familias/{familiaId}/principal", segunda.getId()).header("Authorization", bearer(bia)))
+                .andExpect(status().isNoContent());
+        entityManager.flush();
+        assertThat(jdbcTemplate.queryForObject("select principal from membro_familia where familia_id = ? and usuario_id = ?", Boolean.class, segunda.getId(), bia.getId())).isTrue();
+
+        mockMvc.perform(put("/api/familias/{familiaId}/principal", segunda.getId()).header("Authorization", bearer(ana)))
+                .andExpect(status().isNoContent());
+        entityManager.flush();
+        assertThat(jdbcTemplate.queryForObject("select count(*) from membro_familia where usuario_id = ? and principal", Integer.class, ana.getId())).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject("select principal from membro_familia where familia_id = ? and usuario_id = ?", Boolean.class, primeira.getId(), ana.getId())).isFalse();
+
+        Usuario externo = usuario("Externo");
+        mockMvc.perform(put("/api/familias/{familiaId}/principal", segunda.getId()).header("Authorization", bearer(externo)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void familiaPrincipalRejeitaVinculoOuFamiliaInativos() throws Exception {
+        Usuario ana = usuario("Ana");
+        Familia familia = criarFamilia.criar(ana.getId(), "Casa Ana");
+        Usuario bia = usuario("Bia");
+        entityManager.flush();
+        jdbcTemplate.update("insert into membro_familia (id, familia_id, usuario_id, papel, status, criado_em, atualizado_em) values (?, ?, ?, 'MEMBRO', 'INATIVO', now(), now())",
+                UUID.randomUUID(), familia.getId(), bia.getId());
+        mockMvc.perform(put("/api/familias/{familiaId}/principal", familia.getId()).header("Authorization", bearer(bia)))
+                .andExpect(status().isForbidden());
+
+        jdbcTemplate.update("update familia set status = 'INATIVA' where id = ?", familia.getId());
+        entityManager.clear();
+        mockMvc.perform(put("/api/familias/{familiaId}/principal", familia.getId()).header("Authorization", bearer(ana)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void saidaERemocaoLimpamFamiliaPrincipal() throws Exception {
+        Usuario ana = usuario("Ana");
+        Familia familia = criarFamilia.criar(ana.getId(), "Casa");
+        Usuario bia = usuario("Bia");
+        entityManager.flush();
+        UUID membroBia = UUID.randomUUID();
+        jdbcTemplate.update("insert into membro_familia (id, familia_id, usuario_id, papel, status, criado_em, atualizado_em) values (?, ?, ?, 'MEMBRO', 'ATIVO', now(), now())",
+                membroBia, familia.getId(), bia.getId());
+        mockMvc.perform(put("/api/familias/{familiaId}/principal", familia.getId()).header("Authorization", bearer(bia)))
+                .andExpect(status().isNoContent());
+        mockMvc.perform(delete("/api/familias/{familiaId}/membros/{membroId}", familia.getId(), membroBia)
+                        .header("Authorization", bearer(ana)))
+                .andExpect(status().isNoContent());
+        entityManager.flush();
+        assertThat(jdbcTemplate.queryForObject("select principal from membro_familia where id = ?", Boolean.class, membroBia)).isFalse();
+
+        Usuario carla = usuario("Carla");
+        entityManager.flush();
+        UUID membroCarla = UUID.randomUUID();
+        jdbcTemplate.update("insert into membro_familia (id, familia_id, usuario_id, papel, status, criado_em, atualizado_em) values (?, ?, ?, 'MEMBRO', 'ATIVO', now(), now())",
+                membroCarla, familia.getId(), carla.getId());
+        mockMvc.perform(put("/api/familias/{familiaId}/principal", familia.getId()).header("Authorization", bearer(carla)))
+                .andExpect(status().isNoContent());
+        mockMvc.perform(delete("/api/familias/{familiaId}/membros/me", familia.getId()).header("Authorization", bearer(carla)))
+                .andExpect(status().isNoContent());
+        entityManager.flush();
+        assertThat(jdbcTemplate.queryForObject("select principal from membro_familia where id = ?", Boolean.class, membroCarla)).isFalse();
+    }
+
+    @Test
     void rotasDeFamiliaExigemJwt() throws Exception {
         mockMvc.perform(get("/api/familias")).andExpect(status().isUnauthorized());
     }

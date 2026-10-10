@@ -178,7 +178,7 @@ class RestauracaoItemCompraHttpIntegrationTests {
         var c = contexto();
         remover(c);
         if (replay) restaurar(c, c.terceiro(), 200);
-        jdbc.update("update membro_familia set status = 'INATIVO' where id = ?", c.terceiroMembro());
+        jdbc.update("update membro_familia set principal = false, status = 'INATIVO' where id = ?", c.terceiroMembro());
         restaurar(c, c.terceiro(), 403);
         mvc.perform(get(c.url()).header("Authorization", c.terceiro())).andExpect(status().isForbidden());
     }

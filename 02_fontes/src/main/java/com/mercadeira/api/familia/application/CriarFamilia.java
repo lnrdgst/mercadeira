@@ -67,11 +67,14 @@ public class CriarFamilia {
 
         familiaRepository.save(familia);
 
-        membroFamiliaRepository.save(
-                MembroFamilia.criarAdministrador(
-                        familia,
-                        usuario,
-                        clock.instant()));
+        boolean primeiraFamiliaAtiva = membroFamiliaRepository
+                .findByUsuario_IdAndStatusOrderByFamilia_NomeAsc(usuarioId, com.mercadeira.api.familia.domain.StatusMembroFamilia.ATIVO)
+                .isEmpty();
+        MembroFamilia membro = MembroFamilia.criarAdministrador(familia, usuario, clock.instant());
+        if (primeiraFamiliaAtiva) {
+            membro.tornarPrincipal(clock.instant());
+        }
+        membroFamiliaRepository.save(membro);
 
         return familia;
     }

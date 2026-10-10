@@ -127,7 +127,7 @@ class SugestoesItensIntegrationTests {
         UUID membro = UUID.randomUUID();
         jdbc.update("insert into membro_familia(id,familia_id,usuario_id,papel,status,criado_em,atualizado_em) values (?,?,?,'MEMBRO','ATIVO',now(),now())", membro, familia, outro.getId());
         mvc.perform(get(url).param("listaId", lista.toString()).param("categoria", "SUPERMERCADO").header("Authorization",token(outro))).andExpect(status().isOk()).andExpect(jsonPath("$[0].descricao").value("Arroz"));
-        jdbc.update("update membro_familia set status='INATIVO' where id=?", membro);
+        jdbc.update("update membro_familia set principal=false, status='INATIVO' where id=?", membro);
         mvc.perform(get(url).param("listaId", lista.toString()).param("categoria", "SUPERMERCADO").header("Authorization",token(outro))).andExpect(status().isForbidden());
     }
     @Test void filtraHistoricoPelaCategoriaDaListaAtualESemFallback() throws Exception {
