@@ -1,5 +1,13 @@
 # Mercadeira API
 
+## Famílias
+
+`PATCH /api/familias/{familiaId}` renomeia uma família e retorna `200 OK` com a `FamiliaResponse` atualizada.
+O payload é `{ "nome": "Novo nome" }`. Somente um vínculo `ATIVO` com papel `ADMINISTRADOR`
+pode realizar a alteração. O nome usa a mesma normalização da criação: remove espaços excedentes,
+remove o prefixo inicial `Família`/`Familia` e rejeita nome vazio ou maior que 120 caracteres.
+Somente o nome é alterado; integrantes, papéis, família principal, código de ingresso, listas e compras são preservados.
+
 ## AutenticaÃ§Ã£o local e Conta Google
 
 `Usuario` continua sendo a pessoa e seus vÃ­nculos no Mercadeira. As formas de acesso ficam em `UsuarioIdentidade`: contas existentes recebem `LOCAL` pela migration V21; um primeiro acesso Google cria somente `GOOGLE`, sem senha artificial. A identidade Google Ã© localizada pelo claim `sub` validado, nunca pelo e-mail; uma mudanÃ§a posterior de e-mail no Google apenas atualiza o metadado do provedor.

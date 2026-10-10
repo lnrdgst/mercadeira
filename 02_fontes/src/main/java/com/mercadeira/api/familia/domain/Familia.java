@@ -74,4 +74,9 @@ public class Familia {
     public StatusFamilia getStatus() {
         return status;
     }
+
+    public void renomear(String nome, Instant agora) {
+        this.nome = nome;
+        this.atualizadaEm = agora;
+    }
 }

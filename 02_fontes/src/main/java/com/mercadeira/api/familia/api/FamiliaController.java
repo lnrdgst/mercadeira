@@ -21,6 +21,7 @@ import com.mercadeira.api.compra.repository.CompraRepository;
 import com.mercadeira.api.familia.application.SolicitarEntradaFamiliaPorCodigo;
 import com.mercadeira.api.familia.application.TransferirAdministracaoFamilia;
 import com.mercadeira.api.familia.application.AlterarPermissaoIniciarCompra;
+import com.mercadeira.api.familia.application.AlterarNomeFamilia;
 import com.mercadeira.api.familia.domain.Familia;
 import com.mercadeira.api.familia.domain.MembroFamilia;
 import com.mercadeira.api.familia.domain.PapelMembroFamilia;
@@ -59,6 +60,7 @@ public class FamiliaController {
     private final SairDaFamilia sairDaFamilia;
     private final ExcluirFamiliaNuncaUtilizada excluirFamiliaNuncaUtilizada;
     private final AlterarPermissaoIniciarCompra alterarPermissaoIniciarCompra;
+    private final AlterarNomeFamilia alterarNomeFamilia;
     private final CompraRepository compraRepository;
     private final MembroFamiliaRepository membroFamiliaRepository;
     private final ParticipanteCompraRepository participanteCompraRepository;
@@ -73,7 +75,8 @@ public class FamiliaController {
             TransferirAdministracaoFamilia transferirAdministracaoFamilia,
             RemoverIntegranteFamilia removerIntegranteFamilia,
             SairDaFamilia sairDaFamilia,
-            ExcluirFamiliaNuncaUtilizada excluirFamiliaNuncaUtilizada, AlterarPermissaoIniciarCompra alterarPermissaoIniciarCompra, CompraRepository compraRepository,
+            ExcluirFamiliaNuncaUtilizada excluirFamiliaNuncaUtilizada, AlterarPermissaoIniciarCompra alterarPermissaoIniciarCompra,
+            AlterarNomeFamilia alterarNomeFamilia, CompraRepository compraRepository,
             MembroFamiliaRepository membroFamiliaRepository,
             ParticipanteCompraRepository participanteCompraRepository) {
         this.usuarioAutenticado = usuarioAutenticado;
@@ -90,6 +93,7 @@ public class FamiliaController {
         this.sairDaFamilia = sairDaFamilia;
         this.excluirFamiliaNuncaUtilizada = excluirFamiliaNuncaUtilizada; this.compraRepository = compraRepository;
         this.alterarPermissaoIniciarCompra = alterarPermissaoIniciarCompra;
+        this.alterarNomeFamilia = alterarNomeFamilia;
         this.membroFamiliaRepository = membroFamiliaRepository;
         this.participanteCompraRepository = participanteCompraRepository;
     }
@@ -114,6 +118,12 @@ public class FamiliaController {
         SolicitacaoEntradaFamilia solicitacao = solicitarEntradaFamiliaPorCodigo.solicitar(
                 usuarioAutenticado.getId(), request.codigoIngresso());
         return ResponseEntity.status(HttpStatus.CREATED).body(SolicitacaoEntradaFamiliaResponse.from(solicitacao));
+    }
+
+    @PatchMapping("/{familiaId}")
+    public FamiliaResponse alterarNome(@PathVariable UUID familiaId, @Valid @RequestBody AlterarNomeFamiliaRequest request) {
+        alterarNomeFamilia.alterar(familiaId, usuarioAutenticado.getId(), request.nome());
+        return familiaResponse(membroAtivoNaFamilia(familiaId));
     }
 
     @GetMapping("/solicitacoes/minhas-pendentes")

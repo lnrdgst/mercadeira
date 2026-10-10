@@ -5,6 +5,7 @@ import java.util.UUID;
 
 import com.mercadeira.api.familia.domain.Familia;
 import com.mercadeira.api.familia.domain.MembroFamilia;
+import com.mercadeira.api.familia.domain.NomeFamilia;
 import com.mercadeira.api.familia.repository.FamiliaRepository;
 import com.mercadeira.api.familia.repository.MembroFamiliaRepository;
 import com.mercadeira.api.usuario.domain.Usuario;
@@ -34,27 +35,9 @@ public class CriarFamilia {
         this.clock = clock;
     }
 
-    private String normalizarNome(String nome) {
-        if (nome == null || nome.isBlank()) {
-            throw new IllegalArgumentException("O nome da família é obrigatório.");
-        }
-
-        String nomeNormalizado = nome
-                .trim()
-                .replaceFirst("(?iu)^fam[ií]lia(?:\\s+|$)", "")
-                .replaceAll("\\s+", " ")
-                .trim();
-
-        if (nomeNormalizado.isBlank()) {
-            throw new IllegalArgumentException("O nome da família é obrigatório.");
-        }
-
-        return nomeNormalizado;
-    }
-
     @Transactional
     public Familia criar(UUID usuarioId, String nome) {
-        String nomeNormalizado = normalizarNome(nome);
+        String nomeNormalizado = NomeFamilia.normalizar(nome);
 
         Usuario usuario = usuarioRepository.findById(usuarioId)
                 .orElseThrow(() -> new UsuarioNaoEncontradoException(usuarioId));

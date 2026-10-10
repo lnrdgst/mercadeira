@@ -5,6 +5,7 @@ import static org.springframework.security.test.web.servlet.setup.SecurityMockMv
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -12,6 +13,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.nio.charset.StandardCharsets;
 import java.math.BigDecimal;
 import java.util.Base64;
+import java.util.List;
 import java.util.UUID;
 
 import com.mercadeira.api.autenticacao.application.AutenticarUsuario;
@@ -149,6 +151,71 @@ class ApiIntegrationTests {
         entityManager.clear();
         mockMvc.perform(put("/api/familias/{familiaId}/principal", familia.getId()).header("Authorization", bearer(ana)))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void administradorAtivoRenomeiaFamiliaSemAlterarDemaisDados() throws Exception {
+        Usuario administradora = usuario("Administradora");
+        Familia familia = criarFamilia.criar(administradora.getId(), "Nome original");
+        Usuario membro = usuario("Membro");
+        entityManager.flush();
+        jdbcTemplate.update("insert into membro_familia (id, familia_id, usuario_id, papel, status, criado_em, atualizado_em) values (?, ?, ?, 'MEMBRO', 'ATIVO', now(), now())",
+                UUID.randomUUID(), familia.getId(), membro.getId());
+        String codigoIngresso = familia.getCodigoIngresso();
+        entityManager.clear();
+
+        mockMvc.perform(patch("/api/familias/{familiaId}", familia.getId())
+                        .header("Authorization", bearer(administradora))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"nome\": \"  Família   Novo   nome  \"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(familia.getId().toString()))
+                .andExpect(jsonPath("$.nome").value("Novo nome"))
+                .andExpect(jsonPath("$.codigoIngresso").value(codigoIngresso))
+                .andExpect(jsonPath("$.principal").value(true));
+
+        entityManager.flush();
+        assertThat(jdbcTemplate.queryForObject("select nome from familia where id = ?", String.class, familia.getId()))
+                .isEqualTo("Novo nome");
+        assertThat(jdbcTemplate.queryForObject("select codigo_ingresso from familia where id = ?", String.class, familia.getId()))
+                .isEqualTo(codigoIngresso);
+        assertThat(jdbcTemplate.queryForObject("select count(*) from membro_familia where familia_id = ?", Integer.class, familia.getId()))
+                .isEqualTo(2);
+        assertThat(jdbcTemplate.queryForObject("select principal from membro_familia where familia_id = ? and usuario_id = ?", Boolean.class,
+                familia.getId(), administradora.getId())).isTrue();
+    }
+
+    @Test
+    void renomearFamiliaExigeAdministradorAtivoENomeValido() throws Exception {
+        Usuario administradora = usuario("Administradora");
+        Familia familia = criarFamilia.criar(administradora.getId(), "Casa");
+        Usuario membro = usuario("Membro");
+        Usuario inativo = usuario("Inativo");
+        Usuario semVinculo = usuario("Sem vinculo");
+        entityManager.flush();
+        jdbcTemplate.update("insert into membro_familia (id, familia_id, usuario_id, papel, status, criado_em, atualizado_em) values (?, ?, ?, 'MEMBRO', 'ATIVO', now(), now())",
+                UUID.randomUUID(), familia.getId(), membro.getId());
+        jdbcTemplate.update("insert into membro_familia (id, familia_id, usuario_id, papel, status, criado_em, atualizado_em) values (?, ?, ?, 'ADMINISTRADOR', 'INATIVO', now(), now())",
+                UUID.randomUUID(), familia.getId(), inativo.getId());
+        entityManager.clear();
+
+        for (Usuario usuarioSemPermissao : List.of(membro, inativo, semVinculo)) {
+            mockMvc.perform(patch("/api/familias/{familiaId}", familia.getId())
+                            .header("Authorization", bearer(usuarioSemPermissao))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"nome\": \"Nao permitido\"}"))
+                    .andExpect(status().isForbidden());
+        }
+        mockMvc.perform(patch("/api/familias/{familiaId}", UUID.randomUUID())
+                        .header("Authorization", bearer(administradora))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"nome\": \"Inexistente\"}"))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(patch("/api/familias/{familiaId}", familia.getId())
+                        .header("Authorization", bearer(administradora))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"nome\": \"   \"}"))
+                .andExpect(status().isBadRequest());
     }
 
     @Test
