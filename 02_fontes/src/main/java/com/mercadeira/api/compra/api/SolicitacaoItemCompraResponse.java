@@ -1,0 +1,3 @@
+package com.mercadeira.api.compra.api;
+import java.math.*; import java.time.*; import java.util.*; import com.mercadeira.api.compra.domain.*; import com.mercadeira.api.lista.domain.UnidadeMedida;
+public record SolicitacaoItemCompraResponse(UUID id,String descricao,BigDecimal quantidade,UnidadeMedida unidadeMedida,EstadoSolicitacaoItemCompra status,Instant criadoEm,UUID solicitanteParticipanteCompraId){ public static SolicitacaoItemCompraResponse from(SolicitacaoItemCompra s){return new SolicitacaoItemCompraResponse(s.getId(),s.getDescricao(),s.getQuantidade(),s.getUnidadeMedida(),s.getStatus(),s.getCriadoEm(),s.getSolicitanteId());}}
