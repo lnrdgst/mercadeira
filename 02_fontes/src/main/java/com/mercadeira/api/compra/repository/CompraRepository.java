@@ -30,6 +30,9 @@ public interface CompraRepository extends JpaRepository<Compra, UUID> {
             UUID familiaId,
             StatusCompra status);
 
+    @Query("select compra.listaCompra.id, compra.finalizadaEm from Compra compra where compra.listaCompra.id in :listaIds and compra.status = com.mercadeira.api.compra.domain.StatusCompra.FINALIZADA")
+    List<Object[]> findFinalizadasEmByListaCompraIds(@Param("listaIds") List<UUID> listaIds);
+
     long countByListaCompra_Familia_IdAndStatusAndFinalizadaEmBefore(UUID familiaId, StatusCompra status, Instant limite);
 
 }

@@ -91,9 +91,12 @@ public class ListaCompraController {
         var resumos = resumirPorListaIds(listas.stream()
                 .filter(lista -> lista.getStatus() == com.mercadeira.api.lista.domain.StatusListaCompra.FINALIZADA)
                 .map(lista -> lista.getId()).toList());
+        var finalizadasEm = finalizadasEmPorListaIds(listas.stream()
+                .filter(lista -> lista.getStatus() == com.mercadeira.api.lista.domain.StatusListaCompra.FINALIZADA)
+                .map(lista -> lista.getId()).toList());
         var membro = membroRepository.findByFamilia_IdAndUsuario_IdAndStatus(familiaId, usuario.getId(), StatusMembroFamilia.ATIVO).orElseThrow();
         return ResponseEntity.ok().header("X-Total-Compras-Anteriores", String.valueOf(listar.totalHistorico(usuario.getId(), familiaId, filtros)))
-                .body(listas.stream().map(lista -> ListaCompraResponse.from(lista, resumos.get(lista.getId()), alertaDaLista(lista.getId(), membro.getId()))).toList());
+                .body(listas.stream().map(lista -> ListaCompraResponse.from(lista, resumos.get(lista.getId()), alertaDaLista(lista.getId(), membro.getId()), finalizadasEm.get(lista.getId()))).toList());
     }
     @GetMapping("/historico")
     public HistoricoListaCompraResponse historico(@PathVariable UUID familiaId,
@@ -177,6 +180,12 @@ public class ListaCompraController {
     private Map<UUID, ResumoFinanceiroCompraResponse> resumirPorListaIds(List<UUID> listaIds) {
         if (listaIds.isEmpty()) return Map.of();
         return resumir(registrosFinanceiros.resumirPorListaIds(listaIds));
+    }
+
+    private Map<UUID, java.time.Instant> finalizadasEmPorListaIds(List<UUID> listaIds) {
+        if (listaIds.isEmpty()) return Map.of();
+        return compraRepository.findFinalizadasEmByListaCompraIds(listaIds).stream()
+                .collect(Collectors.toMap(linha -> (UUID) linha[0], linha -> (java.time.Instant) linha[1]));
     }
 
     private Map<UUID, ReferenciaPrecoItensRepository.Referencia> referenciasDaLista(UUID familiaId,

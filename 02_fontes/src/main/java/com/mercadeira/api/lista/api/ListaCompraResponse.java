@@ -9,20 +9,25 @@ import com.mercadeira.api.lista.domain.StatusListaCompra;
 import com.mercadeira.api.compra.api.AlertaContinuidadeCompraResponse;
 
 public record ListaCompraResponse(UUID id, String nome, CategoriaCompra categoria, String estabelecimento,
-        StatusListaCompra status, Instant criadaEm, Instant atualizadaEm, UUID criadaPorUsuarioId,
+        StatusListaCompra status, Instant criadaEm, Instant atualizadaEm, Instant finalizadaEm, UUID criadaPorUsuarioId,
         ResumoFinanceiroCompraResponse resumoFinanceiro, AlertaContinuidadeCompraResponse alertaContinuidade) {
     static ListaCompraResponse from(ListaCompra lista) {
-        return from(lista, null, null);
+        return from(lista, null, null, null);
     }
 
     static ListaCompraResponse from(ListaCompra lista, ResumoFinanceiroCompraResponse resumoFinanceiro) {
-        return from(lista, resumoFinanceiro, null);
+        return from(lista, resumoFinanceiro, null, null);
     }
 
     static ListaCompraResponse from(ListaCompra lista, ResumoFinanceiroCompraResponse resumoFinanceiro,
             AlertaContinuidadeCompraResponse alertaContinuidade) {
+        return from(lista, resumoFinanceiro, alertaContinuidade, null);
+    }
+
+    static ListaCompraResponse from(ListaCompra lista, ResumoFinanceiroCompraResponse resumoFinanceiro,
+            AlertaContinuidadeCompraResponse alertaContinuidade, Instant finalizadaEm) {
         return new ListaCompraResponse(lista.getId(), lista.getNome(), lista.getCategoria(), lista.getEstabelecimento(),
-                lista.getStatus(), lista.getCriadaEm(), lista.getAtualizadaEm(), lista.getCriadaPorMembroFamilia().getUsuario().getId(),
+                lista.getStatus(), lista.getCriadaEm(), lista.getAtualizadaEm(), finalizadaEm, lista.getCriadaPorMembroFamilia().getUsuario().getId(),
                 resumoFinanceiro, alertaContinuidade);
     }
 }
