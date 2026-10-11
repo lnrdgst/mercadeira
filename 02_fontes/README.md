@@ -8,6 +8,12 @@ pode realizar a alteração. O nome usa a mesma normalização da criação: rem
 remove o prefixo inicial `Família`/`Familia` e rejeita nome vazio ou maior que 120 caracteres.
 Somente o nome é alterado; integrantes, papéis, família principal, código de ingresso, listas e compras são preservados.
 
+## Busca de listas por item
+
+`GET /api/familias/{familiaId}/itens/sugestoes?texto=arr` retorna até dez sugestões deduplicadas de descrições históricas de `item_lista` e `item_compra` da família. A consulta exige vínculo familiar ativo e normaliza espaços e caixa.
+
+Os endpoints `GET /api/familias/{familiaId}/listas` e `/listas/historico` aceitam o parâmetro opcional `item`. Ele combina com período e participante e retorna somente listas que contenham uma descrição equivalente, considerando itens da lista e snapshots de compra. O filtro `criadaPorUsuarioId` não integra mais esse contrato.
+
 ## AutenticaÃ§Ã£o local e Conta Google
 
 `Usuario` continua sendo a pessoa e seus vÃ­nculos no Mercadeira. As formas de acesso ficam em `UsuarioIdentidade`: contas existentes recebem `LOCAL` pela migration V21; um primeiro acesso Google cria somente `GOOGLE`, sem senha artificial. A identidade Google Ã© localizada pelo claim `sub` validado, nunca pelo e-mail; uma mudanÃ§a posterior de e-mail no Google apenas atualiza o metadado do provedor.

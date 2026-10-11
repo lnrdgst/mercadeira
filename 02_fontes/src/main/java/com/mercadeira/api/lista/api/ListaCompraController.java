@@ -85,8 +85,8 @@ public class ListaCompraController {
 
     @GetMapping public ResponseEntity<List<ListaCompraResponse>> listar(@PathVariable UUID familiaId,
             @RequestParam(required = false) LocalDate criadaDe, @RequestParam(required = false) LocalDate criadaAte,
-            @RequestParam(required = false) UUID criadaPorUsuarioId, @RequestParam(required = false) UUID participanteMembroFamiliaId) {
-        var filtros = new FiltrosListas(criadaDe, criadaAte, criadaPorUsuarioId, participanteMembroFamiliaId);
+            @RequestParam(required = false) UUID participanteMembroFamiliaId, @RequestParam(required = false) String item) {
+        var filtros = new FiltrosListas(criadaDe, criadaAte, participanteMembroFamiliaId, item);
         var listas = listar.listar(usuario.getId(), familiaId, filtros);
         var resumos = resumirPorListaIds(listas.stream()
                 .filter(lista -> lista.getStatus() == com.mercadeira.api.lista.domain.StatusListaCompra.FINALIZADA)
@@ -99,8 +99,8 @@ public class ListaCompraController {
     public HistoricoListaCompraResponse historico(@PathVariable UUID familiaId,
             @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size,
             @RequestParam(required = false) LocalDate criadaDe, @RequestParam(required = false) LocalDate criadaAte,
-            @RequestParam(required = false) UUID criadaPorUsuarioId, @RequestParam(required = false) UUID participanteMembroFamiliaId) {
-        var compras = listar.historico(usuario.getId(), familiaId, page, size, new FiltrosListas(criadaDe, criadaAte, criadaPorUsuarioId, participanteMembroFamiliaId));
+            @RequestParam(required = false) UUID participanteMembroFamiliaId, @RequestParam(required = false) String item) {
+        var compras = listar.historico(usuario.getId(), familiaId, page, size, new FiltrosListas(criadaDe, criadaAte, participanteMembroFamiliaId, item));
         return HistoricoListaCompraResponse.from(compras, resumirPorCompraIds(compras.getContent().stream().map(compra -> compra.getId()).toList()));
     }
     @PostMapping public ResponseEntity<ListaCompraResponse> criar(@PathVariable UUID familiaId, @Valid @RequestBody ListaCompraRequest request) {

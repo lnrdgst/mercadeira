@@ -43,4 +43,27 @@ public class SugestoesItensRepository {
             (rs, row) -> new Sugestao(rs.getString("descricao"),
                 rs.getString("unidade_medida") == null ? null : UnidadeMedida.valueOf(rs.getString("unidade_medida"))));
     }
+
+    public List<String> buscarNaFamilia(UUID familiaId, String termo) {
+        return jdbc.query("""
+            with usos as (
+                select i.id, i.descricao, i.atualizado_em as usado_em
+                from item_lista i join lista_compra l on l.id = i.lista_compra_id
+                where l.familia_id = :familia
+                union all
+                select i.id, i.descricao_snapshot, coalesce(i.adicionado_em, c.iniciada_em)
+                from item_compra i join compra c on c.id = i.compra_id
+                join lista_compra l on l.id = c.lista_compra_id
+                where l.familia_id = :familia
+            ), normalizados as (
+                select *, btrim(regexp_replace(descricao, '[[:space:]]+', ' ', 'g')) as texto from usos
+            ), distintos as (
+                select *, row_number() over (partition by lower(texto) order by usado_em desc, id desc) as posicao
+                from normalizados
+                where texto <> '' and strpos(lower(texto), lower(btrim(regexp_replace(:termo, '[[:space:]]+', ' ', 'g')))) > 0
+            )
+            select texto from distintos where posicao = 1
+            order by usado_em desc, lower(texto), id desc limit 10
+            """, Map.of("familia", familiaId, "termo", termo), (rs, row) -> rs.getString("texto"));
+    }
 }

@@ -35,13 +35,22 @@ public class ConsultaListasFiltradas {
         var partes = new ArrayList<String>(); var valores = new ArrayList<Object>();
         if (f.inicio() != null) { partes.add(lista + ".criadaEm >= ?" + (valores.size()+1)); valores.add(f.inicio()); }
         if (f.fimExclusivo() != null) { partes.add(lista + ".criadaEm < ?" + (valores.size()+1)); valores.add(f.fimExclusivo()); }
-        if (f.criadaPorUsuarioId() != null) { partes.add(lista + ".criadaPorMembroFamilia.usuario.id = ?" + (valores.size()+1)); valores.add(f.criadaPorUsuarioId()); }
         if (f.participanteMembroFamiliaId() != null) {
             var parametro = "?" + (valores.size()+1);
             var participanteCompra = "exists (select participante from ParticipanteCompra participante where participante.compra" + (compra ? " = compra" : ".listaCompra = lista") + " and participante.membroFamilia.id = " + parametro + ")";
             var participanteLista = "exists (select participante from ParticipanteLista participante where participante.listaCompra = lista and participante.saiuEm is null and participante.membroFamilia.id = " + parametro + ")";
             partes.add(compra ? participanteCompra : "((lista.status = com.mercadeira.api.lista.domain.StatusListaCompra.EM_PREPARACAO and " + participanteLista + ") or (lista.status <> com.mercadeira.api.lista.domain.StatusListaCompra.EM_PREPARACAO and " + participanteCompra + "))");
             valores.add(f.participanteMembroFamiliaId());
+        }
+        if (f.item() != null && !f.item().isBlank()) {
+            var parametro = "?" + (valores.size() + 1);
+            var normalizado = "lower(trim(function('regexp_replace', %s, '[[:space:]]+', ' ', 'g')))";
+            var listaItem = "exists (select itemLista from ItemLista itemLista where itemLista.listaCompra = " + lista
+                    + " and " + normalizado.formatted("itemLista.descricao") + " = " + normalizado.formatted(parametro) + ")";
+            var compraItem = "exists (select itemCompra from ItemCompra itemCompra where itemCompra.compra.listaCompra = " + lista
+                    + " and " + normalizado.formatted("itemCompra.descricaoSnapshot") + " = " + normalizado.formatted(parametro) + ")";
+            partes.add("(" + listaItem + " or " + compraItem + ")");
+            valores.add(f.item());
         }
         return new Predicados(partes.isEmpty() ? "1 = 1" : String.join(" and ", partes), valores);
     }

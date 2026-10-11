@@ -103,6 +103,26 @@ class ApiIntegrationTests {
     }
 
     @Test
+    void buscaListasPorItemESugestoesUsamDescricaoNormalizadaDaFamilia() throws Exception {
+        Usuario ana = usuario("Ana");
+        Familia familia = criarFamilia.criar(ana.getId(), "Casa Ana");
+        ListaCompra comArroz = criarListaCompra.criar(ana.getId(), familia.getId(), "Mercado", CategoriaCompra.SUPERMERCADO, null);
+        ListaCompra semArroz = criarListaCompra.criar(ana.getId(), familia.getId(), "Farmacia", CategoriaCompra.FARMACIA, null);
+        adicionarItemLista.adicionar(ana.getId(), familia.getId(), comArroz.getId(), "  Arroz   integral ", BigDecimal.ONE, UnidadeMedida.UNIDADE, null, null);
+        adicionarItemLista.adicionar(ana.getId(), familia.getId(), semArroz.getId(), "Dipirona", BigDecimal.ONE, UnidadeMedida.UNIDADE, null, null);
+
+        mockMvc.perform(get("/api/familias/{familiaId}/itens/sugestoes", familia.getId())
+                        .header("Authorization", bearer(ana)).param("texto", " ARROZ "))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].descricao").value("Arroz integral"));
+        mockMvc.perform(get("/api/familias/{familiaId}/listas", familia.getId())
+                        .header("Authorization", bearer(ana)).param("item", " arroz   integral "))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].id").value(comArroz.getId().toString()));
+    }
+
+    @Test
     void familiaPrincipalEhExpostaETrocadaPorQualquerMembroAtivo() throws Exception {
         Usuario ana = usuario("Ana");
         Familia primeira = criarFamilia.criar(ana.getId(), "Primeira");

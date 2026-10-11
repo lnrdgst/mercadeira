@@ -24,4 +24,11 @@ public class SugerirItensFamilia {
         }
         return repository.buscar(familiaId, categoria, termo);
     }
+
+    @Transactional(readOnly = true)
+    public List<String> buscarNaFamilia(UUID usuarioId, UUID familiaId, String texto) {
+        acesso.membroAtivoNaFamilia(usuarioId, familiaId);
+        if (texto == null || texto.length() > 200) throw new IllegalArgumentException("Busca limitada a 200 caracteres.");
+        return repository.buscarNaFamilia(familiaId, texto);
+    }
 }
