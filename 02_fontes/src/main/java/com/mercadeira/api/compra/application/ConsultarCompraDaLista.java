@@ -13,11 +13,15 @@ import com.mercadeira.api.compra.repository.ParticipanteCompraRepository;
 import com.mercadeira.api.compra.repository.RegistroFinanceiroCompraRepository;
 import com.mercadeira.api.compra.repository.SolicitacaoPresencaCompraRepository;
 import com.mercadeira.api.compra.repository.SolicitacaoResponsabilidadeOperacionalRepository;
+import com.mercadeira.api.compra.repository.SolicitacaoItemCompraRepository;
+import com.mercadeira.api.compra.domain.EstadoSolicitacaoItemCompra;
+import com.mercadeira.api.compra.domain.StatusCompra;
 import com.mercadeira.api.compra.domain.EstadoSolicitacaoPresenca;
 import com.mercadeira.api.compra.domain.EstadoSolicitacaoResponsabilidade;
 import com.mercadeira.api.familia.domain.MembroFamilia;
 import com.mercadeira.api.familia.domain.PapelMembroFamilia;
 import com.mercadeira.api.familia.domain.StatusMembroFamilia;
+import com.mercadeira.api.familia.domain.StatusFamilia;
 import com.mercadeira.api.familia.repository.MembroFamiliaRepository;
 import com.mercadeira.api.lista.application.ListaCompraNaoEncontradaException;
 import com.mercadeira.api.lista.application.MembroFamiliaInvalidoException;
@@ -38,13 +42,15 @@ public class ConsultarCompraDaLista {
     private final SolicitacaoPresencaCompraRepository solicitacaoRepository;
     private final SolicitacaoResponsabilidadeOperacionalRepository solicitacaoResponsabilidadeRepository;
     private final AlertaContinuidadeCompra alertaContinuidade;
+    private final SolicitacaoItemCompraRepository solicitacoesItens;
 
     public ConsultarCompraDaLista(ListaCompraRepository listaRepository, MembroFamiliaRepository membroRepository,
             CompraRepository compraRepository, ParticipanteCompraRepository participanteRepository,
             ItemCompraRepository itemRepository, RegistroFinanceiroCompraRepository registroFinanceiroRepository,
             SolicitacaoPresencaCompraRepository solicitacaoRepository,
             SolicitacaoResponsabilidadeOperacionalRepository solicitacaoResponsabilidadeRepository,
-            AlertaContinuidadeCompra alertaContinuidade) {
+            AlertaContinuidadeCompra alertaContinuidade,
+            SolicitacaoItemCompraRepository solicitacoesItens) {
         this.listaRepository = listaRepository;
         this.membroRepository = membroRepository;
         this.compraRepository = compraRepository;
@@ -54,6 +60,7 @@ public class ConsultarCompraDaLista {
         this.solicitacaoRepository = solicitacaoRepository;
         this.solicitacaoResponsabilidadeRepository = solicitacaoResponsabilidadeRepository;
         this.alertaContinuidade = alertaContinuidade;
+        this.solicitacoesItens = solicitacoesItens;
     }
 
     @Transactional(readOnly = true)
@@ -82,6 +89,11 @@ public class ConsultarCompraDaLista {
         return new ResultadoConsultaCompra(compra, participantes, itens, registrosFinanceiros,
                 alertaContinuidade.avaliar(compra, participanteAtual.map(ParticipanteCompra::getId).orElse(null)), participanteCompra,
                 membro.getPapel() == PapelMembroFamilia.ADMINISTRADOR, minhaSolicitacao, pendentes,
-                minhaResponsabilidade, pendentesResponsabilidade);
+                minhaResponsabilidade, pendentesResponsabilidade,
+                compra.getStatus() == StatusCompra.EM_ANDAMENTO && participanteCompra
+                        && lista.getFamilia().getStatus() == StatusFamilia.ATIVA
+                        ? solicitacoesItens.findByCompraIdAndStatusOrderByCriadoEmAscIdAsc(compra.getId(),
+                                EstadoSolicitacaoItemCompra.PENDENTE)
+                        : List.of());
     }
 }

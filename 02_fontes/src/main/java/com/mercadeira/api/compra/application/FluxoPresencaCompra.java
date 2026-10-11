@@ -95,7 +95,7 @@ public class FluxoPresencaCompra {
         var compra = contexto.compra();
         var decisor = contexto.participante();
         var todos = participantesDaCompra(compra);
-        if (!decisor.getId().equals(compra.getResponsavelOperacionalId()) || !elegivel(decisor))
+        if (!AutoridadeOperacionalCompra.responsavelAtualElegivel(compra, decisor))
             throw new AutoridadePresencaException();
         var pedido = pedidoDaCompra(solicitacaoId, compra);
         var destino = aprovar ? EstadoSolicitacaoPresenca.APROVADA : EstadoSolicitacaoPresenca.REJEITADA;

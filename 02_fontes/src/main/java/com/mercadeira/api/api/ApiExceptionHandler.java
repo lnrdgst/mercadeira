@@ -51,6 +51,8 @@ import com.mercadeira.api.compra.application.ListaCompraSemParticipantesExceptio
 import com.mercadeira.api.compra.application.UsuarioNaoParticipaDaCompraException;
 import com.mercadeira.api.compra.application.AutoridadePresencaException;
 import com.mercadeira.api.compra.application.ConflitoPresencaException;
+import com.mercadeira.api.compra.application.SolicitacaoItemCompraNaoEncontradaException;
+import com.mercadeira.api.compra.domain.SolicitacaoItemCompraNaoPendenteException;
 import com.mercadeira.api.compra.domain.TransicaoStatusItemCompraInvalidaException;
 import com.mercadeira.api.compra.domain.RestauracaoItemCompraInvalidaException;
 import com.mercadeira.api.compra.leiturapreco.LeituraPrecoIaIndisponivelException;
@@ -63,6 +65,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
@@ -90,7 +93,8 @@ public class ApiExceptionHandler {
 
     @ExceptionHandler({ HttpMessageNotReadableException.class, DadosUsuarioInvalidosException.class,
             IllegalArgumentException.class, CodigoFamiliaInvalidoException.class, DadosFinanceirosItemCompraInvalidosException.class,
-            MissingServletRequestPartException.class, MaxUploadSizeExceededException.class })
+            MissingServletRequestPartException.class, MaxUploadSizeExceededException.class,
+            MethodArgumentTypeMismatchException.class })
     ResponseEntity<ErroApiResponse> tratarRequisicaoInvalida(Exception exception, HttpServletRequest request) {
         return resposta(HttpStatus.BAD_REQUEST, "REQUISICAO_INVALIDA", "Requisicao invalida.", request, Map.of());
     }
@@ -124,13 +128,14 @@ public class ApiExceptionHandler {
     @ExceptionHandler({ UsuarioNaoEncontradoException.class, SolicitacaoNaoEncontradaException.class,
             ListaCompraNaoEncontradaException.class, ItemListaNaoEncontradoException.class,
             CompraNaoEncontradaException.class, ItemCompraNaoEncontradoException.class,
-            RegistroFinanceiroCompraNaoEncontradoException.class })
+            RegistroFinanceiroCompraNaoEncontradoException.class,
+            SolicitacaoItemCompraNaoEncontradaException.class })
     ResponseEntity<ErroApiResponse> tratarNaoEncontrado(Exception exception, HttpServletRequest request) {
         return resposta(HttpStatus.NOT_FOUND, "RECURSO_NAO_ENCONTRADO", "Recurso nao encontrado.", request, Map.of());
     }
 
     @ExceptionHandler({ EmailJaCadastradoException.class, SolicitacaoPendenteJaExisteException.class,
-            SolicitacaoNaoPendenteException.class,
+            SolicitacaoNaoPendenteException.class, SolicitacaoItemCompraNaoPendenteException.class,
             SolicitanteJaPossuiVinculoAtivoException.class,
             FamiliaInativaException.class, ListaCompraForaDePreparacaoException.class,
             ItemListaJaRemovidoException.class, CriadorListaNaoPodeSerRemovidoException.class,

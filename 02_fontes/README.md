@@ -80,6 +80,14 @@ A senha atual é obrigatória. A API reutiliza a política de senha existente e 
 
 Como o JWT usa o UUID no `sub`, mudar nome ou e-mail não exige logout automático. A sessão atual permanece válida.
 
+## Solicitação de item remoto na Compra
+
+Criação/listagem em `/api/compras/{compraId}/solicitacoes-itens` e decisão
+em `/{solicitacaoId}/aprovar` ou `/recusar`. Somente participante `NAO_PRESENTE`
+solicita; somente responsável operacional atual e presente decide.
+Pendências e capabilities são retornadas pelo polling existente da Compra.
+Contrato completo: [solicitação de item remoto](../docs/contrato-solicitacao-item-remoto.md).
+
 ## Recuperação de senha
 
 `POST /api/autenticacao/esqueci-senha` é público e recebe `{ "email": "usuario@exemplo.com" }`. A resposta é sempre genérica, inclusive para e-mails inexistentes, evitando enumeração de contas. O e-mail é normalizado (trim/lowercase) e há cooldown simples de 60 segundos por conta, sem alterar a resposta pública.

@@ -22,6 +22,9 @@ public interface CompraRepository extends JpaRepository<Compra, UUID> {
 
     Optional<Compra> findByListaCompra_Id(UUID listaCompraId);
 
+    @Query("select compra.listaCompra.id from Compra compra where compra.id = :compraId")
+    Optional<UUID> findListaIdById(@Param("compraId") UUID compraId);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select compra from Compra compra where compra.listaCompra.id = :listaCompraId")
     Optional<Compra> findByListaCompra_IdForUpdate(@Param("listaCompraId") UUID listaCompraId);

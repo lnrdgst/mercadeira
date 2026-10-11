@@ -6,6 +6,12 @@ import java.util.List;
 import java.util.UUID;
 
 import com.mercadeira.api.compra.application.CompraListaInconsistenteException;
+import com.mercadeira.api.compra.application.AutoridadeOperacionalCompra;
+import com.mercadeira.api.compra.domain.ParticipanteCompra;
+import com.mercadeira.api.compra.domain.PresencaOperacional;
+import com.mercadeira.api.familia.domain.StatusFamilia;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import com.mercadeira.api.compra.domain.StatusItemCompra;
 import com.mercadeira.api.lista.domain.StatusListaCompra;
 import com.mercadeira.api.compra.application.ResultadoConsultaCompra;
@@ -32,6 +38,7 @@ public record CompraResponse(
         List<SolicitacaoPresencaResponse> solicitacoesPresencaPendentes,
         SolicitacaoResponsabilidadeResponse minhaSolicitacaoResponsabilidade,
         List<SolicitacaoResponsabilidadeResponse> solicitacoesResponsabilidadePendentes,
+        List<SolicitacaoItemCompraResponse> solicitacoesItensPendentes,
         List<ParticipanteCompraResponse> participantes,
         List<ItemCompraResponse> itens,
         List<RegistroFinanceiroCompraResponse> registrosFinanceiros,
@@ -54,6 +61,13 @@ public record CompraResponse(
                         .findFirst().map(ParticipanteCompraReferenciaResponse::from)
                         .orElseThrow(CompraListaInconsistenteException::new);
         boolean emAndamento = compra.getStatus() == StatusCompra.EM_ANDAMENTO;
+        boolean familiaAtiva = compra.getListaCompra().getFamilia().getStatus() == StatusFamilia.ATIVA;
+        boolean podeSolicitarItem = resultado.participanteCompra() && familiaAtiva && emAndamento && participanteAtual != null
+                && participanteAtual.getPresencaOperacional() == PresencaOperacional.NAO_PRESENTE;
+        boolean podeDecidirItens = resultado.participanteCompra() && familiaAtiva && emAndamento
+                && AutoridadeOperacionalCompra.responsavelAtualElegivel(compra, participanteAtual);
+        var participantesPorId = resultado.participantes().stream()
+                .collect(Collectors.toMap(ParticipanteCompra::getId, Function.identity()));
         boolean podeFinalizar = resultado.participanteCompra() && participanteAtual != null && participanteAtual.estaPresente()
                 && compra.getStatus() == StatusCompra.EM_ANDAMENTO
                 && compra.getListaCompra().getStatus() == StatusListaCompra.EM_COMPRA
@@ -123,6 +137,8 @@ public record CompraResponse(
                 responsavel != null && participanteAtual != null && responsavel.getId().equals(participanteAtual.getId())
                         ? resultado.solicitacoesResponsabilidadePendentes().stream().map(s -> SolicitacaoResponsabilidadeResponse.from(s, true)).toList()
                         : List.of(),
+                resultado.solicitacoesItensPendentes().stream()
+                        .map(s -> SolicitacaoItemCompraResponse.from(s, participantesPorId)).toList(),
                 resultado.participantes().stream().map(participante -> new ParticipanteCompraResponse(
                         participante.getId(),
                         participante.getMembroFamilia().getId(),
@@ -145,7 +161,8 @@ public record CompraResponse(
                                 && resultado.itens().stream().anyMatch(item -> item.getStatus() == StatusItemCompra.PENDENTE || item.getStatus() == StatusItemCompra.REMOVIDO),
                         podeSolicitarPresenca, podeCancelar, podeDeclararSaida, podeSolicitarResponsabilidade,
                         podeCancelarResponsabilidade, precisaEstarPresenteParaFinalizar, podeEncerrarAdministrativamente,
-                        podeAdicionarItem, podeTransferirResponsabilidade, podeGerenciarRegistrosFinanceiros));
+                        podeAdicionarItem, podeTransferirResponsabilidade, podeGerenciarRegistrosFinanceiros,
+                        podeSolicitarItem, podeDecidirItens));
     }
 
     public record ParticipanteCompraResponse(
@@ -202,6 +219,6 @@ public record CompraResponse(
             boolean podeSolicitarResponsabilidade, boolean podeCancelarSolicitacaoResponsabilidade,
             boolean precisaEstarPresenteParaFinalizar, boolean podeEncerrarCompraAdministrativamente,
             boolean podeAdicionarItemDuranteCompra, boolean podeTransferirResponsabilidade,
-            boolean podeGerenciarRegistrosFinanceiros) {
+            boolean podeGerenciarRegistrosFinanceiros, boolean podeSolicitarItemRemoto, boolean podeDecidirSolicitacoesItens) {
     }
 }
