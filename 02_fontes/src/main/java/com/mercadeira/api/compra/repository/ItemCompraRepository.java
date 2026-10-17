@@ -26,7 +26,8 @@ public interface ItemCompraRepository extends JpaRepository<ItemCompra, UUID> {
             "adicionadoPorParticipanteCompra.membroFamilia.usuario",
             "marcadoPorMembroFamilia",
             "remocaoSolicitadaPorMembroFamilia",
-            "remocaoResolvidaPorMembroFamilia"
+            "remocaoResolvidaPorMembroFamilia",
+            "lancamentos"
     })
     List<ItemCompra> findByCompra_IdOrderByOrdemExibicaoAscIdAsc(UUID compraId);
 

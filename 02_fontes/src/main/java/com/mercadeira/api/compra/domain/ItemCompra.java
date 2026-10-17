@@ -3,6 +3,10 @@ package com.mercadeira.api.compra.domain;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import com.mercadeira.api.familia.domain.MembroFamilia;
@@ -19,6 +23,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 
 @Entity
@@ -71,6 +76,9 @@ public class ItemCompra {
 
     @Column(name = "quantidade_comprada", precision = 12, scale = 3)
     private BigDecimal quantidadeComprada;
+
+    @OneToMany(mappedBy = "itemCompra", fetch = FetchType.LAZY)
+    private List<LancamentoItemCompra> lancamentos = new ArrayList<>();
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 40)
@@ -179,6 +187,23 @@ public class ItemCompra {
         return precoUnitario.multiply(quantidadeComprada).setScale(2, RoundingMode.HALF_UP);
     }
 
+    public LancamentoItemCompra adicionarLancamento(BigDecimal precoUnitario, BigDecimal quantidade, Instant criadoEm) {
+        LancamentoItemCompra lancamento = LancamentoItemCompra.criar(this, precoUnitario, quantidade, criadoEm);
+        lancamentos.add(lancamento);
+        return lancamento;
+    }
+
+    public Optional<LancamentoItemCompra> localizarLancamento(UUID lancamentoId) {
+        if (lancamentoId == null) return Optional.empty();
+        return lancamentos.stream().filter(lancamento -> lancamentoId.equals(lancamento.getId())).findFirst();
+    }
+
+    /** Total derivado exclusivamente dos lancamentos financeiros. */
+    public BigDecimal getValorTotalDosLancamentos() {
+        return lancamentos.stream().map(LancamentoItemCompra::getSubtotal)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
     public boolean solicitarRemocao(MembroFamilia solicitante, Instant instante) {
         if (status == StatusItemCompra.REMOCAO_SOLICITADA) {
             return false;
@@ -274,6 +299,7 @@ public class ItemCompra {
     public String getObservacoesSnapshot() { return observacoesSnapshot; }
     public BigDecimal getPrecoUnitario() { return precoUnitario; }
     public BigDecimal getQuantidadeComprada() { return quantidadeComprada; }
+    public List<LancamentoItemCompra> getLancamentos() { return Collections.unmodifiableList(lancamentos); }
     public StatusItemCompra getStatus() { return status; }
     public MembroFamilia getMarcadoPorMembroFamilia() { return marcadoPorMembroFamilia; }
     public Instant getMarcadoEm() { return marcadoEm; }
