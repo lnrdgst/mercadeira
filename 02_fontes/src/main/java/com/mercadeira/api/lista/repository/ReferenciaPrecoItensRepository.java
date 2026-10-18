@@ -28,20 +28,22 @@ public class ReferenciaPrecoItensRepository {
                     from item_lista i
                     where i.lista_compra_id = :listaId and i.removido_em is null
                 ), historico as (
-                    select a.id as item_lista_id, ic.preco_unitario, c.finalizada_em, c.estabelecimento_snapshot,
-                           row_number() over (partition by a.id order by c.finalizada_em desc, ic.id desc) as posicao
+                    select a.id as item_lista_id, lic.preco_unitario, c.finalizada_em, c.estabelecimento_snapshot,
+                           row_number() over (partition by a.id order by c.finalizada_em desc,
+                                             lic.criado_em desc, lic.id desc) as posicao
                     from alvo a
                     join item_compra ic on lower(btrim(regexp_replace(ic.descricao_snapshot, '[[:space:]]+', ' ', 'g')))
                                          = lower(a.descricao_normalizada)
                     join compra c on c.id = ic.compra_id
+                    join lancamento_item_compra lic on lic.item_compra_id = ic.id
                     join lista_compra l on l.id = c.lista_compra_id
                     where l.familia_id = :familiaId
                       and l.categoria = :categoria
                       and c.status = 'FINALIZADA'
                       and c.finalizada_em is not null
                       and ic.status = 'NO_CARRINHO'
-                      and ic.preco_unitario > 0
-                      and ic.quantidade_comprada > 0
+                      and lic.preco_unitario > 0
+                      and lic.quantidade > 0
                       and ic.unidade_medida_snapshot is not distinct from a.unidade_medida
                 )
                 select item_lista_id, preco_unitario, finalizada_em, estabelecimento_snapshot
