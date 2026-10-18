@@ -3,6 +3,7 @@ package com.mercadeira.api.compra.api;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
+import java.util.List;
 
 import com.mercadeira.api.compra.domain.StatusItemCompra;
 
@@ -15,6 +16,7 @@ public record ItemCompraResponse(
         String unidadeMedida,
         String marca,
         String observacoes,
+        List<LancamentoItemCompraResponse> lancamentos,
         BigDecimal precoUnitario,
         BigDecimal quantidadeComprada,
         BigDecimal valorTotal,

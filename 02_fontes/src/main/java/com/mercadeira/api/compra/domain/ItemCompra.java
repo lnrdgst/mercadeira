@@ -24,6 +24,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
 
 @Entity
@@ -78,6 +79,7 @@ public class ItemCompra {
     private BigDecimal quantidadeComprada;
 
     @OneToMany(mappedBy = "itemCompra", fetch = FetchType.LAZY)
+    @OrderBy("criadoEm ASC, id ASC")
     private List<LancamentoItemCompra> lancamentos = new ArrayList<>();
 
     @Enumerated(EnumType.STRING)
@@ -183,14 +185,31 @@ public class ItemCompra {
     }
 
     public BigDecimal getValorTotal() {
-        if (precoUnitario == null || quantidadeComprada == null) return null;
-        return precoUnitario.multiply(quantidadeComprada).setScale(2, RoundingMode.HALF_UP);
+        if (lancamentos.isEmpty()) return null;
+        return getValorTotalDosLancamentos();
     }
 
     public LancamentoItemCompra adicionarLancamento(BigDecimal precoUnitario, BigDecimal quantidade, Instant criadoEm) {
         LancamentoItemCompra lancamento = LancamentoItemCompra.criar(this, precoUnitario, quantidade, criadoEm);
         lancamentos.add(lancamento);
         return lancamento;
+    }
+
+    /** Ponte temporaria do endpoint legado: nunca grava as colunas legadas. */
+    public LancamentoItemCompra registrarLancamentoLegado(BigDecimal precoUnitario, BigDecimal quantidade, Instant instante) {
+        if (precoUnitario == null || quantidade == null) throw new DadosFinanceirosItemCompraInvalidosException();
+        if (lancamentos.size() > 1) throw new LancamentosLegadosIncompativeisException();
+        if (lancamentos.isEmpty()) return adicionarLancamento(precoUnitario, quantidade, instante);
+        LancamentoItemCompra lancamento = lancamentos.getFirst();
+        lancamento.atualizar(precoUnitario, quantidade, instante);
+        return lancamento;
+    }
+
+    /** Ponte temporaria do endpoint legado para limpar o unico lancamento que ele controla. */
+    public Optional<LancamentoItemCompra> limparLancamentoLegado() {
+        if (lancamentos.size() > 1) throw new LancamentosLegadosIncompativeisException();
+        if (lancamentos.isEmpty()) return Optional.empty();
+        return Optional.of(lancamentos.removeFirst());
     }
 
     public Optional<LancamentoItemCompra> localizarLancamento(UUID lancamentoId) {
@@ -297,8 +316,10 @@ public class ItemCompra {
     public String getUnidadeMedidaSnapshot() { return unidadeMedidaSnapshot; }
     public String getMarcaSnapshot() { return marcaSnapshot; }
     public String getObservacoesSnapshot() { return observacoesSnapshot; }
-    public BigDecimal getPrecoUnitario() { return precoUnitario; }
-    public BigDecimal getQuantidadeComprada() { return quantidadeComprada; }
+    /** @deprecated O valor exibido deve ser derivado de lancamentos. */
+    @Deprecated public BigDecimal getPrecoUnitario() { return precoUnitario; }
+    /** @deprecated O valor exibido deve ser derivado de lancamentos. */
+    @Deprecated public BigDecimal getQuantidadeComprada() { return quantidadeComprada; }
     public List<LancamentoItemCompra> getLancamentos() { return Collections.unmodifiableList(lancamentos); }
     public StatusItemCompra getStatus() { return status; }
     public MembroFamilia getMarcadoPorMembroFamilia() { return marcadoPorMembroFamilia; }

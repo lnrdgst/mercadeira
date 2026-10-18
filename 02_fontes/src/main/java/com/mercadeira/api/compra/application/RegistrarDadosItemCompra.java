@@ -1,11 +1,13 @@
 package com.mercadeira.api.compra.application;
 
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.util.UUID;
 
 import com.mercadeira.api.compra.domain.StatusCompra;
 import com.mercadeira.api.compra.repository.CompraRepository;
 import com.mercadeira.api.compra.repository.ItemCompraRepository;
+import com.mercadeira.api.compra.repository.LancamentoItemCompraRepository;
 import com.mercadeira.api.compra.repository.ParticipanteCompraRepository;
 import com.mercadeira.api.familia.domain.StatusMembroFamilia;
 import com.mercadeira.api.familia.repository.MembroFamiliaRepository;
@@ -22,17 +24,25 @@ public class RegistrarDadosItemCompra {
     private final MembroFamiliaRepository membros;
     private final ParticipanteCompraRepository participantes;
     private final ItemCompraRepository itens;
+    private final LancamentoItemCompraRepository lancamentos;
+    private final Clock clock;
 
     public RegistrarDadosItemCompra(ListaCompraRepository listas, CompraRepository compras,
-            MembroFamiliaRepository membros, ParticipanteCompraRepository participantes, ItemCompraRepository itens) {
-        this.listas = listas; this.compras = compras; this.membros = membros; this.participantes = participantes; this.itens = itens;
+            MembroFamiliaRepository membros, ParticipanteCompraRepository participantes, ItemCompraRepository itens,
+            LancamentoItemCompraRepository lancamentos, Clock clock) {
+        this.listas = listas; this.compras = compras; this.membros = membros; this.participantes = participantes;
+        this.itens = itens; this.lancamentos = lancamentos; this.clock = clock;
     }
 
     @Transactional
     public void executar(UUID usuarioId, UUID familiaId, UUID listaId, UUID itemId,
             BigDecimal precoUnitario, BigDecimal quantidadeComprada) {
         var item = validarEdicao(usuarioId, familiaId, listaId, itemId);
-        item.registrarDadosDaCompra(precoUnitario, quantidadeComprada);
+        if (precoUnitario == null && quantidadeComprada == null) {
+            item.limparLancamentoLegado().ifPresent(lancamentos::delete);
+            return;
+        }
+        lancamentos.save(item.registrarLancamentoLegado(precoUnitario, quantidadeComprada, clock.instant()));
     }
 
     /** Reutilizado por acoes que exigem a mesma capacidade operacional da edicao financeira. */

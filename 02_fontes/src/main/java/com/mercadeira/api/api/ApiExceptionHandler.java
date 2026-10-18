@@ -6,6 +6,7 @@ import java.util.Map;
 
 import com.mercadeira.api.compra.domain.FinalizacaoCompraInvalidaException;
 import com.mercadeira.api.compra.domain.DadosFinanceirosItemCompraInvalidosException;
+import com.mercadeira.api.compra.domain.LancamentosLegadosIncompativeisException;
 import com.mercadeira.api.compra.application.CompraComRemocaoPendenteException;
 import com.mercadeira.api.compra.application.UsuarioNaoPodeDecidirRemocaoItemCompraException;
 import com.mercadeira.api.compra.application.ResponsavelRemocaoItemCompraInvalidoException;
@@ -142,7 +143,7 @@ public class ApiExceptionHandler {
             ParticipanteListaNaoEncontradoException.class, ListaCompraSemItensException.class,
             ListaCompraSemParticipantesException.class, CompraListaInconsistenteException.class,
             ListaCompraJaUtilizadaException.class,
-            com.mercadeira.api.compra.application.PresencaOperacionalObrigatoriaException.class, RestauracaoItemCompraInvalidaException.class, FinalizacaoCompraInvalidaException.class, CompraComRemocaoPendenteException.class, CompraForaDeAndamentoException.class, TransicaoStatusItemCompraInvalidaException.class, ResponsavelRemocaoItemCompraInvalidoException.class, ConflitoPresencaException.class, TransferenciaAdministracaoInvalidaException.class, RemocaoIntegranteInvalidaException.class, SaidaFamiliaInvalidaException.class, ExclusaoFamiliaInvalidaException.class, ItensForaCompraInvalidosException.class })
+            com.mercadeira.api.compra.application.PresencaOperacionalObrigatoriaException.class, RestauracaoItemCompraInvalidaException.class, FinalizacaoCompraInvalidaException.class, CompraComRemocaoPendenteException.class, CompraForaDeAndamentoException.class, TransicaoStatusItemCompraInvalidaException.class, ResponsavelRemocaoItemCompraInvalidoException.class, ConflitoPresencaException.class, TransferenciaAdministracaoInvalidaException.class, RemocaoIntegranteInvalidaException.class, SaidaFamiliaInvalidaException.class, ExclusaoFamiliaInvalidaException.class, ItensForaCompraInvalidosException.class, LancamentosLegadosIncompativeisException.class })
     ResponseEntity<ErroApiResponse> tratarConflito(Exception exception, HttpServletRequest request) {
         return resposta(HttpStatus.CONFLICT, "CONFLITO_DE_ESTADO", exception.getMessage(), request, Map.of());
     }

@@ -54,6 +54,7 @@ class LancamentoItemCompraTest {
 
         assertThat(item.getLancamentos()).hasSize(2);
         assertThat(item.getValorTotalDosLancamentos()).isEqualByComparingTo("14.90");
+        assertThat(item.getValorTotal()).isEqualByComparingTo("14.90");
     }
 
     private static void assertInvalido(BigDecimal preco, BigDecimal quantidade) {

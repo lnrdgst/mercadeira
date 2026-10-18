@@ -16,6 +16,7 @@ import jakarta.persistence.LockModeType;
 public interface ItemCompraRepository extends JpaRepository<ItemCompra, UUID> {
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @EntityGraph(attributePaths = "lancamentos")
     @Query("select item from ItemCompra item where item.id = :itemCompraId")
     Optional<ItemCompra> findByIdForUpdate(@Param("itemCompraId") UUID itemCompraId);
 

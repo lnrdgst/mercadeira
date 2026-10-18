@@ -59,6 +59,13 @@ public class LancamentoItemCompra {
         return precoUnitario.multiply(quantidade).setScale(2, RoundingMode.HALF_UP);
     }
 
+    void atualizar(BigDecimal precoUnitario, BigDecimal quantidade, Instant atualizadoEm) {
+        validar(itemCompra, precoUnitario, quantidade, atualizadoEm);
+        this.precoUnitario = precoUnitario;
+        this.quantidade = quantidade;
+        this.atualizadoEm = atualizadoEm;
+    }
+
     private static void validar(ItemCompra itemCompra, BigDecimal precoUnitario,
             BigDecimal quantidade, Instant criadoEm) {
         if (itemCompra == null || precoUnitario == null || quantidade == null || criadoEm == null

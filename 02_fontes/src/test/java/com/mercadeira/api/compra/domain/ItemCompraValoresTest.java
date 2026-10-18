@@ -22,16 +22,16 @@ class ItemCompraValoresTest {
     @Test
     void calculaValorComPrecisaoERecalculaQuantidade() {
         ItemCompra item = noCarrinho();
-        item.registrarDadosDaCompra(new BigDecimal("27.00"), new BigDecimal("2"));
+        item.registrarLancamentoLegado(new BigDecimal("27.00"), new BigDecimal("2"), Instant.parse("2026-10-06T12:02:00Z"));
         assertThat(item.getValorTotal()).isEqualByComparingTo("54.00");
-        item.registrarDadosDaCompra(new BigDecimal("27.00"), BigDecimal.ONE);
+        item.registrarLancamentoLegado(new BigDecimal("27.00"), BigDecimal.ONE, Instant.parse("2026-10-06T12:03:00Z"));
         assertThat(item.getValorTotal()).isEqualByComparingTo("27.00");
     }
 
     @Test
     void calculaDezUnidadesDeOitentaENoveCentavos() {
         ItemCompra item = noCarrinho();
-        item.registrarDadosDaCompra(new BigDecimal("0.89"), new BigDecimal("10"));
+        item.adicionarLancamento(new BigDecimal("0.89"), new BigDecimal("10"), Instant.parse("2026-10-06T12:02:00Z"));
         assertThat(item.getValorTotal()).isEqualByComparingTo("8.90");
     }
 

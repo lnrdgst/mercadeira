@@ -3,6 +3,7 @@ package com.mercadeira.api.compra.api;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.List;
 import com.mercadeira.api.compra.application.ResultadoConsultaCompra;
 import com.mercadeira.api.compra.application.ResponsavelRemocaoItemCompraInvalidoException;
 import com.mercadeira.api.compra.domain.ItemCompra;
@@ -61,11 +62,15 @@ final class ItemCompraResponseMapper {
                 && membroAtual.equals(marcador);
         boolean fallback = !originalPresente && presenteAtual() && responsavelOperacionalId != null
                 && membroAtual != null && responsavelOperacionalId.equals(porMembro.get(membroAtual).participanteCompraId());
+        List<LancamentoItemCompraResponse> lancamentos = item.getLancamentos().stream()
+                .map(LancamentoItemCompraResponse::from).toList();
+        var lancamentoLegado = item.getLancamentos().size() == 1 ? item.getLancamentos().getFirst() : null;
         return new ItemCompraResponse(
                 item.getId(), item.getItemListaOrigem() == null ? null : item.getItemListaOrigem().getId(),
                 item.isAdicionadoDuranteCompra(), item.getDescricaoSnapshot(), item.getQuantidadeSnapshot(),
                 item.getUnidadeMedidaSnapshot(), item.getMarcaSnapshot(), item.getObservacoesSnapshot(),
-                item.getPrecoUnitario(), item.getQuantidadeComprada(), item.getValorTotal(),
+                lancamentos, lancamentoLegado == null ? null : lancamentoLegado.getPrecoUnitario(),
+                lancamentoLegado == null ? null : lancamentoLegado.getQuantidade(), item.getValorTotal(),
                 item.getOrdemExibicao(), item.getStatus(),
                 item.getAdicionadoPorParticipanteCompra() == null ? null
                         : porParticipante.get(item.getAdicionadoPorParticipanteCompra().getId()),

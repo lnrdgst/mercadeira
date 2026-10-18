@@ -68,11 +68,15 @@ class ResumoValoresItensCompraIntegrationTests {
         CompraResponse semPreco = CompraResponse.from(consultarCompra.consultar(contexto.usuario().getId(), contexto.familia().getId(), contexto.lista().getId()), contexto.usuario().getId());
         assertThat(semPreco.totalItensComprados()).isEqualByComparingTo("54.00");
         assertThat(semPreco.quantidadeItensNoCarrinhoSemPreco()).isEqualTo(1);
+        assertThat(semPreco.itens().getFirst().lancamentos()).hasSize(1);
+        assertThat(semPreco.itens().getFirst().lancamentos().getFirst().subtotal()).isEqualByComparingTo("54.00");
+        assertThat(semPreco.itens().getFirst().precoUnitario()).isEqualByComparingTo("27.00");
 
         registrarDados.executar(contexto.usuario().getId(), contexto.familia().getId(), contexto.lista().getId(), itens.get(1).getId(), new BigDecimal("0.89"), new BigDecimal("10"));
         CompraResponse completo = CompraResponse.from(consultarCompra.consultar(contexto.usuario().getId(), contexto.familia().getId(), contexto.lista().getId()), contexto.usuario().getId());
         assertThat(completo.totalItensComprados()).isEqualByComparingTo("62.90");
         assertThat(completo.quantidadeItensNoCarrinhoSemPreco()).isZero();
+        assertThat(completo.itens().get(1).lancamentos()).hasSize(1);
 
         itens.get(0).solicitarRemocao(contexto.membro(), agora());
         itens.get(0).aprovarRemocao(contexto.membro(), agora());
