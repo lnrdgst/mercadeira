@@ -28,6 +28,7 @@ public record ItemCompraResponse(
         Instant colocadoNoCarrinhoEm,
         RemocaoItemCompraResponse remocao,
         RestauracaoItemCompraResponse restauracao,
+        boolean podeGerenciarLancamentos,
         AcoesItemCompraResponse acoes) {
 
 }

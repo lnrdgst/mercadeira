@@ -17,6 +17,7 @@ import com.mercadeira.api.compra.application.GerenciarRegistrosFinanceirosCompra
 import com.mercadeira.api.compra.application.ContinuarCompra;
 import com.mercadeira.api.compra.application.EncerrarCompraProlongada;
 import com.mercadeira.api.compra.application.RegistrarDadosItemCompra;
+import com.mercadeira.api.compra.application.GerenciarLancamentosItemCompra;
 import com.mercadeira.api.compra.application.LerPrecoIaItemCompra;
 import com.mercadeira.api.compra.application.ColocarItemNoCarrinho;
 import com.mercadeira.api.compra.application.IniciarCompra;
@@ -58,6 +59,7 @@ public class CompraController {
     private final ContinuarCompra continuarCompra;
     private final EncerrarCompraProlongada encerrarCompraProlongada;
     private final RegistrarDadosItemCompra registrarDadosItemCompra;
+    private final GerenciarLancamentosItemCompra gerenciarLancamentosItemCompra;
     private final LerPrecoIaItemCompra lerPrecoIaItemCompra;
 
     public CompraController(UsuarioAutenticado usuario, IniciarCompra iniciarCompra,
@@ -69,7 +71,7 @@ public class CompraController {
             com.mercadeira.api.compra.application.AlterarMinhaPresencaCompra alterarPresenca,
             FluxoPresencaCompra fluxoPresenca, ContinuarCompra continuarCompra,
             RegistrarDadosItemCompra registrarDadosItemCompra, EncerrarCompraProlongada encerrarCompraProlongada,
-            LerPrecoIaItemCompra lerPrecoIaItemCompra) {
+            LerPrecoIaItemCompra lerPrecoIaItemCompra, GerenciarLancamentosItemCompra gerenciarLancamentosItemCompra) {
         this.alterarPresenca = alterarPresenca;
         this.fluxoPresenca = fluxoPresenca;
         this.solicitarRemocao = solicitarRemocao;
@@ -85,6 +87,7 @@ public class CompraController {
         this.gerenciarRegistrosFinanceiros = gerenciarRegistrosFinanceiros;
         this.continuarCompra = continuarCompra;
         this.registrarDadosItemCompra = registrarDadosItemCompra;
+        this.gerenciarLancamentosItemCompra = gerenciarLancamentosItemCompra;
         this.encerrarCompraProlongada = encerrarCompraProlongada;
         this.lerPrecoIaItemCompra = lerPrecoIaItemCompra;
     }
@@ -196,11 +199,37 @@ public class CompraController {
         return itemResponse(familiaId, listaId, itemCompraId);
     }
 
+    /** @deprecated Use o CRUD explicito de lancamentos; mantido apenas para compatibilidade temporaria. */
+    @Deprecated
     @PutMapping("/itens/{itemCompraId}/dados-compra")
     public ItemCompraResponse atualizarDadosItem(@PathVariable UUID familiaId, @PathVariable UUID listaId,
             @PathVariable UUID itemCompraId, @Valid @RequestBody AtualizarDadosItemCompraRequest request) {
         registrarDadosItemCompra.executar(usuario.getId(), familiaId, listaId, itemCompraId,
                 request.precoUnitario(), request.quantidadeComprada());
+        return itemResponse(familiaId, listaId, itemCompraId);
+    }
+
+    @PostMapping("/itens/{itemCompraId}/lancamentos")
+    public ResponseEntity<ItemCompraResponse> adicionarLancamento(@PathVariable UUID familiaId, @PathVariable UUID listaId,
+            @PathVariable UUID itemCompraId, @Valid @RequestBody SalvarLancamentoItemCompraRequest request) {
+        gerenciarLancamentosItemCompra.adicionar(usuario.getId(), familiaId, listaId, itemCompraId,
+                request.precoUnitario(), request.quantidade());
+        return ResponseEntity.status(HttpStatus.CREATED).body(itemResponse(familiaId, listaId, itemCompraId));
+    }
+
+    @PutMapping("/itens/{itemCompraId}/lancamentos/{lancamentoId}")
+    public ItemCompraResponse editarLancamento(@PathVariable UUID familiaId, @PathVariable UUID listaId,
+            @PathVariable UUID itemCompraId, @PathVariable UUID lancamentoId,
+            @Valid @RequestBody SalvarLancamentoItemCompraRequest request) {
+        gerenciarLancamentosItemCompra.editar(usuario.getId(), familiaId, listaId, itemCompraId, lancamentoId,
+                request.precoUnitario(), request.quantidade());
+        return itemResponse(familiaId, listaId, itemCompraId);
+    }
+
+    @DeleteMapping("/itens/{itemCompraId}/lancamentos/{lancamentoId}")
+    public ItemCompraResponse removerLancamento(@PathVariable UUID familiaId, @PathVariable UUID listaId,
+            @PathVariable UUID itemCompraId, @PathVariable UUID lancamentoId) {
+        gerenciarLancamentosItemCompra.remover(usuario.getId(), familiaId, listaId, itemCompraId, lancamentoId);
         return itemResponse(familiaId, listaId, itemCompraId);
     }
 

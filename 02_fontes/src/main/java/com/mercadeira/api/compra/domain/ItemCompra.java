@@ -190,13 +190,29 @@ public class ItemCompra {
     }
 
     public LancamentoItemCompra adicionarLancamento(BigDecimal precoUnitario, BigDecimal quantidade, Instant criadoEm) {
+        validarItemNoCarrinho();
         LancamentoItemCompra lancamento = LancamentoItemCompra.criar(this, precoUnitario, quantidade, criadoEm);
         lancamentos.add(lancamento);
         return lancamento;
     }
 
+    public void editarLancamento(UUID lancamentoId, BigDecimal precoUnitario, BigDecimal quantidade, Instant atualizadoEm) {
+        validarItemNoCarrinho();
+        localizarLancamento(lancamentoId).orElseThrow(LancamentoItemCompraNaoEncontradoException::new)
+                .atualizar(precoUnitario, quantidade, atualizadoEm);
+    }
+
+    public LancamentoItemCompra removerLancamento(UUID lancamentoId) {
+        validarItemNoCarrinho();
+        LancamentoItemCompra lancamento = localizarLancamento(lancamentoId)
+                .orElseThrow(LancamentoItemCompraNaoEncontradoException::new);
+        lancamentos.remove(lancamento);
+        return lancamento;
+    }
+
     /** Ponte temporaria do endpoint legado: nunca grava as colunas legadas. */
     public LancamentoItemCompra registrarLancamentoLegado(BigDecimal precoUnitario, BigDecimal quantidade, Instant instante) {
+        validarItemNoCarrinho();
         if (precoUnitario == null || quantidade == null) throw new DadosFinanceirosItemCompraInvalidosException();
         if (lancamentos.size() > 1) throw new LancamentosLegadosIncompativeisException();
         if (lancamentos.isEmpty()) return adicionarLancamento(precoUnitario, quantidade, instante);
@@ -207,6 +223,7 @@ public class ItemCompra {
 
     /** Ponte temporaria do endpoint legado para limpar o unico lancamento que ele controla. */
     public Optional<LancamentoItemCompra> limparLancamentoLegado() {
+        validarItemNoCarrinho();
         if (lancamentos.size() > 1) throw new LancamentosLegadosIncompativeisException();
         if (lancamentos.isEmpty()) return Optional.empty();
         return Optional.of(lancamentos.removeFirst());
@@ -215,6 +232,10 @@ public class ItemCompra {
     public Optional<LancamentoItemCompra> localizarLancamento(UUID lancamentoId) {
         if (lancamentoId == null) return Optional.empty();
         return lancamentos.stream().filter(lancamento -> lancamentoId.equals(lancamento.getId())).findFirst();
+    }
+
+    private void validarItemNoCarrinho() {
+        if (status != StatusItemCompra.NO_CARRINHO) throw new TransicaoStatusItemCompraInvalidaException(status);
     }
 
     /** Total derivado exclusivamente dos lancamentos financeiros. */

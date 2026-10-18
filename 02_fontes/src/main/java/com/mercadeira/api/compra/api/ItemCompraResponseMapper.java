@@ -75,6 +75,7 @@ final class ItemCompraResponseMapper {
                 item.getAdicionadoPorParticipanteCompra() == null ? null
                         : porParticipante.get(item.getAdicionadoPorParticipanteCompra().getId()),
                 item.getAdicionadoEm(), porMembro.get(marcador), item.getMarcadoEm(), remocao, restauracao,
+                participanteAtivo && presente && item.getStatus() == StatusItemCompra.NO_CARRINHO,
                 new AcoesItemCompraResponse(
                         participanteAtivo && presente && item.getStatus() == StatusItemCompra.PENDENTE,
                         podeOperar && item.getStatus() == StatusItemCompra.NO_CARRINHO,

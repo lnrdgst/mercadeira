@@ -7,6 +7,7 @@ import java.util.Map;
 import com.mercadeira.api.compra.domain.FinalizacaoCompraInvalidaException;
 import com.mercadeira.api.compra.domain.DadosFinanceirosItemCompraInvalidosException;
 import com.mercadeira.api.compra.domain.LancamentosLegadosIncompativeisException;
+import com.mercadeira.api.compra.domain.LancamentoItemCompraNaoEncontradoException;
 import com.mercadeira.api.compra.application.CompraComRemocaoPendenteException;
 import com.mercadeira.api.compra.application.UsuarioNaoPodeDecidirRemocaoItemCompraException;
 import com.mercadeira.api.compra.application.ResponsavelRemocaoItemCompraInvalidoException;
@@ -129,6 +130,7 @@ public class ApiExceptionHandler {
     @ExceptionHandler({ UsuarioNaoEncontradoException.class, SolicitacaoNaoEncontradaException.class,
             ListaCompraNaoEncontradaException.class, ItemListaNaoEncontradoException.class,
             CompraNaoEncontradaException.class, ItemCompraNaoEncontradoException.class,
+            LancamentoItemCompraNaoEncontradoException.class,
             RegistroFinanceiroCompraNaoEncontradoException.class,
             SolicitacaoItemCompraNaoEncontradaException.class })
     ResponseEntity<ErroApiResponse> tratarNaoEncontrado(Exception exception, HttpServletRequest request) {

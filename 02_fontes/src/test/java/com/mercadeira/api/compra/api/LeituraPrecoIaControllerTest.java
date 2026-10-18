@@ -26,6 +26,7 @@ import com.mercadeira.api.compra.application.EncerrarCompraProlongada;
 import com.mercadeira.api.compra.application.FinalizarCompra;
 import com.mercadeira.api.compra.application.FluxoPresencaCompra;
 import com.mercadeira.api.compra.application.GerenciarRegistrosFinanceirosCompra;
+import com.mercadeira.api.compra.application.GerenciarLancamentosItemCompra;
 import com.mercadeira.api.compra.application.IniciarCompra;
 import com.mercadeira.api.compra.application.LerPrecoIaItemCompra;
 import com.mercadeira.api.compra.application.PresencaOperacionalObrigatoriaException;
@@ -62,7 +63,8 @@ class LeituraPrecoIaControllerTest {
                 mock(SolicitarRemocaoItemCompra.class), mock(AprovarRemocaoItemCompra.class), mock(RejeitarRemocaoItemCompra.class),
                 mock(FinalizarCompra.class), mock(RestaurarItemNoCarrinho.class),
                 mock(com.mercadeira.api.compra.application.AlterarMinhaPresencaCompra.class), mock(FluxoPresencaCompra.class),
-                mock(ContinuarCompra.class), mock(RegistrarDadosItemCompra.class), mock(EncerrarCompraProlongada.class), leitor);
+                mock(ContinuarCompra.class), mock(RegistrarDadosItemCompra.class), mock(EncerrarCompraProlongada.class), leitor,
+                mock(GerenciarLancamentosItemCompra.class));
         mvc = MockMvcBuilders.standaloneSetup(controller).setControllerAdvice(new ApiExceptionHandler(Clock.systemUTC())).build();
     }
 
